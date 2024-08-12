@@ -1,0 +1,61 @@
+#include "instructions.h"
+
+char *instruction_to_string(instruction_t instruction) {
+  switch (instruction) {
+    case NOP:      return "NOP";
+    case INCA:     return "INCA";
+    case DECA:     return "DECA";
+    case RAM_AL:   return "RAM_AL";
+    case RAM_BL:   return "RAM_BL";
+    case RAM_A:    return "RAM_A";
+    case RAM_B:    return "RAM_B";
+    case INCSP:    return "INCSP";
+    case DECSP:    return "DECSP";
+    case PUSHA:    return "PUSHA";
+    case POPA:     return "POPA";
+    case PEEKA:    return "PEEKA";
+    case PEEKAR:   return "PEEKAR";
+    case PUSHAR:   return "PUSHAR";
+    case PUSHB:    return "PUSHB";
+    case POPB:     return "POPB";
+    case PEEKB:    return "PEEKB";
+    case SUM:      return "SUM";
+    case SUB:      return "SUB";
+    case SHR:      return "SHR";
+    case SHL:      return "SHL";
+    case CMPA:     return "CMPA";
+    case CMPB:     return "CMPB";
+    case JMP:      return "JMP";
+    case JMPR:     return "JMPR";
+    case JMPRZ:    return "JMPRZ";
+    case JMPRN:    return "JMPRN";
+    case JMPRC:    return "JMPRC";
+    case JMPRNZ:   return "JMPRNZ";
+    case JMPRNN:   return "JMPRNN";
+    case JMPRNC:   return "JMPRNC";
+    case JMPA:     return "JMPA";
+    case A_B:      return "A_B";
+    case B_A:      return "B_A";
+    case B_AH:     return "B_AH";
+    case AL_rB:    return "AL_rB";
+    case A_rB:     return "A_rB";
+    case rB_AL:    return "rB_AL";
+    case rB_A:     return "rB_A";
+    case A_SP:     return "A_SP";
+    case SP_A:     return "SP_A";
+    case A_SEC:    return "A_SEC";
+    case SEC_A:    return "SEC_A";
+    case RAM_NDX:  return "RAM_NDX";
+    case INCNDX:   return "INCNDX";
+    case NDX_A:    return "NDX_A";
+    case A_NDX:    return "A_NDX";
+    case MEM_A:    return "MEM_A";
+    case MEM_AH:   return "MEM_AH";
+    case CALL:     return "CALL";
+    case CALLR:    return "CALLR";
+    case CALLrRAM: return "CALLrRAM";
+    case RET:      return "RET";
+    case KEY:      return "KEY";
+    case HLT:      return "HLT";
+  }
+}
