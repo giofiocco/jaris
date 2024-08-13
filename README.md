@@ -6,7 +6,7 @@ Jaris is a 16bit computer
 
 ### Tokens
 - SYM: `[a-zA-Z_][a-zA-Z_0-9]*` 
-- INST: ``
+- INST: as SYM
 - HEX: `0[xX][0-9a-fA-F]{2}`
 - HEX2: `0[xX][0-9a-fA-F]{4}`
 - MACROO: `{`
@@ -17,7 +17,7 @@ Jaris is a 16bit computer
 - EXTERN: `EXTERN`
 - STRING: `"[^"]*"`
 - ALIGN: `ALIGN`
-- DB: `DB`
+- DB: `db`
 - INT: `[1-9][0-9]*`
 
 ### Comments

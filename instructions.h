@@ -26,14 +26,20 @@ typedef enum {
 
 typedef struct {
   enum {
+    BNONE,
     BINST,
     BINSTHEX,
     BINSTHEX2,
     BINSTLABEL,
     BINSTRELLABEL,
+    BHEX,
+    BHEX2,
+    BSTRING,
     BSETLABEL,
     BGLOBAL,
     BEXTERN,
+    BALIGN,
+    BDB,
   } kind;
   instruction_t inst;
   union {
@@ -42,6 +48,18 @@ typedef struct {
   } arg;
 } bytecode_t;
 
+typedef struct {
+  enum {
+    INST_NO_ARGS,
+    INST_8BITS_ARG,
+    INST_16BITS_ARG,
+    INST_LABEL_ARG,
+    INST_RELLABEL_ARG,
+  } arg;
+} instruction_stat_t;
+
 char *instruction_to_string(instruction_t instruction);
+int sv_to_instruction(sv_t sv, instruction_t *out);
+instruction_stat_t instruction_stat(instruction_t instruction);
 
 #endif // INSTRUCTIONS_H__

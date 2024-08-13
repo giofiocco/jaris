@@ -1,9 +1,11 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "assemble.h"
 #include "errors.h"
+#include "instructions.h"
 #include "sv.h"
 
 #define TODO assert(0 && "TO IMPLEMENT")
@@ -11,6 +13,7 @@
 typedef enum {
   T_NONE,
   T_SYM,
+  T_INST,
   T_HEX,
   T_HEX2,
   T_MACROO,
@@ -30,6 +33,10 @@ typedef struct {
   token_kind_t kind;
   sv_t image;
   location_t loc;
+  union {
+    uint16_t num;
+    instruction_t inst;
+  } as;
 } token_t;
 
 typedef struct {
@@ -37,10 +44,28 @@ typedef struct {
   location_t loc;
 } tokenizer_t;
 
+#define MACRO_MAX        128
+#define TOKENS_MACRO_MAX 128
+
+typedef struct {
+  token_t name;
+  token_t tokens[TOKENS_MACRO_MAX];
+  int tokeni;
+} macro_t;
+
+typedef struct {
+  tokenizer_t *tok;
+  macro_t macros[MACRO_MAX];
+  int macroi;
+  macro_t *active_macro;
+  int active_macro_tokeni;
+} preprocessor_t;
+
 char *token_kind_to_string(token_kind_t kind) {
   switch (kind) {
-    case T_NONE:   assert(0);
+    case T_NONE:   return "NONE";
     case T_SYM:    return "SYM";
+    case T_INST:   return "INST";
     case T_HEX:    return "HEX";
     case T_HEX2:   return "HEX2";
     case T_MACROO: return "MACROO";
@@ -78,7 +103,8 @@ void tokenizer_init(tokenizer_t *tokenizer, char *buffer, char *filename) {
 token_t token_next(tokenizer_t *tokenizer) {
   assert(tokenizer);
 
-  token_t token = {0};
+  tokenizer->loc.len = 1;
+  token_t token = {T_NONE, {}, tokenizer->loc, {}};
 
   token_kind_t table[128] = {0};
   table['{'] = T_MACROO;
@@ -87,6 +113,7 @@ token_t token_next(tokenizer_t *tokenizer) {
   table['$'] = T_REL;
 
   switch (*tokenizer->buffer) {
+    case '\0': break;
     case ' ':
     case '\t':
       ++tokenizer->buffer;
@@ -108,7 +135,8 @@ token_t token_next(tokenizer_t *tokenizer) {
       token = (token_t){
         table[(int)*tokenizer->buffer],
         {tokenizer->buffer, 1},
-        tokenizer->loc
+        tokenizer->loc,
+        {}
       };
       ++tokenizer->buffer;
       ++tokenizer->loc.col;
@@ -128,7 +156,8 @@ token_t token_next(tokenizer_t *tokenizer) {
         token = (token_t){
           T_STRING,
           {start, len},
-          tokenizer->loc
+          tokenizer->loc,
+          {}
         };
         tokenizer->loc.col += len;
       }
@@ -143,13 +172,16 @@ token_t token_next(tokenizer_t *tokenizer) {
         }
         tokenizer->loc.len = len;
         sv_t image = {start, len};
-        token = (token_t){sv_eq(image, sv_from_cstr("GLOBAL"))   ? T_GLOBAL
+        instruction_t inst;
+        token = (token_t){sv_to_instruction(image, &inst)        ? T_INST
+                          : sv_eq(image, sv_from_cstr("GLOBAL")) ? T_GLOBAL
                           : sv_eq(image, sv_from_cstr("EXTERN")) ? T_EXTERN
                           : sv_eq(image, sv_from_cstr("ALIGN"))  ? T_ALIGN
-                          : sv_eq(image, sv_from_cstr("DB"))     ? T_DB
+                          : sv_eq(image, sv_from_cstr("db"))     ? T_DB
                                                                  : T_SYM,
                           image,
-                          tokenizer->loc};
+                          tokenizer->loc,
+                          {.inst = inst}};
         tokenizer->loc.col += len;
       } else if (*tokenizer->buffer == '0' && (*(tokenizer->buffer + 1) == 'x' || *(tokenizer->buffer + 1) == 'X')) {
         char *start = tokenizer->buffer;
@@ -167,7 +199,8 @@ token_t token_next(tokenizer_t *tokenizer) {
         token = (token_t){
           len == 2 ? T_HEX : T_HEX2,
           {start, len + 2},
-          tokenizer->loc
+          tokenizer->loc,
+          {.num = strtol(start, NULL, 16)}
         };
         tokenizer->loc.col += len;
       } else if (isdigit(*tokenizer->buffer)) {
@@ -181,7 +214,8 @@ token_t token_next(tokenizer_t *tokenizer) {
         token = (token_t){
           T_INT,
           {start, len},
-          tokenizer->loc
+          tokenizer->loc,
+          {.num = atoi(start)}
         };
         tokenizer->loc.col += len;
       } else if (*tokenizer->buffer == '-' && *(tokenizer->buffer + 1) == '-') {
@@ -192,32 +226,157 @@ token_t token_next(tokenizer_t *tokenizer) {
         return token_next(tokenizer);
       } else {
         tokenizer->loc.len = 1;
-        eprintfloc(tokenizer->loc, "invalid char");
+        if (isprint(*tokenizer->buffer)) {
+          eprintfloc(tokenizer->loc, "invalid char");
+        } else {
+          eprintfloc(tokenizer->loc, "invalid char: '%X'", *tokenizer->buffer);
+        }
       }
   }
 
   return token;
 }
 
-void token_compile(token_t token, obj_t *obj) {
-  assert(obj);
+macro_t *preprocessor_find_macro(preprocessor_t *pre, sv_t image) {
+  for (int i = 0; i < pre->macroi; ++i) {
+    if (sv_eq(image, pre->macros[i].name.image)) {
+      return &pre->active_macro[i];
+    }
+  }
+  return NULL;
+}
+
+token_t preprocessor_token_next(preprocessor_t *pre) {
+  assert(pre);
+
+  if (pre->active_macro != NULL) {
+    if (pre->active_macro_tokeni < pre->active_macro->tokeni) {
+      return pre->active_macro->tokens[pre->active_macro_tokeni++];
+    } else {
+      pre->active_macro = NULL;
+    }
+  }
+
+  token_t token = token_next(pre->tok);
+
+  if (token.kind == T_MACROO) {
+    token_t name = token_next(pre->tok);
+    if (name.kind != T_SYM) {
+      eprintfloc(name.loc, "expected SYM, found %s", token_kind_to_string(name.kind));
+    }
+    macro_t *macro = preprocessor_find_macro(pre, name.image);
+    if (macro != NULL) {
+      eprintfloc(name.loc, "macro redefinition, already defined at " LOCATION_FMT, LOCATION_UNPACK(macro->name.loc));
+    }
+    assert(pre->macroi + 1 < MACRO_MAX);
+    macro = &pre->macros[pre->macroi++];
+    macro->name = name;
+
+    while ((token = token_next(pre->tok)).kind != T_MACROC) {
+      macro->tokens[macro->tokeni++] = token;
+    }
+
+    token = token_next(pre->tok);
+  } else if (token.kind == T_SYM) {
+    macro_t *macro = preprocessor_find_macro(pre, token.image);
+    if (macro != NULL) {
+      pre->active_macro = macro;
+      pre->active_macro_tokeni = 0;
+      return preprocessor_token_next(pre);
+    }
+  }
+
+  return token;
+}
+
+token_t preprocessor_token_expect(preprocessor_t *pre, token_kind_t kind) {
+  assert(pre);
+
+  token_t token = preprocessor_token_next(pre);
+  if (token.kind != kind) {
+    eprintfloc(token.loc, "expected %s, found %s", token_kind_to_string(kind), token_kind_to_string(token.kind));
+  }
+
+  return token;
+}
+
+bytecode_t compile(preprocessor_t *pre) {
+  assert(pre);
+
+  token_t token = preprocessor_token_next(pre);
 
   switch (token.kind) {
-    case T_SYM:    TODO;
-    case T_MACROO: TODO;
-    case T_MACROC: TODO;
-    case T_GLOBAL: TODO;
-    case T_EXTERN: TODO;
-    case T_ALIGN:  TODO;
-    case T_DB:     TODO;
-    case T_NONE:
+    case T_SYM:
+      preprocessor_token_expect(pre, T_COLON);
+      return (bytecode_t){BSETLABEL, 0, {.sv = token.image}};
+      break;
+    case T_INST:
+      switch (instruction_stat(token.as.inst).arg) {
+        case INST_NO_ARGS: return (bytecode_t){BINST, token.as.inst, {}};
+        case INST_8BITS_ARG:
+          {
+            token_t arg = preprocessor_token_next(pre);
+            if (arg.kind == T_HEX) {
+              return (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.as.num}};
+            } else if (arg.kind == T_STRING && arg.image.len == 3) {
+              return (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.image.start[1]}};
+            } else {
+              eprintfloc(arg.loc, "expected HEX or STRING with len 1, found %s", token_kind_to_string(arg.kind));
+            }
+          }
+          break;
+        case INST_16BITS_ARG:
+          {
+            token_t arg = preprocessor_token_next(pre);
+            if (arg.kind == T_HEX2) {
+              return (bytecode_t){BINSTHEX2, token.as.inst, {.num = arg.as.num}};
+            } else if (arg.kind == T_SYM) {
+              return (bytecode_t){BINSTLABEL, token.as.inst, {.sv = arg.image}};
+            } else {
+              eprintfloc(arg.loc, "expected HEX2, found %s", token_kind_to_string(arg.kind));
+            }
+          }
+          break;
+        case INST_LABEL_ARG:
+          {
+            token_t arg = preprocessor_token_expect(pre, T_SYM);
+            return (bytecode_t){BINSTRELLABEL, token.as.inst, {.sv = arg.image}};
+          }
+          break;
+        case INST_RELLABEL_ARG:
+          {
+            preprocessor_token_expect(pre, T_REL);
+            token_t arg = preprocessor_token_expect(pre, T_SYM);
+            return (bytecode_t){BINSTRELLABEL, token.as.inst, {.sv = arg.image}};
+          }
+          break;
+      }
+      break;
+    case T_GLOBAL:
+    case T_EXTERN:
+      {
+        token_t arg = preprocessor_token_expect(pre, T_SYM);
+        return (bytecode_t){token.kind == T_GLOBAL ? BGLOBAL : BEXTERN, 0, {.sv = arg.image}};
+      }
+      break;
+    case T_ALIGN: return (bytecode_t){BALIGN, 0, {}};
+    case T_DB:
+      {
+        token_t arg = preprocessor_token_expect(pre, T_INT);
+        return (bytecode_t){BDB, 0, {.num = arg.as.num}};
+      }
+      break;
     case T_HEX:
-    case T_HEX2:
+    case T_HEX2:   return (bytecode_t){token.kind == T_HEX ? BHEX : BHEX2, 0, {.num = token.as.num}};
+    case T_STRING: return (bytecode_t){BSTRING, 0, {.sv = token.image}};
+    case T_NONE:   return (bytecode_t){BNONE, 0, {}};
+    case T_MACROO:
+    case T_MACROC:
     case T_COLON:
     case T_REL:
-    case T_STRING:
-    case T_INT:    assert(0);
+    case T_INT:    eprintfloc(token.loc, "invalid token: %s", token_kind_to_string(token.kind));
   }
+  assert(0);
 }
 
 obj_t assemble(char *buffer, char *filename, debug_flag_t flag) {
@@ -234,11 +393,13 @@ obj_t assemble(char *buffer, char *filename, debug_flag_t flag) {
     tokenizer_init(&tokenizer, buffer, filename);
   }
 
+  preprocessor_t pre = {0};
+  pre.tok = &tokenizer;
+
   obj_t obj = {0};
 
-  token_t token = {0};
-  while ((token = token_next(&tokenizer)).kind != T_NONE) {
-    token_compile(token, &obj);
+  bytecode_t bc = {0};
+  while ((bc = compile(&pre)).kind != BNONE) {
   }
 
   return obj;
