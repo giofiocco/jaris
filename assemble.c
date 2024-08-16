@@ -63,21 +63,36 @@ typedef struct {
 
 char *token_kind_to_string(token_kind_t kind) {
   switch (kind) {
-    case T_NONE:   return "NONE";
-    case T_SYM:    return "SYM";
-    case T_INST:   return "INST";
-    case T_HEX:    return "HEX";
-    case T_HEX2:   return "HEX2";
-    case T_MACROO: return "MACROO";
-    case T_MACROC: return "MACROC";
-    case T_COLON:  return "COLON";
-    case T_REL:    return "REL";
-    case T_GLOBAL: return "GLOBAL";
-    case T_EXTERN: return "EXTERN";
-    case T_STRING: return "STRING";
-    case T_ALIGN:  return "ALIGN";
-    case T_DB:     return "DB";
-    case T_INT:    return "INT";
+    case T_NONE:
+      return "NONE";
+    case T_SYM:
+      return "SYM";
+    case T_INST:
+      return "INST";
+    case T_HEX:
+      return "HEX";
+    case T_HEX2:
+      return "HEX2";
+    case T_MACROO:
+      return "MACROO";
+    case T_MACROC:
+      return "MACROC";
+    case T_COLON:
+      return "COLON";
+    case T_REL:
+      return "REL";
+    case T_GLOBAL:
+      return "GLOBAL";
+    case T_EXTERN:
+      return "EXTERN";
+    case T_STRING:
+      return "STRING";
+    case T_ALIGN:
+      return "ALIGN";
+    case T_DB:
+      return "DB";
+    case T_INT:
+      return "INT";
   }
   assert(0);
 }
@@ -113,13 +128,16 @@ token_t token_next(tokenizer_t *tokenizer) {
   table['$'] = T_REL;
 
   switch (*tokenizer->buffer) {
-    case '\0': break;
+    case '\0':
+      break;
     case ' ':
     case '\t':
       ++tokenizer->buffer;
       ++tokenizer->loc.col;
       return token_next(tokenizer);
-    case '\r': ++tokenizer->buffer; return token_next(tokenizer);
+    case '\r':
+      ++tokenizer->buffer;
+      return token_next(tokenizer);
     case '\n':
       ++tokenizer->buffer;
       tokenizer->loc.row_start = tokenizer->buffer;
@@ -312,7 +330,8 @@ bytecode_t compile(preprocessor_t *pre) {
       break;
     case T_INST:
       switch (instruction_stat(token.as.inst).arg) {
-        case INST_NO_ARGS: return (bytecode_t){BINST, token.as.inst, {}};
+        case INST_NO_ARGS:
+          return (bytecode_t){BINST, token.as.inst, {}};
         case INST_8BITS_ARG:
           {
             token_t arg = preprocessor_token_next(pre);
@@ -359,7 +378,8 @@ bytecode_t compile(preprocessor_t *pre) {
         return (bytecode_t){token.kind == T_GLOBAL ? BGLOBAL : BEXTERN, 0, {.sv = arg.image}};
       }
       break;
-    case T_ALIGN: return (bytecode_t){BALIGN, 0, {}};
+    case T_ALIGN:
+      return (bytecode_t){BALIGN, 0, {}};
     case T_DB:
       {
         token_t arg = preprocessor_token_expect(pre, T_INT);
@@ -367,14 +387,18 @@ bytecode_t compile(preprocessor_t *pre) {
       }
       break;
     case T_HEX:
-    case T_HEX2:   return (bytecode_t){token.kind == T_HEX ? BHEX : BHEX2, 0, {.num = token.as.num}};
-    case T_STRING: return (bytecode_t){BSTRING, 0, {.sv = token.image}};
-    case T_NONE:   return (bytecode_t){BNONE, 0, {}};
+    case T_HEX2:
+      return (bytecode_t){token.kind == T_HEX ? BHEX : BHEX2, 0, {.num = token.as.num}};
+    case T_STRING:
+      return (bytecode_t){BSTRING, 0, {.sv = token.image}};
+    case T_NONE:
+      return (bytecode_t){BNONE, 0, {}};
     case T_MACROO:
     case T_MACROC:
     case T_COLON:
     case T_REL:
-    case T_INT:    eprintfloc(token.loc, "invalid token: %s", token_kind_to_string(token.kind));
+    case T_INT:
+      eprintfloc(token.loc, "invalid token: %s", token_kind_to_string(token.kind));
   }
   assert(0);
 }
@@ -396,11 +420,13 @@ obj_t assemble(char *buffer, char *filename, debug_flag_t flag) {
   preprocessor_t pre = {0};
   pre.tok = &tokenizer;
 
-  obj_t obj = {0};
+  obj_state_t objs = {0};
 
   bytecode_t bc = {0};
   while ((bc = compile(&pre)).kind != BNONE) {
+    obj_compile_bytecode(&objs, bc);
   }
+  obj_state_check_obj(&objs);
 
-  return obj;
+  return objs.obj;
 }

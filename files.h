@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "sv.h"
+#include "instructions.h"
 
 typedef struct {
   uint16_t where;
@@ -24,6 +24,7 @@ typedef struct {
 #define GLOBAL_COUNT 256
 #define EXTERN_COUNT 256
 #define RELOC_COUNT 1024
+
 typedef struct {
   uint16_t global_num;
   global_entry_t globals[GLOBAL_COUNT];
@@ -41,5 +42,38 @@ typedef struct {
   uint16_t reloc_num;
   reloc_entry_t reloc_table[RELOC_COUNT];
 } exe_t;
+
+#define SYMBOL_COUNT 256
+#define INTERN_RELOC_COUNT 256
+
+typedef struct {
+  sv_t image;
+  uint16_t pos;
+} symbol_t;
+
+typedef struct {
+  obj_t obj;
+  symbol_t symbols[SYMBOL_COUNT];
+  int symbol_num;
+  symbol_t relocs[INTERN_RELOC_COUNT];
+  int reloc_num;
+ symbol_t relrelocs[RELOC_COUNT];
+  int relreloc_num;
+} obj_state_t;
+
+void obj_dump(obj_t *obj);
+
+void obj_state_add_symbol(obj_state_t *objs, sv_t sv, uint16_t pos);
+uint16_t obj_state_find_symbol(obj_state_t *objs, sv_t sv);
+void obj_state_add_reloc(obj_state_t *objs, sv_t sv, uint16_t pos);
+void obj_state_add_relreloc(obj_state_t *objs, sv_t sv, uint16_t pos);
+void obj_state_check_obj(obj_state_t *objs);
+
+void obj_add_reloc(obj_state_t *objs, uint16_t where, uint16_t what);
+void obj_add_global(obj_state_t *objs, sv_t image);
+void obj_add_instruction(obj_state_t *objs, instruction_t inst);
+void obj_add_hex(obj_state_t *objs, uint8_t num);
+void obj_add_hex2(obj_state_t *objs, uint16_t num);
+void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc);
 
 #endif // FILES_H__

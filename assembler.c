@@ -21,7 +21,8 @@ int main() {
   buffer[size] = 0;
   assert(fclose(file) == 0);
 
-  assemble(buffer, filename, 0);
+  obj_t obj = assemble(buffer, filename, 0);
+  obj_dump(&obj);
 
   return 0;
 }

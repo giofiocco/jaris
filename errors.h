@@ -14,11 +14,11 @@ typedef struct {
 void print_location_pretty(location_t location);
 location_t location_union(location_t a, location_t b); 
 
-#define eprintfloc(__loc, ...) eprintfloc_impl((__loc), __LINE__, __FUNCTION__, __VA_ARGS__)
-void eprintfloc_impl(location_t location, int line, const char *func, char *fmt, ...);
+#define eprintfloc(__loc, ...) eprintfloc_impl((__loc), __FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+void eprintfloc_impl(location_t location, const char *file,int line, const char *func, char *fmt, ...);
 
-#define eprintf(...) eprintf_impl(__LINE__, __FUNCTION__, __VA_ARGS__)
-void eprintf_impl(int line, const char *func, char *fmt, ...);
+#define eprintf(...) eprintf_impl(__FILE__, __LINE__, __FUNCTION__, __VA_ARGS__)
+void eprintf_impl(const char *file, int line, const char *func, char *fmt, ...);
 
 #endif // ERRORS_H__
        
@@ -57,9 +57,9 @@ location_t location_union(location_t a, location_t b) {
   return c;
 }
 
-void eprintfloc_impl(location_t location, int line, const char *func, char *fmt, ...) {
+void eprintfloc_impl(location_t location, const char *file, int line, const char *func, char *fmt, ...) {
   if (1) {
-    fprintf(stderr, "ERROR throw at %d in %s\n", line, func);
+    fprintf(stderr, "ERROR throw at %s:%d in %s\n", file, line, func);
   }
   fprintf(stderr, "ERROR:"LOCATION_FMT" ", LOCATION_UNPACK(location));
   va_list argptr;
@@ -71,9 +71,9 @@ void eprintfloc_impl(location_t location, int line, const char *func, char *fmt,
   exit(1);
 }
 
-void eprintf_impl(int line, const char *func, char *fmt, ...) {
+void eprintf_impl(const char *file, int line, const char *func, char *fmt, ...) {
    if (1) {
-    fprintf(stderr, "ERROR throw at %d in %s\n", line, func);
+    fprintf(stderr, "ERROR throw at %s:%d in %s\n", file, line, func);
   }
   fprintf(stderr, "ERROR: ");
   va_list argptr;

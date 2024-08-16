@@ -62,4 +62,6 @@ char *instruction_to_string(instruction_t instruction);
 int sv_to_instruction(sv_t sv, instruction_t *out);
 instruction_stat_t instruction_stat(instruction_t instruction);
 
+void bytecode_dump(bytecode_t bc);
+
 #endif // INSTRUCTIONS_H__
