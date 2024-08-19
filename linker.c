@@ -11,7 +11,7 @@ extern exe_t link(obj_t *objs_list, int objs_count);
 
 int main(int argc, char **argv) {
   int debug = 0;
-  char *output = NULL;
+  char *output = "a.out";
 
   arg_parser_t parser = {0};
   parser.program_name = "linker";
@@ -28,7 +28,7 @@ int main(int argc, char **argv) {
     objs[i] = obj_decode_file(parser.unflag[i], &alloc);
   }
 
-  link(objs, parser.unflagi);
+  exe_t exe = link(objs, parser.unflagi);
 
   return 0;
 }

@@ -132,7 +132,7 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
       {
         obj_add_instruction(&objs->obj, bc.inst);
         uint16_t pos = obj_state_find_symbol(objs, bc.arg.sv);
-        if (pos != (uint16_t)-1) {
+        if (pos != 0xFFFF) {
           obj_add_hex2(&objs->obj, (uint16_t)(pos - objs->obj.code_size));
         } else {
           obj_state_add_relreloc(objs, bc.arg.sv, objs->obj.code_size);
@@ -318,4 +318,71 @@ void obj_encode_file(obj_t *obj, char *filename) {
   assert(fwrite(&obj->code, 1, obj->code_size, file) == obj->code_size);
 
   assert(fclose(file) == 0);
+}
+
+uint16_t exe_state_find_global(exe_state_t *exes, sv_t name) {
+  assert(exes);
+
+  for (int i = 0; i < exes->global_num; ++i) {
+    if (sv_eq(exes->globals[i].name, name)) {
+      return exes->globals[i].pos;
+    }
+  }
+
+  return 0xFFFF;
+}
+
+void exe_state_add_global(exe_state_t *exes, global_entry_t global, uint16_t offset) {
+  assert(exes);
+
+  if (exe_state_find_global(exes, global.name) != 0xFFFF) {
+    eprintf("global redefinition: " SV_FMT, SV_UNPACK(global.name));
+  }
+
+  assert(exes->global_num + 1 < GLOBAL_COUNT);
+  global.pos += offset;
+  exes->globals[exes->global_num++] = global;
+}
+
+void exe_state_add_extern(exe_state_t *exes, extern_entry_t extern_, uint16_t offset) {
+  assert(exes);
+
+  for (int i = 0; i < extern_.pos_num; ++i) {
+    extern_.pos[i] += offset;
+  }
+
+  assert(exes->extern_num + 1 < GLOBAL_COUNT);
+  exes->externs[exes->extern_num++] = extern_;
+}
+
+void exe_state_check_exe(exe_state_t *exes) {
+  assert(exes);
+
+  for (int i = 0; i < exes->extern_num; ++i) {
+    extern_entry_t extern_ = exes->externs[i];
+    uint16_t pos = exe_state_find_global(exes, extern_.name);
+    if (pos != 0xFFFF) {
+      eprintf("global unset: " SV_FMT, SV_UNPACK(extern_.name));
+    }
+
+    for (int j = 0; j < extern_.pos_num; ++j) {
+      exe_add_reloc(&exes->exe, (reloc_entry_t){extern_.pos[i], pos});
+    }
+  }
+}
+
+void exe_add_reloc_offset(exe_t *exe, reloc_entry_t reloc, uint16_t offset) {
+  assert(exe);
+
+  assert(exe->reloc_num + 1 < RELOC_COUNT);
+  reloc.where += offset;
+  reloc.what += offset;
+  exe->reloc_table[exe->reloc_num++] = reloc;
+}
+
+void exe_add_reloc(exe_t *exe, reloc_entry_t reloc) {
+  assert(exe);
+
+  assert(exe->reloc_num + 1 < RELOC_COUNT);
+  exe->reloc_table[exe->reloc_num++] = reloc;
 }
