@@ -24,5 +24,7 @@ int main() {
   obj_t obj = assemble(buffer, filename, 0);
   obj_dump(&obj);
 
+  obj_encode_file(&obj, "a.out");
+
   return 0;
 }

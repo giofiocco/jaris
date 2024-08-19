@@ -1,8 +1,13 @@
 #include <assert.h>
+#include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
-#include "errors.h"
 #include "files.h"
+#define ERRORS_IMPLEMENTATION
+#include "errors.h"
+#define SV_IMPLEMENTATION
+#include "sv.h"
 
 #define TODO assert(0 && "TO IMPLEMENT")
 
@@ -88,7 +93,7 @@ void obj_state_check_obj(obj_state_t *objs) {
       eprintf("label unset: " SV_FMT, SV_UNPACK(objs->relocs[i].image));
     }
 
-    obj_add_reloc(objs, objs->relocs[i].pos, pos);
+    obj_add_reloc(&objs->obj, objs->relocs[i].pos, pos);
   }
 
   for (int i = 0; i < objs->obj.global_num; ++i) {
@@ -101,39 +106,6 @@ void obj_state_check_obj(obj_state_t *objs) {
   }
 }
 
-void obj_add_reloc(obj_state_t *objs, uint16_t where, uint16_t what) {
-  assert(objs);
-
-  assert(objs->obj.reloc_num + 1 < RELOC_COUNT);
-  objs->obj.reloc_table[objs->obj.reloc_num++] = (reloc_entry_t){where, what};
-}
-
-void obj_add_global(obj_state_t *objs, sv_t image) {
-  assert(objs);
-
-  assert(objs->obj.global_num + 1 < GLOBAL_COUNT);
-  objs->obj.globals[objs->obj.global_num++] = (global_entry_t){image, obj_state_find_symbol(objs, image)};
-}
-
-void obj_add_instruction(obj_state_t *objs, instruction_t inst) {
-  assert(objs);
-
-  objs->obj.code[objs->obj.code_size++] = inst;
-}
-
-void obj_add_hex(obj_state_t *objs, uint8_t num) {
-  assert(objs);
-
-  objs->obj.code[objs->obj.code_size++] = num;
-}
-
-void obj_add_hex2(obj_state_t *objs, uint16_t num) {
-  assert(objs);
-
-  objs->obj.code[objs->obj.code_size++] = num & 0xFF;
-  objs->obj.code[objs->obj.code_size++] = num >> 8;
-}
-
 void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
   assert(objs);
 
@@ -141,27 +113,27 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
     case BNONE:
       assert(0);
     case BINST:
-      obj_add_instruction(objs, bc.inst);
+      obj_add_instruction(&objs->obj, bc.inst);
       break;
     case BINSTHEX:
-      obj_add_instruction(objs, bc.inst);
-      obj_add_hex(objs, bc.arg.num);
+      obj_add_instruction(&objs->obj, bc.inst);
+      obj_add_hex(&objs->obj, bc.arg.num);
       break;
     case BINSTHEX2:
-      obj_add_instruction(objs, bc.inst);
-      obj_add_hex2(objs, bc.arg.num);
+      obj_add_instruction(&objs->obj, bc.inst);
+      obj_add_hex2(&objs->obj, bc.arg.num);
       break;
     case BINSTLABEL:
-      obj_add_instruction(objs, bc.inst);
+      obj_add_instruction(&objs->obj, bc.inst);
       obj_state_add_reloc(objs, bc.arg.sv, objs->obj.code_size);
       objs->obj.code_size += 2;
       break;
     case BINSTRELLABEL:
       {
-        obj_add_instruction(objs, bc.inst);
+        obj_add_instruction(&objs->obj, bc.inst);
         uint16_t pos = obj_state_find_symbol(objs, bc.arg.sv);
         if (pos != (uint16_t)-1) {
-          obj_add_hex2(objs, (uint16_t)(pos - objs->obj.code_size));
+          obj_add_hex2(&objs->obj, (uint16_t)(pos - objs->obj.code_size));
         } else {
           obj_state_add_relreloc(objs, bc.arg.sv, objs->obj.code_size);
           objs->obj.code_size += 2;
@@ -169,14 +141,14 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
       }
       break;
     case BHEX:
-      obj_add_hex(objs, bc.arg.num);
+      obj_add_hex(&objs->obj, bc.arg.num);
       break;
     case BHEX2:
-      obj_add_hex2(objs, bc.arg.num);
+      obj_add_hex2(&objs->obj, bc.arg.num);
       break;
     case BSTRING:
       for (unsigned int i = 0; i < bc.arg.sv.len - 1; ++i) {
-        obj_add_hex(objs, bc.arg.sv.start[1 + i]);
+        obj_add_hex(&objs->obj, bc.arg.sv.start[1 + i]);
       }
       break;
     case BSETLABEL:
@@ -186,7 +158,7 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
       obj_state_add_symbol(objs, bc.arg.sv, objs->obj.code_size);
       break;
     case BGLOBAL:
-      obj_add_global(objs, bc.arg.sv);
+      obj_add_global(&objs->obj, bc.arg.sv);
       break;
     case BEXTERN:
       TODO;
@@ -200,4 +172,150 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
       objs->obj.code_size += bc.arg.num;
       break;
   }
+}
+
+void obj_add_reloc(obj_t *obj, uint16_t where, uint16_t what) {
+  assert(obj);
+
+  assert(obj->reloc_num + 1 < RELOC_COUNT);
+  obj->reloc_table[obj->reloc_num++] = (reloc_entry_t){where, what};
+}
+
+void obj_add_global(obj_t *obj, sv_t image) {
+  assert(obj);
+
+  assert(obj->global_num + 1 < GLOBAL_COUNT);
+  obj->globals[obj->global_num++] = (global_entry_t){image, 0xFFFF};
+}
+
+void obj_add_instruction(obj_t *obj, instruction_t inst) {
+  assert(obj);
+
+  obj->code[obj->code_size++] = inst;
+}
+
+void obj_add_hex(obj_t *obj, uint8_t num) {
+  assert(obj);
+
+  obj->code[obj->code_size++] = num;
+}
+
+void obj_add_hex2(obj_t *obj, uint16_t num) {
+  assert(obj);
+
+  obj->code[obj->code_size++] = num & 0xFF;
+  obj->code[obj->code_size++] = num >> 8;
+}
+
+obj_t obj_decode_file(char *filename, sv_allocator_t *alloc) {
+  assert(filename);
+  assert(alloc);
+
+  obj_t obj = {0};
+
+  FILE *file = fopen(filename, "r");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  char magic_number[3] = {0};
+  assert(fread(magic_number, 1, 3, file) == 3);
+  if (strcmp(magic_number, "OBJ") != 0) {
+    eprintf("%s magic number is not OBJ: '%s'", filename, magic_number);
+  }
+
+  int global_table_size = 0;
+  assert(fread(&global_table_size, 2, 1, file) == 2);
+  while (global_table_size > 0) {
+    size_t len = 0;
+    assert(fread(&len, 1, 1, file) == 1);
+    obj.globals[obj.global_num].name = sv_alloc_len(alloc, len);
+    assert(fread(&obj.globals[obj.global_num].name.start, 1, len, file) == len);
+    assert(fread(&obj.globals[obj.global_num].pos, 2, 1, file) == 2);
+    ++obj.global_num;
+    global_table_size -= 1 + len + 2;
+  }
+  assert(global_table_size == 0);
+
+  int extern_table_size = 0;
+  assert(fread(&extern_table_size, 2, 1, file) == 2);
+  while (extern_table_size > 0) {
+    size_t len = 0;
+    assert(fread(&len, 1, 1, file) == 1);
+    obj.externs[obj.extern_num].name = sv_alloc_len(alloc, len);
+    assert(fread(&obj.externs[obj.extern_num].name.start, 1, len, file) == len);
+    assert(fread(&obj.externs[obj.extern_num].pos_num, 1, 1, file) == 1);
+    for (int i = 0; i < obj.externs[obj.extern_num].pos_num; ++i) {
+      assert(fread(&obj.externs[obj.extern_num].pos[i], 2, 1, file) == 2);
+    }
+    ++obj.extern_num;
+    extern_table_size -= 1 + len + 1 + 2 * obj.externs[obj.extern_num].pos_num;
+  }
+  assert(extern_table_size == 0);
+
+  assert(fread(&obj.reloc_num, 2, 1, file) == 2);
+  for (int i = 0; i < obj.reloc_num; ++i) {
+    assert(fread(&obj.reloc_table[i].where, 2, 1, file) == 2);
+    assert(fread(&obj.reloc_table[i].what, 2, 1, file) == 2);
+  }
+
+  assert(fread(&obj.code_size, 2, 1, file) == 2);
+  assert(fread(&obj.code, 1, obj.code_size, file) == obj.code_size);
+
+  assert(fclose(file) == 0);
+
+  return obj;
+}
+
+void obj_encode_file(obj_t *obj, char *filename) {
+  assert(obj);
+  assert(filename);
+
+  FILE *file = fopen(filename, "wb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  assert(fwrite("OBJ", 1, 3, file) == 3);
+
+  int global_table_size = 0;
+  assert(fwrite(&global_table_size, 2, 1, file) == 2);
+  for (int i = 0; i < obj->global_num; ++i) {
+    size_t len = obj->globals[i].name.len;
+    assert(fwrite(&len, 1, 1, file) == 1);
+    assert(fwrite(&obj->globals[i].name.start, 1, len, file) == len);
+    assert(fwrite(&obj->globals[i].pos, 2, 1, file) == 2);
+    global_table_size += 1 + len + 2;
+  }
+  assert(fseek(file, 3, SEEK_SET) == 0);
+  assert(fwrite(&global_table_size, 2, 1, file) == 2);
+  assert(fseek(file, 5 + global_table_size, SEEK_SET) == 0);
+
+  int extern_table_size = 0;
+  assert(fwrite(&extern_table_size, 2, 1, file) == 2);
+  for (int i = 0; i < obj->extern_num; ++i) {
+    uint8_t len = obj->externs[i].name.len;
+    uint8_t num = obj->externs[i].pos_num;
+    assert(fwrite(&len, 1, 1, file) == 1);
+    assert(fwrite(&obj->externs[i].name.start, 1, len, file) == len);
+    assert(fwrite(&num, 1, 1, file) == 1);
+    for (int j = 0; j < num; ++j) {
+      assert(fwrite(&obj->externs[i].pos[j], 2, 1, file) == 2);
+    }
+    extern_table_size += 1 + len + 1 + 2 * num;
+  }
+  assert(fseek(file, 5 + global_table_size, SEEK_SET) == 0);
+  assert(fwrite(&extern_table_size, 2, 1, file) == 2);
+  assert(fseek(file, 5 + global_table_size + 2 + extern_table_size, SEEK_SET) == 0);
+
+  assert(fwrite(&obj->reloc_num, 2, 1, file) == 2);
+  for (int i = 0; i < obj->reloc_num; ++i) {
+    assert(fwrite(&obj->reloc_table[i].where, 2, 1, file) == 2);
+    assert(fwrite(&obj->reloc_table[i].what, 2, 1, file) == 2);
+  }
+
+  assert(fwrite(&obj->code_size, 2, 1, file) == 2);
+  assert(fwrite(&obj->code, 1, obj->code_size, file) == obj->code_size);
+
+  assert(fclose(file) == 0);
 }

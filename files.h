@@ -68,12 +68,15 @@ uint16_t obj_state_find_symbol(obj_state_t *objs, sv_t sv);
 void obj_state_add_reloc(obj_state_t *objs, sv_t sv, uint16_t pos);
 void obj_state_add_relreloc(obj_state_t *objs, sv_t sv, uint16_t pos);
 void obj_state_check_obj(obj_state_t *objs);
-
-void obj_add_reloc(obj_state_t *objs, uint16_t where, uint16_t what);
-void obj_add_global(obj_state_t *objs, sv_t image);
-void obj_add_instruction(obj_state_t *objs, instruction_t inst);
-void obj_add_hex(obj_state_t *objs, uint8_t num);
-void obj_add_hex2(obj_state_t *objs, uint16_t num);
 void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc);
+
+void obj_add_reloc(obj_t *obj, uint16_t where, uint16_t what);
+void obj_add_global(obj_t *obj, sv_t image);
+void obj_add_instruction(obj_t *obj, instruction_t inst);
+void obj_add_hex(obj_t *obj, uint8_t num);
+void obj_add_hex2(obj_t *obj, uint16_t num);
+
+obj_t obj_decode_file(char *filename, sv_allocator_t *alloc);
+void obj_encode_file(obj_t *obj, char *filename);
 
 #endif // FILES_H__
