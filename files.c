@@ -279,20 +279,20 @@ void obj_encode_file(obj_t *obj, char *filename) {
   assert(fwrite("OBJ", 1, 3, file) == 3);
 
   int global_table_size = 0;
-  assert(fwrite(&global_table_size, 2, 1, file) == 2);
+  assert(fwrite(&global_table_size, 2, 1, file) == 1);
   for (int i = 0; i < obj->global_num; ++i) {
     size_t len = obj->globals[i].name.len;
     assert(fwrite(&len, 1, 1, file) == 1);
     assert(fwrite(&obj->globals[i].name.start, 1, len, file) == len);
-    assert(fwrite(&obj->globals[i].pos, 2, 1, file) == 2);
+    assert(fwrite(&obj->globals[i].pos, 2, 1, file) == 1);
     global_table_size += 1 + len + 2;
   }
   assert(fseek(file, 3, SEEK_SET) == 0);
-  assert(fwrite(&global_table_size, 2, 1, file) == 2);
+  assert(fwrite(&global_table_size, 2, 1, file) == 1);
   assert(fseek(file, 5 + global_table_size, SEEK_SET) == 0);
 
   int extern_table_size = 0;
-  assert(fwrite(&extern_table_size, 2, 1, file) == 2);
+  assert(fwrite(&extern_table_size, 2, 1, file) == 1);
   for (int i = 0; i < obj->extern_num; ++i) {
     uint8_t len = obj->externs[i].name.len;
     uint8_t num = obj->externs[i].pos_num;
@@ -300,21 +300,21 @@ void obj_encode_file(obj_t *obj, char *filename) {
     assert(fwrite(&obj->externs[i].name.start, 1, len, file) == len);
     assert(fwrite(&num, 1, 1, file) == 1);
     for (int j = 0; j < num; ++j) {
-      assert(fwrite(&obj->externs[i].pos[j], 2, 1, file) == 2);
+      assert(fwrite(&obj->externs[i].pos[j], 2, 1, file) == 1);
     }
     extern_table_size += 1 + len + 1 + 2 * num;
   }
   assert(fseek(file, 5 + global_table_size, SEEK_SET) == 0);
-  assert(fwrite(&extern_table_size, 2, 1, file) == 2);
+  assert(fwrite(&extern_table_size, 2, 1, file) == 1);
   assert(fseek(file, 5 + global_table_size + 2 + extern_table_size, SEEK_SET) == 0);
 
-  assert(fwrite(&obj->reloc_num, 2, 1, file) == 2);
+  assert(fwrite(&obj->reloc_num, 2, 1, file) == 1);
   for (int i = 0; i < obj->reloc_num; ++i) {
-    assert(fwrite(&obj->reloc_table[i].where, 2, 1, file) == 2);
-    assert(fwrite(&obj->reloc_table[i].what, 2, 1, file) == 2);
+    assert(fwrite(&obj->reloc_table[i].where, 2, 1, file) == 1);
+    assert(fwrite(&obj->reloc_table[i].what, 2, 1, file) == 1);
   }
 
-  assert(fwrite(&obj->code_size, 2, 1, file) == 2);
+  assert(fwrite(&obj->code_size, 2, 1, file) == 1);
   assert(fwrite(&obj->code, 1, obj->code_size, file) == obj->code_size);
 
   assert(fclose(file) == 0);
