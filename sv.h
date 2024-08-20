@@ -28,6 +28,7 @@ sv_t sv_alloc_len(sv_allocator_t *alloc, unsigned int len);
 #ifdef SV_IMPLEMENTATION
 
 #include <string.h>
+#include <assert.h>
 
 int sv_eq(sv_t a, sv_t b) {
   if (a.len != b.len) {
@@ -53,11 +54,12 @@ sv_t sv_alloc_cstr(sv_allocator_t *alloc, char *image) {
   assert(alloc);
   assert(image);
 
-  int len = strlen(image);
+  unsigned int len = strlen(image);
   assert(len);
 
   char *start = &alloc->data[alloc->data_num];
   alloc->data_num += len;
+  assert(alloc->data_num < SV_ALLOCATOR_SIZE);
 
   return (sv_t) {start, len};
 }
@@ -66,8 +68,10 @@ sv_t sv_alloc_len(sv_allocator_t *alloc, unsigned int len) {
   assert(alloc);
   assert(len);
 
-  char *start = &alloc->data[alloc->data_num];
+
+  char *start = &(alloc->data[alloc->data_num]);
   alloc->data_num += len;
+  assert(alloc->data_num < SV_ALLOCATOR_SIZE);
 
   return (sv_t) {start, len};
 }

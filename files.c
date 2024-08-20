@@ -213,7 +213,7 @@ obj_t obj_decode_file(char *filename, sv_allocator_t *alloc) {
 
   obj_t obj = {0};
 
-  FILE *file = fopen(filename, "r");
+  FILE *file = fopen(filename, "rb");
   if (!file) {
     eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
   }
@@ -225,41 +225,41 @@ obj_t obj_decode_file(char *filename, sv_allocator_t *alloc) {
   }
 
   int global_table_size = 0;
-  assert(fread(&global_table_size, 2, 1, file) == 2);
+  assert(fread(&global_table_size, 2, 1, file) == 1);
   while (global_table_size > 0) {
     size_t len = 0;
     assert(fread(&len, 1, 1, file) == 1);
     obj.globals[obj.global_num].name = sv_alloc_len(alloc, len);
-    assert(fread(&obj.globals[obj.global_num].name.start, 1, len, file) == len);
-    assert(fread(&obj.globals[obj.global_num].pos, 2, 1, file) == 2);
+    assert(fread(obj.globals[obj.global_num].name.start, 1, len, file) == len);
+    assert(fread(&obj.globals[obj.global_num].pos, 2, 1, file) == 1);
     ++obj.global_num;
     global_table_size -= 1 + len + 2;
   }
   assert(global_table_size == 0);
 
   int extern_table_size = 0;
-  assert(fread(&extern_table_size, 2, 1, file) == 2);
+  assert(fread(&extern_table_size, 2, 1, file) == 1);
   while (extern_table_size > 0) {
     size_t len = 0;
     assert(fread(&len, 1, 1, file) == 1);
     obj.externs[obj.extern_num].name = sv_alloc_len(alloc, len);
-    assert(fread(&obj.externs[obj.extern_num].name.start, 1, len, file) == len);
+    assert(fread(obj.externs[obj.extern_num].name.start, 1, len, file) == len);
     assert(fread(&obj.externs[obj.extern_num].pos_num, 1, 1, file) == 1);
     for (int i = 0; i < obj.externs[obj.extern_num].pos_num; ++i) {
-      assert(fread(&obj.externs[obj.extern_num].pos[i], 2, 1, file) == 2);
+      assert(fread(&obj.externs[obj.extern_num].pos[i], 2, 1, file) == 1);
     }
     ++obj.extern_num;
     extern_table_size -= 1 + len + 1 + 2 * obj.externs[obj.extern_num].pos_num;
   }
   assert(extern_table_size == 0);
 
-  assert(fread(&obj.reloc_num, 2, 1, file) == 2);
+  assert(fread(&obj.reloc_num, 2, 1, file) == 1);
   for (int i = 0; i < obj.reloc_num; ++i) {
-    assert(fread(&obj.reloc_table[i].where, 2, 1, file) == 2);
-    assert(fread(&obj.reloc_table[i].what, 2, 1, file) == 2);
+    assert(fread(&obj.reloc_table[i].where, 2, 1, file) == 1);
+    assert(fread(&obj.reloc_table[i].what, 2, 1, file) == 1);
   }
 
-  assert(fread(&obj.code_size, 2, 1, file) == 2);
+  assert(fread(&obj.code_size, 2, 1, file) == 1);
   assert(fread(&obj.code, 1, obj.code_size, file) == obj.code_size);
 
   assert(fclose(file) == 0);
@@ -283,7 +283,7 @@ void obj_encode_file(obj_t *obj, char *filename) {
   for (int i = 0; i < obj->global_num; ++i) {
     size_t len = obj->globals[i].name.len;
     assert(fwrite(&len, 1, 1, file) == 1);
-    assert(fwrite(&obj->globals[i].name.start, 1, len, file) == len);
+    assert(fwrite(obj->globals[i].name.start, 1, len, file) == len);
     assert(fwrite(&obj->globals[i].pos, 2, 1, file) == 1);
     global_table_size += 1 + len + 2;
   }
@@ -297,7 +297,7 @@ void obj_encode_file(obj_t *obj, char *filename) {
     uint8_t len = obj->externs[i].name.len;
     uint8_t num = obj->externs[i].pos_num;
     assert(fwrite(&len, 1, 1, file) == 1);
-    assert(fwrite(&obj->externs[i].name.start, 1, len, file) == len);
+    assert(fwrite(obj->externs[i].name.start, 1, len, file) == len);
     assert(fwrite(&num, 1, 1, file) == 1);
     for (int j = 0; j < num; ++j) {
       assert(fwrite(&obj->externs[i].pos[j], 2, 1, file) == 1);
@@ -385,4 +385,16 @@ void exe_add_reloc(exe_t *exe, reloc_entry_t reloc) {
 
   assert(exe->reloc_num + 1 < RELOC_COUNT);
   exe->reloc_table[exe->reloc_num++] = reloc;
+}
+
+exe_t exe_decode_file(char *filename, sv_allocator_t *alloc) {
+  assert(filename);
+  assert(alloc);
+  TODO;
+}
+
+void exe_encode_file(exe_t *exe, char *filename) {
+  assert(exe);
+  assert(filename);
+  TODO;
 }

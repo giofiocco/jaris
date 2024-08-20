@@ -95,4 +95,7 @@ void exe_state_check_exe(exe_state_t *exes);
 void exe_add_reloc_offset(exe_t *exe, reloc_entry_t reloc, uint16_t offset);
 void exe_add_reloc(exe_t *exe, reloc_entry_t reloc);
 
+exe_t exe_decode_file(char *filename, sv_allocator_t *alloc);
+void exe_encode_file(exe_t *exe, char *filename);
+
 #endif // FILES_H__

@@ -29,6 +29,7 @@ int main(int argc, char **argv) {
   }
 
   exe_t exe = link(objs, parser.unflagi);
+  exe_encode_file(&exe, output);
 
   return 0;
 }
