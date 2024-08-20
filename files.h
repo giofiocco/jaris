@@ -87,6 +87,8 @@ void obj_add_hex2(obj_t *obj, uint16_t num);
 obj_t obj_decode_file(char *filename, sv_allocator_t *alloc);
 void obj_encode_file(obj_t *obj, char *filename);
 
+void exe_dump(exe_t *exe);
+
 uint16_t exe_state_find_global(exe_state_t *exes,  sv_t name);
 void exe_state_add_global(exe_state_t *exes, global_entry_t global, uint16_t offset);
 void exe_state_add_extern(exe_state_t *exes, extern_entry_t extern_, uint16_t offset);
@@ -95,7 +97,7 @@ void exe_state_check_exe(exe_state_t *exes);
 void exe_add_reloc_offset(exe_t *exe, reloc_entry_t reloc, uint16_t offset);
 void exe_add_reloc(exe_t *exe, reloc_entry_t reloc);
 
-exe_t exe_decode_file(char *filename, sv_allocator_t *alloc);
+exe_t exe_decode_file(char *filename);
 void exe_encode_file(exe_t *exe, char *filename);
 
 #endif // FILES_H__

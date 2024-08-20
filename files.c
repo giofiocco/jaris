@@ -29,6 +29,10 @@ void obj_dump(obj_t *obj) {
     }
     printf("]\n");
   }
+  printf("RELOC:\n");
+  for (int i = 0; i < obj->reloc_num; ++i) {
+    printf("\t%04X %04X\n", obj->reloc_table[i].where, obj->reloc_table[i].what);
+  }
   printf("CODE:\n");
   printf("\t");
   for (int i = 0; i < obj->code_size; ++i) {
@@ -37,6 +41,7 @@ void obj_dump(obj_t *obj) {
     }
     printf("%02X", obj->code[i]);
   }
+  printf("\n");
 }
 
 void obj_state_add_symbol(obj_state_t *objs, sv_t sv, uint16_t pos) {
@@ -221,7 +226,7 @@ obj_t obj_decode_file(char *filename, sv_allocator_t *alloc) {
   char magic_number[3] = {0};
   assert(fread(magic_number, 1, 3, file) == 3);
   if (strcmp(magic_number, "OBJ") != 0) {
-    eprintf("%s magic number is not OBJ: '%s'", filename, magic_number);
+    eprintf("%s: expected magic number to be 'OBJ': found '%s'", filename, magic_number);
   }
 
   int global_table_size = 0;
@@ -320,6 +325,23 @@ void obj_encode_file(obj_t *obj, char *filename) {
   assert(fclose(file) == 0);
 }
 
+void exe_dump(exe_t *exe) {
+  assert(exe);
+
+  printf("CODE:\n");
+  printf("\t");
+  for (int i = 0; i < exe->code_size; ++i) {
+    if (i != 0) {
+      printf(" ");
+    }
+    printf("%02X", exe->code[i]);
+  }
+  printf("\nRELOC:\n");
+  for (int i = 0; i < exe->reloc_num; ++i) {
+    printf("\t%04X %04X\n", exe->reloc_table[i].where, exe->reloc_table[i].what);
+  }
+}
+
 uint16_t exe_state_find_global(exe_state_t *exes, sv_t name) {
   assert(exes);
 
@@ -387,14 +409,55 @@ void exe_add_reloc(exe_t *exe, reloc_entry_t reloc) {
   exe->reloc_table[exe->reloc_num++] = reloc;
 }
 
-exe_t exe_decode_file(char *filename, sv_allocator_t *alloc) {
+exe_t exe_decode_file(char *filename) {
   assert(filename);
-  assert(alloc);
-  TODO;
+
+  exe_t exe = {0};
+
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  char magic_number[3] = {0};
+  assert(fread(magic_number, 1, 3, file) == 3);
+  if (strcmp(magic_number, "EXE") != 0) {
+    eprintf("%s: expected magic number to be 'EXE': found '%s'", filename, magic_number);
+  }
+
+  assert(fread(&exe.code_size, 2, 1, file) == 1);
+  assert(fread(exe.code, 1, exe.code_size, file) == exe.code_size);
+
+  assert(fread(&exe.reloc_num, 2, 1, file) == 1);
+  for (int i = 0; i < exe.reloc_num; ++i) {
+    assert(fread(&exe.reloc_table[i].where, 2, 1, file) == 1);
+    assert(fread(&exe.reloc_table[i].what, 2, 1, file) == 1);
+  }
+
+  assert(fclose(file) == 0);
+
+  return exe;
 }
 
 void exe_encode_file(exe_t *exe, char *filename) {
   assert(exe);
   assert(filename);
-  TODO;
+
+  FILE *file = fopen(filename, "wb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  assert(fwrite("EXE", 1, 3, file) == 3);
+
+  assert(fwrite(&exe->code_size, 2, 1, file) == 1);
+  assert(fwrite(&exe->code, 1, exe->code_size, file) == exe->code_size);
+
+  assert(fwrite(&exe->reloc_num, 2, 1, file) == 1);
+  for (int i = 0; i < exe->reloc_num; ++i) {
+    assert(fwrite(&exe->reloc_table[i].where, 2, 1, file) == 1);
+    assert(fwrite(&exe->reloc_table[i].what, 2, 1, file) == 1);
+  }
+
+  assert(fclose(file) == 0);
 }
