@@ -32,6 +32,16 @@ Jaris is a 16bit computer
 
 ## File Specifications
 
+### Exe file
+
+| size [B] | description                   |
+| :------- | :---------------------------- |
+| 3        | 'EXE'                         |
+| 2        | code size                     |
+|          | code                          |
+| 2        | number of reloc table entries |
+| 4\*#     | reloc table                   |
+
 ### Obj file
 
 | size [B] | description                   |
