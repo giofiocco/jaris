@@ -1,3 +1,7 @@
 *.o
 assembler
 linker
+encodemem
+inspect
+mem.bin
+sim

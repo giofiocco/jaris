@@ -19,6 +19,9 @@ void sector_push(uint8_t **sector, void *data, int count) {
   assert(*sector);
   assert(data);
   assert(count > 0);
+
+  memcpy(*sector, data, count);
+  *sector += count;
 }
 
 void sector_push_u8(uint8_t **sector, uint8_t data) {
