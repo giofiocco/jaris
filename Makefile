@@ -7,22 +7,29 @@ all: $(TARGETS)
 
 CFLAGS=-Wall -Wextra -Werror -std=c99
 
-assemble.o: assemble.c 
-	cc $(CFLAGS) -c $<
+build:
+	mkdir build
 
-instructions.o: instructions.c instructions.h sv.h
-	cc $(CFLAGS) -c $<
+build/assemble.o: assemble.c build 
+	cc $(CFLAGS) -o $@ -c $<
 
-files.o: files.c files.h instructions.o errors.h sv.h 
+build/instructions.o: instructions.c instructions.h sv.h build
+	cc $(CFLAGS) -o $@ -c $<
+
+build/files.o: files.c files.h build/instructions.o errors.h sv.h build 
 	cc $(CFLAGS) -o $@ -c $< 
 
-assembler: assembler.c assemble.o errors.h instructions.o files.o $(ARG_PARSER) 
+build/link.o: link.c build
+	cc $(CFLAGS) -o $@ -c $<
+
+MEM=$(shell find mem)
+mem.bin: encodemem $(MEM)
+	./encodemem
+
+assembler: assembler.c build/assemble.o errors.h build/instructions.o build/files.o $(ARG_PARSER) 
 	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c %.o, $^) 
 
-link.o: link.c
-	cc $(CFLAGS) -c $<
-
-linker: linker.c link.o files.o $(ARG_PARSER)
+linker: linker.c build/link.o build/files.o $(ARG_PARSER)
 	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c %.o, $^) 
 
 encodemem: encodemem.c
@@ -31,14 +38,8 @@ encodemem: encodemem.c
 sim: sim.c mem.bin $(ARG_PARSER)
 	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^)
 
-MEM=$(shell find mem)
-mem.bin: encodemem $(MEM)
-	./encodemem
-
-inspect: inspect.c files.o $(ARG_PARSER)
+inspect: inspect.c build/files.o $(ARG_PARSER)
 	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c %.o, $^)
 
 clean:
-	rm *.o
-	rm $(TARGETS)
-	mem.bin
+	rm -rf build/ $(TARGETS) mem.bin

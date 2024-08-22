@@ -1,7 +1,9 @@
 *.o
+build/
+mem/
+mem.bin
 assembler
 linker
 encodemem
 inspect
-mem.bin
 sim
