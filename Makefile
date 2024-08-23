@@ -1,5 +1,7 @@
 TARGETS=assembler linker encodemem sim inspect
-ARG_PARSER=arg_parser.h/arg_parser.h
+ARG_PARSER_LIB=mystb/arg_parser.h
+SV_LIB=mystb/sv.h
+ERRORS_LIB=mystb/errors.h
 
 all: $(TARGETS)
 
@@ -10,36 +12,28 @@ CFLAGS=-Wall -Wextra -Werror -std=c99
 build:
 	mkdir build
 
-build/assemble.o: assemble.c build 
-	cc $(CFLAGS) -o $@ -c $<
-
-build/instructions.o: instructions.c instructions.h sv.h build
-	cc $(CFLAGS) -o $@ -c $<
-
-build/files.o: files.c files.h build/instructions.o errors.h sv.h build 
-	cc $(CFLAGS) -o $@ -c $< 
-
-build/link.o: link.c build
-	cc $(CFLAGS) -o $@ -c $<
-
 MEM=$(shell find mem)
 mem.bin: encodemem $(MEM)
 	./encodemem
 
-assembler: assembler.c build/assemble.o errors.h build/instructions.o build/files.o $(ARG_PARSER) 
-	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c %.o, $^) 
+FILES_DEP=files.c files.h $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
+INSTRUCTIONS_DEP=instructions.c instructions.h $(SV_LIB)
+ASSEMBLE_DEP=assemble.c assemble.h $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
 
-linker: linker.c build/link.o build/files.o $(ARG_PARSER)
-	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c %.o, $^) 
+assembler: assembler.c $(ASSEMBLE_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB) 
+	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^) 
+
+linker: linker.c link.c $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ARG_PARSER_LIB) 
+	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^) 
 
 encodemem: encodemem.c
 	cc $(CFLAGS) -D_DEFAULT_SOURCE -o $@ $(filter %.c, $^)
 
-sim: sim.c mem.bin $(ARG_PARSER)
+sim: sim.c mem.bin $(ARG_PARSER_LIB)
 	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^)
 
-inspect: inspect.c build/files.o $(ARG_PARSER)
-	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c %.o, $^)
+inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
+	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^)
 
 clean:
-	rm -rf build/ $(TARGETS) mem.bin
+	rm -rf$(TARGETS) mem.bin

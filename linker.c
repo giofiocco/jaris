@@ -3,9 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "arg_parser.h/arg_parser.h"
+#define SV_IMPLEMENTATION
 #include "files.h"
 #include "instructions.h"
+#include "mystb/arg_parser.h"
 
 extern exe_t link(obj_t *objs_list, int objs_count);
 

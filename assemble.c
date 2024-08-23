@@ -3,10 +3,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define SV_IMPLEMENTATION
 #include "assemble.h"
-#include "errors.h"
 #include "instructions.h"
-#include "sv.h"
+#include "mystb/errors.h"
 
 #define MUL_PTR        0xF820
 #define DIV_PTR        0xF822

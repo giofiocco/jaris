@@ -3,11 +3,9 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "files.h"
 #define ERRORS_IMPLEMENTATION
-#include "errors.h"
-#define SV_IMPLEMENTATION
-#include "sv.h"
+#include "files.h"
+#include "mystb/errors.h"
 
 #define TODO assert(0 && "TO IMPLEMENT")
 

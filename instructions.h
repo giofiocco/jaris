@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "sv.h"
+#include "mystb/sv.h"
 
 typedef enum {
   NOP = 0,

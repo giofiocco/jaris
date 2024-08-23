@@ -5,9 +5,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "arg_parser.h/arg_parser.h"
-#include "errors.h"
+#define SV_IMPLEMENTATION
 #include "files.h"
+#include "mystb/arg_parser.h"
+#include "mystb/errors.h"
 
 int main(int argc, char **argv) {
   char *kind = NULL;

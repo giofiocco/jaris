@@ -4,9 +4,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "arg_parser.h/arg_parser.h"
 #include "assemble.h"
-#include "errors.h"
+#include "mystb/arg_parser.h"
+#include "mystb/errors.h"
 
 int main(int argc, char **argv) {
   int debug = 0;
