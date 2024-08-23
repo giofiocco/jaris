@@ -36,4 +36,4 @@ inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^)
 
 clean:
-	rm -rf$(TARGETS) mem.bin
+	rm $(TARGETS) mem.bin
