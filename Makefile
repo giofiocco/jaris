@@ -1,21 +1,21 @@
 TARGETS=assembler linker encodemem sim inspect
-ARG_PARSER_LIB=mystb/arg_parser.h
-SV_LIB=mystb/sv.h
-ERRORS_LIB=mystb/errors.h
+CFLAGS=-Wall -Wextra -Werror -std=c99
 
 all: $(TARGETS)
 
 .PHONY: clean
 
-CFLAGS=-Wall -Wextra -Werror -std=c99
-
-build:
-	mkdir build
-
 MEM=$(shell find mem)
 mem.bin: encodemem $(MEM)
 	./encodemem
 
+mem/__bootloader: asm/bootloader.asm assembler linker
+	./assembler -o asm/build/bootloader.o $<
+	./linker --bin -o mem/bootloader asm/build/bootloader.o
+
+ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
+SV_LIB=mystb/sv.h
+ERRORS_LIB=mystb/errors.h
 FILES_DEP=files.c files.h $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
 INSTRUCTIONS_DEP=instructions.c instructions.h $(SV_LIB)
 ASSEMBLE_DEP=assemble.c assemble.h $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
@@ -29,10 +29,10 @@ linker: linker.c link.c $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ARG_PARSER_LIB)
 encodemem: encodemem.c
 	cc $(CFLAGS) -D_DEFAULT_SOURCE -o $@ $(filter %.c, $^)
 
-sim: sim.c mem.bin $(ARG_PARSER_LIB)
+inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^)
 
-inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
+sim: sim.c $(ARG_PARSER_LIB) mem.bin mem/__bootloader
 	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^)
 
 clean:

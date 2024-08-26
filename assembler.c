@@ -4,33 +4,38 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "argparse/argparse.h"
 #include "assemble.h"
-#include "mystb/arg_parser.h"
 #include "mystb/errors.h"
 
 int main(int argc, char **argv) {
   int debug = 0;
   char *output = NULL;
 
-  arg_parser_t parser = {0};
-  parser.program_name = "assembler";
-  arg_parser_allow_unflag(&parser, "file");
-  arg_parser_add_arg(&parser, (arg_t){ARG_BOOL, NULL, 'd', "enable debug info", &debug});
-  arg_parser_add_arg(&parser, (arg_t){ARG_STRING, NULL, 'o', "output file name", &output});
-  arg_parser_parse(&parser, argc, argv);
+  struct argparse_option options[] = {
+    OPT_GROUP("Options"),
+    OPT_HELP(),
+    OPT_BOOLEAN('d', "debug", &debug, "enable debug info", NULL, 0, 1),
+    OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
+    OPT_END(),
+  };
 
-  if (parser.unflagi > 1) {
-    fprintf(stderr, "ERROR: too many files\n");
-    arg_parser_print_help(&parser);
+  struct argparse argparse;
+  argparse_init(&argparse,
+                options,
+                (const char *const[]){
+                  "assembler [options] file",
+                  NULL,
+                },
+                0);
+  argc = argparse_parse(&argparse, argc, (const char **)argv);
+  if (argc != 1) {
+    fprintf(stderr, "ERROR: expected ONE file\n");
+    argparse_usage(&argparse);
     exit(1);
   }
-  if (parser.unflagi < 1) {
-    fprintf(stderr, "ERROR: too few files\n");
-    arg_parser_print_help(&parser);
-    exit(1);
-  }
 
-  char *filename = parser.unflag[0];
+  char *filename = argv[0];
 
   FILE *file = fopen(filename, "r");
   if (!file) {
@@ -45,18 +50,23 @@ int main(int argc, char **argv) {
   buffer[size] = 0;
   assert(fclose(file) == 0);
 
-  obj_t obj = assemble(buffer, parser.unflag[0], debug);
+  obj_t obj = assemble(buffer, filename, debug);
 
   int output_to_free = output == NULL;
   if (output == NULL) {
     int len = strlen(filename);
+    int start = len;
+    while (start > 0 && filename[start] != '/') {
+      --start;
+    }
+    ++start;
     while (len > 0 && filename[len] != '.') {
       --len;
     }
     if (len == 0) {
       len = strlen(filename);
     }
-    sv_t name = {filename, len};
+    sv_t name = {filename + start, len - start};
     output = malloc(len + 3);
     snprintf(output, len + 3, SV_FMT ".o", SV_UNPACK(name));
   }

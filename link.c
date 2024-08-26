@@ -28,10 +28,23 @@ void exe_link_obj(exe_state_t *exes, obj_t *obj) {
   }
 }
 
-exe_t link(obj_t *objs_list, int objs_count) {
+exe_t link(obj_t *objs_list, int objs_count, int bin) {
   assert(objs_list);
 
   exe_state_t exes = {0};
+
+  if (!bin) {
+    obj_t boilerplate = {0};
+    boilerplate.externs[0].name = sv_from_cstr("_start");
+    boilerplate.externs[0].pos[0] = 2;
+    ++boilerplate.externs[0].pos_num;
+    ++boilerplate.extern_num;
+    boilerplate.code[0] = NOP;
+    boilerplate.code[1] = JMP;
+    boilerplate.code_size = 4;
+
+    exe_link_obj(&exes, &boilerplate);
+  }
 
   for (int i = 0; i < objs_count; ++i) {
     exe_link_obj(&exes, &objs_list[i]);
