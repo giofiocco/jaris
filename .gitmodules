@@ -1,6 +1,6 @@
-[submodule "arg_parser.h"]
-	path = arg_parser.h
-	url = https://github.com/giofiocco/arg_parser.h.git
 [submodule "mystb"]
 	path = mystb
 	url = https://github.com/giofiocco/mystb.git
+[submodule "argparse"]
+	path = argparse
+	url = https://github.com/cofyc/argparse.git
