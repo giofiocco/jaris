@@ -198,7 +198,7 @@ token_t token_next(tokenizer_t *tokenizer) {
       if (isalpha(*tokenizer->buffer) || *tokenizer->buffer == '_') {
         char *start = tokenizer->buffer;
         int len = 0;
-        while (isalpha(*tokenizer->buffer) || *tokenizer->buffer == '_') {
+        while (isalnum(*tokenizer->buffer) || *tokenizer->buffer == '_') {
           ++len;
           ++tokenizer->buffer;
         }
@@ -308,7 +308,8 @@ token_t preprocessor_token_next(preprocessor_t *pre) {
       macro->tokens[macro->tokeni++] = token;
     }
 
-    token = token_next(pre->tok);
+    token = preprocessor_token_next(pre);
+
   } else if (token.kind == T_SYM && sv_eq((sv_t){token.image.start + token.image.len - 4, 4}, sv_from_cstr("_ptr"))) {
     if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("mul_ptr"))) {
       token = (token_t){T_HEX2, token.image, token.loc, {.num = MUL_PTR}};
