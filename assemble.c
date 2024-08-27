@@ -75,41 +75,28 @@ typedef struct {
   int active_macro_tokeni;
 } preprocessor_t;
 
+// clang-format off
 char *token_kind_to_string(token_kind_t kind) {
   switch (kind) {
-    case T_NONE:
-      return "NONE";
-    case T_SYM:
-      return "SYM";
-    case T_INST:
-      return "INST";
-    case T_HEX:
-      return "HEX";
-    case T_HEX2:
-      return "HEX2";
-    case T_MACROO:
-      return "MACROO";
-    case T_MACROC:
-      return "MACROC";
-    case T_COLON:
-      return "COLON";
-    case T_REL:
-      return "REL";
-    case T_GLOBAL:
-      return "GLOBAL";
-    case T_EXTERN:
-      return "EXTERN";
-    case T_STRING:
-      return "STRING";
-    case T_ALIGN:
-      return "ALIGN";
-    case T_DB:
-      return "DB";
-    case T_INT:
-      return "INT";
+    case T_NONE: return "NONE";
+    case T_SYM: return "SYM";
+    case T_INST: return "INST";
+    case T_HEX: return "HEX";
+    case T_HEX2: return "HEX2";
+    case T_MACROO: return "MACROO";
+    case T_MACROC: return "MACROC";
+    case T_COLON: return "COLON";
+    case T_REL: return "REL";
+    case T_GLOBAL: return "GLOBAL";
+    case T_EXTERN: return "EXTERN";
+    case T_STRING: return "STRING";
+    case T_ALIGN: return "ALIGN";
+    case T_DB: return "DB";
+    case T_INT: return "INT";
   }
   assert(0);
 }
+// clang-format on
 
 void token_dump(token_t token) {
   printf(LOCATION_FMT " %-*.*s '" SV_FMT "'\n",
@@ -403,7 +390,7 @@ bytecode_t compile(preprocessor_t *pre) {
         case INST_LABEL_ARG:
           {
             token_t arg = preprocessor_token_expect(pre, T_SYM);
-            return (bytecode_t){BINSTRELLABEL, token.as.inst, {.sv = arg.image}};
+            return (bytecode_t){BINSTLABEL, token.as.inst, {.sv = arg.image}};
           }
           break;
         case INST_RELLABEL_ARG:

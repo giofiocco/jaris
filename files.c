@@ -9,6 +9,13 @@
 
 #define TODO assert(0 && "TO IMPLEMENT")
 
+void extern_entry_add_pos(extern_entry_t *e, uint16_t pos) {
+  assert(e);
+
+  assert(e->pos_num + 1 < EXTERN_COUNT);
+  e->pos[e->pos_num++] = pos;
+}
+
 void obj_dump(obj_t *obj) {
   assert(obj);
 
@@ -79,6 +86,21 @@ void obj_state_add_reloc(obj_state_t *objs, sv_t sv, uint16_t pos) {
 void obj_state_check_obj(obj_state_t *objs) {
   assert(objs);
 
+  if (0) {
+    printf("SYMBOLS:\n");
+    for (int i = 0; i < objs->symbol_num; ++i) {
+      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs->symbols[i].image), objs->symbols[i].pos);
+    }
+    printf("RELRELOCS:\n");
+    for (int i = 0; i < objs->relreloc_num; ++i) {
+      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs->relrelocs[i].image), objs->relrelocs[i].pos);
+    }
+    printf("RELOCS:\n");
+    for (int i = 0; i < objs->reloc_num; ++i) {
+      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs->relocs[i].image), objs->relocs[i].pos);
+    }
+  }
+
   for (int i = 0; i < objs->relreloc_num; ++i) {
     uint16_t pos = obj_state_find_symbol(objs, objs->relrelocs[i].image);
     if (pos == 0xFFFF) {
@@ -93,10 +115,16 @@ void obj_state_check_obj(obj_state_t *objs) {
   for (int i = 0; i < objs->reloc_num; ++i) {
     uint16_t pos = obj_state_find_symbol(objs, objs->relocs[i].image);
     if (pos == 0xFFFF) {
-      eprintf("label unset: " SV_FMT, SV_UNPACK(objs->relocs[i].image));
-    }
+      extern_entry_t *e = obj_find_extern(&objs->obj, objs->relocs[i].image);
 
-    obj_add_reloc(&objs->obj, objs->relocs[i].pos, pos);
+      if (e == NULL) {
+        eprintf("label unset: " SV_FMT, SV_UNPACK(objs->relocs[i].image));
+      }
+
+      extern_entry_add_pos(e, objs->relocs[i].pos);
+    } else {
+      obj_add_reloc(&objs->obj, objs->relocs[i].pos, pos);
+    }
   }
 
   for (int i = 0; i < objs->obj.global_num; ++i) {
@@ -164,7 +192,7 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
       obj_add_global(&objs->obj, bc.arg.sv);
       break;
     case BEXTERN:
-      TODO;
+      obj_add_extern(&objs->obj, bc.arg.sv);
       break;
     case BALIGN:
       if (objs->obj.code_size % 2 == 1) {
@@ -189,6 +217,25 @@ void obj_add_global(obj_t *obj, sv_t image) {
 
   assert(obj->global_num + 1 < GLOBAL_COUNT);
   obj->globals[obj->global_num++] = (global_entry_t){image, 0xFFFF};
+}
+
+void obj_add_extern(obj_t *obj, sv_t image) {
+  assert(obj);
+
+  assert(obj->extern_num + 1 < EXTERN_COUNT);
+  obj->externs[obj->extern_num++] = (extern_entry_t){image, 0, {}};
+}
+
+extern_entry_t *obj_find_extern(obj_t *obj, sv_t image) {
+  assert(obj);
+
+  for (int i = 0; i < obj->extern_num; ++i) {
+    if (sv_eq(image, obj->externs[i].name)) {
+      return &obj->externs[i];
+    }
+  }
+
+  return NULL;
 }
 
 void obj_add_instruction(obj_t *obj, instruction_t inst) {
@@ -251,8 +298,8 @@ obj_t obj_decode_file(char *filename, sv_allocator_t *alloc) {
     for (int i = 0; i < obj.externs[obj.extern_num].pos_num; ++i) {
       assert(fread(&obj.externs[obj.extern_num].pos[i], 2, 1, file) == 1);
     }
-    ++obj.extern_num;
     extern_table_size -= 1 + len + 1 + 2 * obj.externs[obj.extern_num].pos_num;
+    ++obj.extern_num;
   }
   assert(extern_table_size == 0);
 

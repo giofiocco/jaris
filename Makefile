@@ -6,12 +6,16 @@ all: $(TARGETS)
 .PHONY: clean
 
 MEM=$(shell find mem)
-mem.bin: encodemem $(MEM)
+mem.bin: encodemem mem/__bootloader mem/__os $(MEM)
 	./encodemem
 
 mem/__bootloader: asm/bootloader.asm assembler linker
 	./assembler -o asm/build/bootloader.o $<
-	./linker --bin -o mem/bootloader asm/build/bootloader.o
+	./linker --bin -o mem/__bootloader asm/build/bootloader.o
+
+mem/__os: asm/os.asm assembler linker
+	./assembler -o asm/build/os.o $<
+	./linker --bin -o mem/__os asm/build/os.o
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
 SV_LIB=mystb/sv.h
@@ -32,7 +36,7 @@ encodemem: encodemem.c
 inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^)
 
-sim: sim.c $(ARG_PARSER_LIB) mem.bin mem/__bootloader
+sim: sim.c $(ARG_PARSER_LIB) mem.bin 
 	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^)
 
 clean:

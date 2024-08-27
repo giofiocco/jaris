@@ -57,7 +57,7 @@ typedef struct {
   int symbol_num;
   symbol_t relocs[INTERN_RELOC_COUNT];
   int reloc_num;
- symbol_t relrelocs[RELOC_COUNT];
+  symbol_t relrelocs[RELOC_COUNT];
   int relreloc_num;
 } obj_state_t;
 
@@ -68,6 +68,8 @@ typedef struct {
   uint16_t extern_num;
   extern_entry_t externs[EXTERN_COUNT];
 } exe_state_t;
+
+void extern_entry_add_pos(extern_entry_t *e, uint16_t pos);
 
 void obj_dump(obj_t *obj);
 
@@ -80,6 +82,8 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc);
 
 void obj_add_reloc(obj_t *obj, uint16_t where, uint16_t what);
 void obj_add_global(obj_t *obj, sv_t image);
+void obj_add_extern(obj_t *obj, sv_t image);
+extern_entry_t *obj_find_extern(obj_t *obj, sv_t image);
 void obj_add_instruction(obj_t *obj, instruction_t inst);
 void obj_add_hex(obj_t *obj, uint8_t num);
 void obj_add_hex2(obj_t *obj, uint16_t num);
