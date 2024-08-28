@@ -132,7 +132,31 @@ uint16_t encode_dir(char *path, uint16_t parent, uint16_t head) {
   return sector_ptr;
 }
 
+void encode_bootloader(char *filename) {
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    fprintf(stderr, "ERROR: cannot open file '%s': %s\n", filename, strerror(errno));
+    exit(1);
+  }
+
+  fseek(file, 0, SEEK_END);
+  size_t size = ftell(file);
+  fseek(file, 0, SEEK_SET);
+
+  if (size > SECTOR_SIZE) {
+    fprintf(stderr, "ERROR: bootloader too big: %ld\n", size);
+    exit(1);
+  }
+
+  assert(fread(SECTORS[0], 1, size, file) == size);
+
+  ++SECTORI;
+
+  assert(fclose(file) == 0);
+}
+
 int main() {
+  encode_bootloader("mem/__bootloader");
   encode_dir("mem", 0xFFFF, 0xFFFF);
 
   FILE *file = fopen("mem.bin", "wb");
