@@ -434,7 +434,7 @@ bytecode_t compile(preprocessor_t *pre) {
   assert(0);
 }
 
-obj_t assemble(char *buffer, char *filename, debug_flag_t flag) {
+obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
   assert(buffer);
 
   tokenizer_t tokenizer;
@@ -457,6 +457,23 @@ obj_t assemble(char *buffer, char *filename, debug_flag_t flag) {
   while ((bc = compile(&pre)).kind != BNONE) {
     obj_compile_bytecode(&objs, bc);
   }
+
+  if (flag & DEBUG_OBJ_STATE) {
+    printf("SYMBOLS:\n");
+    for (int i = 0; i < objs.symbol_num; ++i) {
+      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs.symbols[i].image), objs.symbols[i].pos);
+    }
+    printf("RELRELOCS:\n");
+    for (int i = 0; i < objs.relreloc_num; ++i) {
+      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs.relrelocs[i].image), objs.relrelocs[i].pos);
+    }
+    printf("RELOCS:\n");
+    for (int i = 0; i < objs.reloc_num; ++i) {
+      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs.relocs[i].image), objs.relocs[i].pos);
+    }
+    obj_dump(&objs.obj);
+  }
+
   obj_state_check_obj(&objs);
 
   return objs.obj;

@@ -15,8 +15,9 @@ int main(int argc, char **argv) {
   struct argparse_option options[] = {
     OPT_GROUP("Options"),
     OPT_HELP(),
-    OPT_BOOLEAN('d', "debug", &debug, "enable debug info", NULL, 0, 1),
     OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
+    OPT_BIT(0, "dtok", &debug, "tokenizer debug info", NULL, DEBUG_TOKENIZER, 0),
+    OPT_BIT(0, "dobj", &debug, "obj state debug info", NULL, DEBUG_OBJ_STATE, 0),
     OPT_END(),
   };
 

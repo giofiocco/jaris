@@ -86,21 +86,6 @@ void obj_state_add_reloc(obj_state_t *objs, sv_t sv, uint16_t pos) {
 void obj_state_check_obj(obj_state_t *objs) {
   assert(objs);
 
-  if (0) {
-    printf("SYMBOLS:\n");
-    for (int i = 0; i < objs->symbol_num; ++i) {
-      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs->symbols[i].image), objs->symbols[i].pos);
-    }
-    printf("RELRELOCS:\n");
-    for (int i = 0; i < objs->relreloc_num; ++i) {
-      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs->relrelocs[i].image), objs->relrelocs[i].pos);
-    }
-    printf("RELOCS:\n");
-    for (int i = 0; i < objs->reloc_num; ++i) {
-      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs->relocs[i].image), objs->relocs[i].pos);
-    }
-  }
-
   for (int i = 0; i < objs->relreloc_num; ++i) {
     uint16_t pos = obj_state_find_symbol(objs, objs->relrelocs[i].image);
     if (pos == 0xFFFF) {
