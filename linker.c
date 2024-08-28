@@ -7,24 +7,20 @@
 #include "argparse/argparse.h"
 #include "files.h"
 #include "instructions.h"
-
-extern exe_t link(obj_t *objs_list, int objs_count, int bin);
+#include "link.h"
 
 int main(int argc, char **argv) {
-  int debug = 0;
-  int bin = 0;
+  int flags = 0;
   char *output = "a.out";
 
   struct argparse_option options[] = {
     OPT_GROUP("Options"),
     OPT_HELP(),
-    OPT_BOOLEAN('d', "debug", &debug, "enable debug info", NULL, 0, 1),
-    OPT_BOOLEAN(0, "bin", &bin, "output only instructions (no EXE header)", NULL, 0, 1),
     OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
+    OPT_BIT(0, "bin", &flags, "output file with only code (no header)", NULL, LINK_FLAG_BIN, 0),
+    OPT_BIT(0, "dexe", &flags, "exe state debug info", NULL, LINK_FLAG_EXE_STATE, 0),
     OPT_END(),
   };
-
-  // TODO: check if no -o is provided
 
   struct argparse argparse;
   argparse_init(&argparse,
@@ -49,7 +45,7 @@ int main(int argc, char **argv) {
     objs[i] = obj_decode_file(argv[i], &alloc);
   }
 
-  exe_t exe = link(objs, argc, bin);
+  exe_t exe = link(objs, argc, flags);
   exe_encode_file(&exe, output);
 
   return 0;

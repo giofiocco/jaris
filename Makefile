@@ -5,17 +5,20 @@ all: $(TARGETS)
 
 .PHONY: clean
 
-MEM=$(shell find mem)
-mem.bin: encodemem mem/__bootloader mem/__os $(MEM)
+mem.bin: encodemem mem/__bootloader mem/__os $(wildcard mem/*)
 	./encodemem
 
-mem/__bootloader: asm/bootloader.asm assembler linker
-	./assembler -o asm/build/bootloader.o $<
-	./linker --bin -o mem/__bootloader asm/build/bootloader.o
+asm/build:
+	mkdir asm/build
 
-mem/__os: asm/os.asm assembler linker
-	./assembler -o asm/build/os.o $<
-	./linker --bin -o mem/__os asm/build/os.o
+asm/build/%.o: asm/%.asm assembler asm/build 
+	./assembler -o $@ $<
+
+mem/__bootloader: asm/build/bootloader.o linker
+	./linker --bin -o $@ $<
+
+mem/__os: asm/build/os.o assembler linker
+	./linker --dexe -o $@ $<
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
 SV_LIB=mystb/sv.h

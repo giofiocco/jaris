@@ -413,7 +413,7 @@ void exe_state_check_exe(exe_state_t *exes) {
   for (int i = 0; i < exes->extern_num; ++i) {
     extern_entry_t extern_ = exes->externs[i];
     uint16_t pos = exe_state_find_global(exes, extern_.name);
-    if (pos != 0xFFFF) {
+    if (pos == 0xFFFF) {
       eprintf("global unset: " SV_FMT, SV_UNPACK(extern_.name));
     }
 
