@@ -11,12 +11,12 @@ typedef struct {
 } reloc_entry_t;
 
 typedef struct {
-  sv_t name;
+  char name[LABEL_MAX_LEN];
   uint16_t pos;
 } global_entry_t;
 
 typedef struct {
-  sv_t name;
+  char name[LABEL_MAX_LEN];
   uint8_t pos_num;
   uint16_t pos[256];
 } extern_entry_t;
@@ -47,7 +47,7 @@ typedef struct {
 #define INTERN_RELOC_COUNT 256
 
 typedef struct {
-  sv_t image;
+  char image[LABEL_MAX_LEN];
   uint16_t pos;
 } symbol_t;
 
@@ -73,17 +73,17 @@ void extern_entry_add_pos(extern_entry_t *e, uint16_t pos);
 
 void obj_dump(obj_t *obj);
 
-void obj_state_add_symbol(obj_state_t *objs, sv_t sv, uint16_t pos);
-uint16_t obj_state_find_symbol(obj_state_t *objs, sv_t sv);
-void obj_state_add_reloc(obj_state_t *objs, sv_t sv, uint16_t pos);
-void obj_state_add_relreloc(obj_state_t *objs, sv_t sv, uint16_t pos);
+void obj_state_add_symbol(obj_state_t *objs, char *label, uint16_t pos);
+uint16_t obj_state_find_symbol(obj_state_t *objs, char *label);
+void obj_state_add_reloc(obj_state_t *objs, char *label, uint16_t pos);
+void obj_state_add_relreloc(obj_state_t *objs, char *label, uint16_t pos);
 void obj_state_check_obj(obj_state_t *objs);
 void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc);
 
 void obj_add_reloc(obj_t *obj, uint16_t where, uint16_t what);
-void obj_add_global(obj_t *obj, sv_t image);
-void obj_add_extern(obj_t *obj, sv_t image);
-extern_entry_t *obj_find_extern(obj_t *obj, sv_t image);
+void obj_add_global(obj_t *obj, char *image);
+void obj_add_extern(obj_t *obj, char *image);
+extern_entry_t *obj_find_extern(obj_t *obj, char *image);
 void obj_add_instruction(obj_t *obj, instruction_t inst);
 void obj_add_hex(obj_t *obj, uint8_t num);
 void obj_add_hex2(obj_t *obj, uint16_t num);
@@ -93,7 +93,7 @@ void obj_encode_file(obj_t *obj, char *filename);
 
 void exe_dump(exe_t *exe);
 
-uint16_t exe_state_find_global(exe_state_t *exes,  sv_t name);
+uint16_t exe_state_find_global(exe_state_t *exes, char *name);
 void exe_state_add_global(exe_state_t *exes, global_entry_t global, uint16_t offset);
 void exe_state_add_extern(exe_state_t *exes, extern_entry_t extern_, uint16_t offset);
 void exe_state_check_exe(exe_state_t *exes);

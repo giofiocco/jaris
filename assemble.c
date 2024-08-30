@@ -354,22 +354,26 @@ bytecode_t compile(preprocessor_t *pre) {
 
   token_t token = preprocessor_token_next(pre);
 
+  bytecode_t bytecode = {0};
+
   switch (token.kind) {
     case T_SYM:
       preprocessor_token_expect(pre, T_COLON);
-      return (bytecode_t){BSETLABEL, 0, {.sv = token.image}};
+      bytecode.kind = BSETLABEL;
+      memcpy(bytecode.arg.string, token.image.start, token.image.len);
       break;
     case T_INST:
       switch (instruction_stat(token.as.inst).arg) {
         case INST_NO_ARGS:
-          return (bytecode_t){BINST, token.as.inst, {}};
+          bytecode = (bytecode_t){BINST, token.as.inst, {}};
+          break;
         case INST_8BITS_ARG:
           {
             token_t arg = preprocessor_token_next(pre);
             if (arg.kind == T_HEX) {
-              return (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.as.num}};
+              bytecode = (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.as.num}};
             } else if (arg.kind == T_STRING && arg.image.len == 3) {
-              return (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.image.start[1]}};
+              bytecode = (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.image.start[1]}};
             } else {
               eprintfloc(arg.loc, "expected HEX or STRING with len 1, found %s", token_kind_to_string(arg.kind));
             }
@@ -379,9 +383,10 @@ bytecode_t compile(preprocessor_t *pre) {
           {
             token_t arg = preprocessor_token_next(pre);
             if (arg.kind == T_HEX2) {
-              return (bytecode_t){BINSTHEX2, token.as.inst, {.num = arg.as.num}};
+              bytecode = (bytecode_t){BINSTHEX2, token.as.inst, {.num = arg.as.num}};
             } else if (arg.kind == T_SYM) {
-              return (bytecode_t){BINSTLABEL, token.as.inst, {.sv = arg.image}};
+              bytecode = (bytecode_t){BINSTLABEL, token.as.inst, {}};
+              memcpy(bytecode.arg.string, arg.image.start, arg.image.len);
             } else {
               eprintfloc(arg.loc, "expected HEX2, found %s", token_kind_to_string(arg.kind));
             }
@@ -390,14 +395,16 @@ bytecode_t compile(preprocessor_t *pre) {
         case INST_LABEL_ARG:
           {
             token_t arg = preprocessor_token_expect(pre, T_SYM);
-            return (bytecode_t){BINSTLABEL, token.as.inst, {.sv = arg.image}};
+            bytecode = (bytecode_t){BINSTLABEL, token.as.inst, {}};
+            memcpy(bytecode.arg.string, arg.image.start, arg.image.len);
           }
           break;
         case INST_RELLABEL_ARG:
           {
             preprocessor_token_expect(pre, T_REL);
             token_t arg = preprocessor_token_expect(pre, T_SYM);
-            return (bytecode_t){BINSTRELLABEL, token.as.inst, {.sv = arg.image}};
+            bytecode = (bytecode_t){BINSTRELLABEL, token.as.inst, {}};
+            memcpy(bytecode.arg.string, arg.image.start, arg.image.len);
           }
           break;
       }
@@ -406,22 +413,26 @@ bytecode_t compile(preprocessor_t *pre) {
     case T_EXTERN:
       {
         token_t arg = preprocessor_token_expect(pre, T_SYM);
-        return (bytecode_t){token.kind == T_GLOBAL ? BGLOBAL : BEXTERN, 0, {.sv = arg.image}};
+        bytecode = (bytecode_t){token.kind == T_GLOBAL ? BGLOBAL : BEXTERN, 0, {}};
+        memcpy(bytecode.arg.string, arg.image.start, arg.image.len);
       }
       break;
     case T_ALIGN:
-      return (bytecode_t){BALIGN, 0, {}};
+      bytecode = (bytecode_t){BALIGN, 0, {}};
+      break;
     case T_DB:
       {
         token_t arg = preprocessor_token_expect(pre, T_INT);
-        return (bytecode_t){BDB, 0, {.num = arg.as.num}};
+        bytecode = (bytecode_t){BDB, 0, {.num = arg.as.num}};
       }
       break;
     case T_HEX:
     case T_HEX2:
-      return (bytecode_t){token.kind == T_HEX ? BHEX : BHEX2, 0, {.num = token.as.num}};
+      bytecode = (bytecode_t){token.kind == T_HEX ? BHEX : BHEX2, 0, {.num = token.as.num}};
+      break;
     case T_STRING:
-      return (bytecode_t){BSTRING, 0, {.sv = token.image}};
+      memcpy(bytecode.arg.string, token.image.start, token.image.len);
+      break;
     case T_NONE:
       return (bytecode_t){BNONE, 0, {}};
     case T_MACROO:
@@ -431,7 +442,8 @@ bytecode_t compile(preprocessor_t *pre) {
     case T_INT:
       eprintfloc(token.loc, "invalid token: %s", token_kind_to_string(token.kind));
   }
-  assert(0);
+
+  return bytecode;
 }
 
 obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
@@ -461,15 +473,15 @@ obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
   if (flag & DEBUG_OBJ_STATE) {
     printf("SYMBOLS:\n");
     for (int i = 0; i < objs.symbol_num; ++i) {
-      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs.symbols[i].image), objs.symbols[i].pos);
+      printf("\t%s %04X\n", objs.symbols[i].image, objs.symbols[i].pos);
     }
     printf("RELRELOCS:\n");
     for (int i = 0; i < objs.relreloc_num; ++i) {
-      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs.relrelocs[i].image), objs.relrelocs[i].pos);
+      printf("\t%s %04X\n", objs.relrelocs[i].image, objs.relrelocs[i].pos);
     }
     printf("RELOCS:\n");
     for (int i = 0; i < objs.reloc_num; ++i) {
-      printf("\t" SV_FMT " %04X\n", SV_UNPACK(objs.relocs[i].image), objs.relocs[i].pos);
+      printf("\t%s %04X\n", objs.relocs[i].image, objs.relocs[i].pos);
     }
     obj_dump(&objs.obj);
   }

@@ -5,6 +5,8 @@
 
 #include "mystb/sv.h"
 
+#define LABEL_MAX_LEN 256
+
 typedef enum {
   NOP = 0,
   INCA, DECA,
@@ -44,7 +46,7 @@ typedef struct {
   instruction_t inst;
   union {
     uint16_t num;
-    sv_t sv;
+    char string[LABEL_MAX_LEN];
   } arg;
 } bytecode_t;
 

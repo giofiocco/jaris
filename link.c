@@ -36,7 +36,7 @@ exe_t link(obj_t *objs_list, int objs_count, link_debug_flag_t flag) {
 
   if (!(flag & LINK_FLAG_BIN)) {
     obj_t boilerplate = {0};
-    boilerplate.externs[0].name = sv_from_cstr("_start");
+    strcpy(boilerplate.externs[0].name, "_start");
     boilerplate.externs[0].pos[0] = 2;
     ++boilerplate.externs[0].pos_num;
     ++boilerplate.extern_num;
@@ -54,11 +54,11 @@ exe_t link(obj_t *objs_list, int objs_count, link_debug_flag_t flag) {
   if (flag & LINK_FLAG_EXE_STATE) {
     printf("GLOBALS:\n");
     for (int i = 0; i < exes.global_num; ++i) {
-      printf("\t" SV_FMT " %04X\n", SV_UNPACK(exes.globals[i].name), exes.globals[i].pos);
+      printf("\t%s %04X\n", exes.globals[i].name, exes.globals[i].pos);
     }
     printf("EXTERNS:\n");
     for (int i = 0; i < exes.extern_num; ++i) {
-      printf("\t" SV_FMT " [", SV_UNPACK(exes.externs[i].name));
+      printf("\t%s [", exes.externs[i].name);
       for (int j = 0; j < exes.externs[i].pos_num; ++j) {
         if (j != 0) {
           printf(" ");

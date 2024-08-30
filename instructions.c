@@ -3,121 +3,68 @@
 
 #include "instructions.h"
 
+// clang-format off
 char *instruction_to_string(instruction_t instruction) {
   switch (instruction) {
-    case NOP:
-      return "NOP";
-    case INCA:
-      return "INCA";
-    case DECA:
-      return "DECA";
-    case RAM_AL:
-      return "RAM_AL";
-    case RAM_BL:
-      return "RAM_BL";
-    case RAM_A:
-      return "RAM_A";
-    case RAM_B:
-      return "RAM_B";
-    case INCSP:
-      return "INCSP";
-    case DECSP:
-      return "DECSP";
-    case PUSHA:
-      return "PUSHA";
-    case POPA:
-      return "POPA";
-    case PEEKA:
-      return "PEEKA";
-    case PEEKAR:
-      return "PEEKAR";
-    case PUSHAR:
-      return "PUSHAR";
-    case PUSHB:
-      return "PUSHB";
-    case POPB:
-      return "POPB";
-    case PEEKB:
-      return "PEEKB";
-    case SUM:
-      return "SUM";
-    case SUB:
-      return "SUB";
-    case SHR:
-      return "SHR";
-    case SHL:
-      return "SHL";
-    case CMPA:
-      return "CMPA";
-    case CMPB:
-      return "CMPB";
-    case JMP:
-      return "JMP";
-    case JMPR:
-      return "JMPR";
-    case JMPRZ:
-      return "JMPRZ";
-    case JMPRN:
-      return "JMPRN";
-    case JMPRC:
-      return "JMPRC";
-    case JMPRNZ:
-      return "JMPRNZ";
-    case JMPRNN:
-      return "JMPRNN";
-    case JMPRNC:
-      return "JMPRNC";
-    case JMPA:
-      return "JMPA";
-    case A_B:
-      return "A_B";
-    case B_A:
-      return "B_A";
-    case B_AH:
-      return "B_AH";
-    case AL_rB:
-      return "AL_rB";
-    case A_rB:
-      return "A_rB";
-    case rB_AL:
-      return "rB_AL";
-    case rB_A:
-      return "rB_A";
-    case A_SP:
-      return "A_SP";
-    case SP_A:
-      return "SP_A";
-    case A_SEC:
-      return "A_SEC";
-    case SEC_A:
-      return "SEC_A";
-    case RAM_NDX:
-      return "RAM_NDX";
-    case INCNDX:
-      return "INCNDX";
-    case NDX_A:
-      return "NDX_A";
-    case A_NDX:
-      return "A_NDX";
-    case MEM_A:
-      return "MEM_A";
-    case MEM_AH:
-      return "MEM_AH";
-    case CALL:
-      return "CALL";
-    case CALLR:
-      return "CALLR";
-    case CALLrRAM:
-      return "CALLrRAM";
-    case RET:
-      return "RET";
-    case KEY:
-      return "KEY";
-    case HLT:
-      return "HLT";
+    case NOP: return "NOP";
+    case INCA: return "INCA";
+    case DECA: return "DECA";
+    case RAM_AL: return "RAM_AL";
+    case RAM_BL: return "RAM_BL";
+    case RAM_A: return "RAM_A";
+    case RAM_B: return "RAM_B";
+    case INCSP: return "INCSP";
+    case DECSP: return "DECSP";
+    case PUSHA: return "PUSHA";
+    case POPA: return "POPA";
+    case PEEKA: return "PEEKA";
+    case PEEKAR: return "PEEKAR";
+    case PUSHAR: return "PUSHAR";
+    case PUSHB: return "PUSHB";
+    case POPB: return "POPB";
+    case PEEKB: return "PEEKB";
+    case SUM: return "SUM";
+    case SUB: return "SUB";
+    case SHR: return "SHR";
+    case SHL: return "SHL";
+    case CMPA: return "CMPA";
+    case CMPB: return "CMPB";
+    case JMP: return "JMP";
+    case JMPR: return "JMPR";
+    case JMPRZ: return "JMPRZ";
+    case JMPRN: return "JMPRN";
+    case JMPRC: return "JMPRC";
+    case JMPRNZ: return "JMPRNZ";
+    case JMPRNN: return "JMPRNN";
+    case JMPRNC: return "JMPRNC";
+    case JMPA: return "JMPA";
+    case A_B: return "A_B";
+    case B_A: return "B_A";
+    case B_AH: return "B_AH";
+    case AL_rB: return "AL_rB";
+    case A_rB: return "A_rB";
+    case rB_AL: return "rB_AL";
+    case rB_A: return "rB_A";
+    case A_SP: return "A_SP";
+    case SP_A: return "SP_A";
+    case A_SEC: return "A_SEC";
+    case SEC_A: return "SEC_A";
+    case RAM_NDX: return "RAM_NDX";
+    case INCNDX: return "INCNDX";
+    case NDX_A: return "NDX_A";
+    case A_NDX: return "A_NDX";
+    case MEM_A: return "MEM_A";
+    case MEM_AH: return "MEM_AH";
+    case CALL: return "CALL";
+    case CALLR: return "CALLR";
+    case CALLrRAM: return "CALLrRAM";
+    case RET: return "RET";
+    case KEY: return "KEY";
+    case HLT: return "HLT";
   }
   assert(0);
 }
+// clang-format on
 
 int sv_to_instruction(sv_t sv, instruction_t *out) {
   if (sv_eq(sv, sv_from_cstr("NOP"))) {
@@ -285,10 +232,10 @@ void bytecode_dump(bytecode_t bc) {
       printf("INSTHEX2 %s 0x%04X\n", instruction_to_string(bc.inst), bc.arg.num);
       break;
     case BINSTLABEL:
-      printf("INSTLABEL %s " SV_FMT "\n", instruction_to_string(bc.inst), SV_UNPACK(bc.arg.sv));
+      printf("INSTLABEL %s %s\n", instruction_to_string(bc.inst), bc.arg.string);
       break;
     case BINSTRELLABEL:
-      printf("INSTRELLABEL %s " SV_FMT "\n", instruction_to_string(bc.inst), SV_UNPACK(bc.arg.sv));
+      printf("INSTRELLABEL %s  %s, \n", instruction_to_string(bc.inst), bc.arg.string);
       break;
     case BHEX:
       printf("HEX 0x%02X\n", bc.arg.num);
@@ -297,16 +244,16 @@ void bytecode_dump(bytecode_t bc) {
       printf("HEX2 0x%02X\n", bc.arg.num);
       break;
     case BSTRING:
-      printf("STRING " SV_FMT "\n", SV_UNPACK(bc.arg.sv));
+      printf("STRING  %s, \n", bc.arg.string);
       break;
     case BSETLABEL:
-      printf("SETLABEL " SV_FMT "\n", SV_UNPACK(bc.arg.sv));
+      printf("SETLABEL  %s, \n", bc.arg.string);
       break;
     case BGLOBAL:
-      printf("GLOBAL " SV_FMT "\n", SV_UNPACK(bc.arg.sv));
+      printf("GLOBAL  %s, \n", bc.arg.string);
       break;
     case BEXTERN:
-      printf("EXTERN " SV_FMT "\n", SV_UNPACK(bc.arg.sv));
+      printf("EXTERN  %s, \n", bc.arg.string);
       break;
     case BALIGN:
       printf("ALIGN\n");
