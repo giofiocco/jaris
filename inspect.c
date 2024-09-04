@@ -134,17 +134,16 @@ void disassemble(uint8_t *code, uint16_t code_size) {
   assert(code);
 
   char *inst = NULL;
-  int was_inst = 0;
+  int first_inst = 1;
 
   printf("DISASSEMBLED CODE:\n\t");
   for (int i = 0; i < code_size;) {
     inst = instruction_to_string(code[i]);
-    if (was_inst) {
-      printf("\n\t");
-      was_inst = 0;
-    }
     if (code[i] != 0 && inst != NULL) {
-      was_inst = 1;
+      if (first_inst) {
+        printf("\n\t");
+        first_inst = 0;
+      }
       switch (instruction_stat(code[i]).arg) {
         case INST_NO_ARGS:
           printf("%-*s ", INSTRUCTION_MAX_LEN, inst);
@@ -164,9 +163,11 @@ void disassemble(uint8_t *code, uint16_t code_size) {
           i += 3;
           break;
       }
+      printf("\n\t");
     } else {
       printf("%02X ", code[i]);
       ++i;
     }
   }
+  printf("\n");
 }
