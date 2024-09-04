@@ -6,6 +6,8 @@ Jaris is a 16bit computer
 
 1. [Assembler](#assembler)
 2. [File Specifications](#file-specifications)
+   - [EXE](#exe-file)
+   - [OBJ](#obj-file)
 
 ## Assembler
 
@@ -32,7 +34,7 @@ Jaris is a 16bit computer
 
 ## File Specifications
 
-### Exe file
+### EXE file
 
 | size [B] | description                   |
 | :------- | :---------------------------- |
@@ -42,7 +44,7 @@ Jaris is a 16bit computer
 | 2        | number of reloc table entries |
 | 4\*#     | reloc table                   |
 
-### Obj file
+### OBJ file
 
 | size [B] | description                   |
 | :------- | :---------------------------- |

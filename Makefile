@@ -17,7 +17,7 @@ asm/build/%.o: asm/%.asm assembler asm/build
 mem/__bootloader: asm/build/bootloader.o linker
 	./linker --bin -o $@ $<
 
-mem/__os: asm/build/os.o assembler linker
+mem/__os: asm/build/os.o linker
 	./linker --dexe -o $@ $<
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
