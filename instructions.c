@@ -62,7 +62,7 @@ char *instruction_to_string(instruction_t instruction) {
     case KEY: return "KEY";
     case HLT: return "HLT";
   }
-  assert(0);
+  return NULL;
 }
 // clang-format on
 

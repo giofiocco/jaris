@@ -7,6 +7,7 @@
 
 #define LABEL_MAX_LEN 256
 
+// clang-format off
 typedef enum {
   NOP = 0,
   INCA, DECA,
@@ -25,6 +26,8 @@ typedef enum {
   KEY,
   HLT = 0x3F
 } instruction_t;
+// clang-format on
+#define INSTRUCTION_MAX_LEN 8
 
 typedef struct {
   enum {
@@ -66,4 +69,4 @@ instruction_stat_t instruction_stat(instruction_t instruction);
 
 void bytecode_dump(bytecode_t bc);
 
-#endif // INSTRUCTIONS_H__
+#endif  // INSTRUCTIONS_H__
