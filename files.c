@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define ERRORS_IMPLEMENTATION
 #include "files.h"
 #include "mystb/errors.h"
 

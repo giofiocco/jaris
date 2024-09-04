@@ -22,7 +22,7 @@ mem/__os: asm/build/os.o assembler linker
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
 SV_LIB=mystb/sv.h
-ERRORS_LIB=mystb/errors.h
+ERRORS_LIB=errors.c errors.h
 FILES_DEP=files.c files.h $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
 INSTRUCTIONS_DEP=instructions.c instructions.h $(SV_LIB)
 ASSEMBLE_DEP=assemble.c assemble.h $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
