@@ -471,9 +471,9 @@ obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
   }
 
   if (flag & DEBUG_OBJ_STATE) {
-    printf("SYMBOLS:\n");
-    for (int i = 0; i < objs.symbol_num; ++i) {
-      printf("\t%s %04X\n", objs.symbols[i].image, objs.symbols[i].pos);
+    printf("labelS:\n");
+    for (int i = 0; i < objs.label_num; ++i) {
+      printf("\t%s %04X\n", objs.labels[i].image, objs.labels[i].pos);
     }
     printf("RELRELOCS:\n");
     for (int i = 0; i < objs.relreloc_num; ++i) {

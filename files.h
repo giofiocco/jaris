@@ -23,7 +23,7 @@ typedef struct {
 
 #define GLOBAL_COUNT 256
 #define EXTERN_COUNT 256
-#define RELOC_COUNT 1024
+#define RELOC_COUNT  1024
 
 typedef struct {
   uint16_t global_num;
@@ -43,21 +43,21 @@ typedef struct {
   reloc_entry_t reloc_table[RELOC_COUNT];
 } exe_t;
 
-#define SYMBOL_COUNT 256
+#define LABEL_COUNT        256
 #define INTERN_RELOC_COUNT 256
 
 typedef struct {
   char image[LABEL_MAX_LEN];
   uint16_t pos;
-} symbol_t;
+} label_t;
 
 typedef struct {
   obj_t obj;
-  symbol_t symbols[SYMBOL_COUNT];
-  int symbol_num;
-  symbol_t relocs[INTERN_RELOC_COUNT];
+  label_t labels[LABEL_COUNT];
+  int label_num;
+  label_t relocs[INTERN_RELOC_COUNT];
   int reloc_num;
-  symbol_t relrelocs[RELOC_COUNT];
+  label_t relrelocs[RELOC_COUNT];
   int relreloc_num;
 } obj_state_t;
 
@@ -73,8 +73,8 @@ void extern_entry_add_pos(extern_entry_t *e, uint16_t pos);
 
 void obj_dump(obj_t *obj);
 
-void obj_state_add_symbol(obj_state_t *objs, char *label, uint16_t pos);
-uint16_t obj_state_find_symbol(obj_state_t *objs, char *label);
+void obj_state_add_label(obj_state_t *objs, char *label, uint16_t pos);
+uint16_t obj_state_find_label(obj_state_t *objs, char *label);
 void obj_state_add_reloc(obj_state_t *objs, char *label, uint16_t pos);
 void obj_state_add_relreloc(obj_state_t *objs, char *label, uint16_t pos);
 void obj_state_check_obj(obj_state_t *objs);
@@ -104,4 +104,4 @@ void exe_add_reloc(exe_t *exe, reloc_entry_t reloc);
 exe_t exe_decode_file(char *filename);
 void exe_encode_file(exe_t *exe, char *filename);
 
-#endif // FILES_H__
+#endif  // FILES_H__

@@ -49,55 +49,55 @@ void obj_dump(obj_t *obj) {
   printf("\n");
 }
 
-void obj_state_add_symbol(obj_state_t *objs, char *label, uint16_t pos) {
+void obj_state_add_label(obj_state_t *objs, char *label, uint16_t pos) {
   assert(objs);
   assert(label);
 
-  assert(objs->symbol_num + 1 < SYMBOL_COUNT);
-  strcpy(objs->symbols[objs->symbol_num].image, label);
-  objs->symbols[objs->symbol_num].pos = pos;
-  ++objs->symbol_num;
+  assert(objs->label_num + 1 < LABEL_COUNT);
+  strcpy(objs->labels[objs->label_num].image, label);
+  objs->labels[objs->label_num].pos = pos;
+  ++objs->label_num;
 }
 
-uint16_t obj_state_find_symbol(obj_state_t *objs, char *label) {
+uint16_t obj_state_find_label(obj_state_t *objs, char *label) {
   assert(objs);
   assert(label);
 
-  for (int i = 0; i < objs->symbol_num; ++i) {
-    if (strcmp(label, objs->symbols[i].image) == 0) {
-      return objs->symbols[i].pos;
+  for (int i = 0; i < objs->label_num; ++i) {
+    if (strcmp(label, objs->labels[i].image) == 0) {
+      return objs->labels[i].pos;
     }
   }
   return 0xFFFF;
 }
 
-void obj_state_add_relreloc(obj_state_t *objs, char *label, uint16_t pos) {
+void obj_state_add_relreloc(obj_state_t *objs, char *name, uint16_t pos) {
   assert(objs);
-  assert(label);
+  assert(name);
 
   assert(objs->relreloc_num + 1 < INTERN_RELOC_COUNT);
-  symbol_t symbol = {0};
-  strcpy(symbol.image, label);
-  symbol.pos = pos;
-  objs->relrelocs[objs->relreloc_num++] = symbol;
+  label_t label = {0};
+  strcpy(label.image, name);
+  label.pos = pos;
+  objs->relrelocs[objs->relreloc_num++] = label;
 }
 
-void obj_state_add_reloc(obj_state_t *objs, char *label, uint16_t pos) {
+void obj_state_add_reloc(obj_state_t *objs, char *name, uint16_t pos) {
   assert(objs);
-  assert(label);
+  assert(name);
 
   assert(objs->reloc_num + 1 < INTERN_RELOC_COUNT);
-  symbol_t symbol = {0};
-  strcpy(symbol.image, label);
-  symbol.pos = pos;
-  objs->relocs[objs->reloc_num++] = symbol;
+  label_t label = {0};
+  strcpy(label.image, name);
+  label.pos = pos;
+  objs->relocs[objs->reloc_num++] = label;
 }
 
 void obj_state_check_obj(obj_state_t *objs) {
   assert(objs);
 
   for (int i = 0; i < objs->relreloc_num; ++i) {
-    uint16_t pos = obj_state_find_symbol(objs, objs->relrelocs[i].image);
+    uint16_t pos = obj_state_find_label(objs, objs->relrelocs[i].image);
     if (pos == 0xFFFF) {
       eprintf("label unset: %s", objs->relrelocs[i].image);
     }
@@ -108,7 +108,7 @@ void obj_state_check_obj(obj_state_t *objs) {
   }
 
   for (int i = 0; i < objs->reloc_num; ++i) {
-    uint16_t pos = obj_state_find_symbol(objs, objs->relocs[i].image);
+    uint16_t pos = obj_state_find_label(objs, objs->relocs[i].image);
     if (pos == 0xFFFF) {
       extern_entry_t *e = obj_find_extern(&objs->obj, objs->relocs[i].image);
 
@@ -123,7 +123,7 @@ void obj_state_check_obj(obj_state_t *objs) {
   }
 
   for (int i = 0; i < objs->obj.global_num; ++i) {
-    uint16_t pos = obj_state_find_symbol(objs, objs->obj.globals[i].name);
+    uint16_t pos = obj_state_find_label(objs, objs->obj.globals[i].name);
     if (pos == 0xFFFF) {
       eprintf("label unset: %s", objs->obj.globals[i].name);
     }
@@ -157,7 +157,7 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
     case BINSTRELLABEL:
       {
         obj_add_instruction(&objs->obj, bc.inst);
-        uint16_t pos = obj_state_find_symbol(objs, bc.arg.string);
+        uint16_t pos = obj_state_find_label(objs, bc.arg.string);
         if (pos != 0xFFFF) {
           obj_add_hex2(&objs->obj, (uint16_t)(pos - objs->obj.code_size));
         } else {
@@ -178,10 +178,10 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
       }
       break;
     case BSETLABEL:
-      if (obj_state_find_symbol(objs, bc.arg.string) != 0xFFFF) {
+      if (obj_state_find_label(objs, bc.arg.string) != 0xFFFF) {
         eprintf("label redefinition %s", bc.arg.string);
       }
-      obj_state_add_symbol(objs, bc.arg.string, objs->obj.code_size);
+      obj_state_add_label(objs, bc.arg.string, objs->obj.code_size);
       break;
     case BGLOBAL:
       obj_add_global(&objs->obj, bc.arg.string);
