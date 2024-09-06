@@ -17,7 +17,8 @@ int main(int argc, char **argv) {
     OPT_GROUP("Options"),
     OPT_HELP(),
     OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
-    OPT_BIT(0, "bin", &flags, "output file with only code (no header)", NULL, LINK_FLAG_BIN, 0),
+    OPT_BIT(0, "bin", &flags, "output bin file", NULL, LINK_FLAG_BIN, 0),
+    OPT_BIT(0, "so", &flags, "output so file", NULL, LINK_FLAG_BIN, 0),
     OPT_BIT(0, "dexe", &flags, "exe state debug info", NULL, LINK_FLAG_EXE_STATE, 0),
     OPT_END(),
   };
@@ -46,7 +47,12 @@ int main(int argc, char **argv) {
   }
 
   exe_t exe = link(objs, argc, flags);
-  exe_encode_file(&exe, output);
+
+  if (flags & LINK_FLAG_BIN) {
+    bin_encode_file(&exe, output);
+  } else {
+    exe_encode_file(&exe, output);
+  }
 
   return 0;
 }

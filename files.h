@@ -104,4 +104,6 @@ void exe_add_reloc(exe_t *exe, reloc_entry_t reloc);
 exe_t exe_decode_file(char *filename);
 void exe_encode_file(exe_t *exe, char *filename);
 
+void bin_encode_file(exe_t *exe, char *filename);
+
 #endif  // FILES_H__

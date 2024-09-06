@@ -8,6 +8,8 @@ Jaris is a 16bit computer
 2. [File Specifications](#file-specifications)
    - [EXE](#exe-file)
    - [OBJ](#obj-file)
+   - [BIN](#bin-file)
+   - [SO](#so-file)
 
 ## Assembler
 
@@ -58,7 +60,25 @@ Jaris is a 16bit computer
 | 2        | code size                     |
 |          | code                          |
 
-### Globals Table Entry
+### Bin file
+
+| size [B] | description |
+| :------- | :---------- |
+|          | code        |
+
+### SO file
+
+| size [B] | description                   |
+| :------- | :---------------------------- |
+| 2        | 'SO'                          |
+| 1        | globals table size            |
+|          | globals table                 |
+| 2        | number of reloc table entries |
+| 4\*#     | reloc table                   |
+| 2        | code size                     |
+|          | code                          |
+
+#### Globals Table Entry
 
 | size [B] | description |
 | :------- | :---------- |
@@ -66,7 +86,7 @@ Jaris is a 16bit computer
 |          | symbol      |
 | 2        | address     |
 
-### Externs Table Entry
+#### Externs Table Entry
 
 | size [B] | description              |
 | :------- | :----------------------- |
@@ -75,7 +95,7 @@ Jaris is a 16bit computer
 | 1        | number of where to subst |
 | 2\*#     | where to substs          |
 
-### Reloc Table Entry
+#### Reloc Table Entry
 
 | size [B] | description    |
 | :------- | :------------- |

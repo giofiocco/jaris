@@ -5,20 +5,23 @@ all: $(TARGETS)
 
 .PHONY: clean
 
-mem.bin: encodemem mem/__bootloader mem/__os $(wildcard mem/*)
+mem.bin: encodemem mem/__bootloader mem/__os $(wildcard mem/*) | mem
 	./encodemem
 
 asm/build:
-	mkdir asm/build
+	mkdir $@
 
-asm/build/%.o: asm/%.asm assembler asm/build 
+mem:
+	mkdir $@
+
+asm/build/%.o: asm/%.asm assembler | asm/build 
 	./assembler -o $@ $<
 
-mem/__bootloader: asm/build/bootloader.o linker
+mem/__bootloader: asm/build/bootloader.o linker | mem
 	./linker --bin -o $@ $<
 
-mem/__os: asm/build/os.o linker
-	./linker --dexe -o $@ $<
+mem/__os: asm/build/os.o linker | mem
+	#./linker --dexe -o $@ $<
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
 SV_LIB=mystb/sv.h
@@ -28,19 +31,19 @@ INSTRUCTIONS_DEP=instructions.c instructions.h $(SV_LIB)
 ASSEMBLE_DEP=assemble.c assemble.h $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
 
 assembler: assembler.c $(ASSEMBLE_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB) 
-	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^) 
+	cc $(CFLAGS) -o $@ $(filter %.c, $^) 
 
 linker: linker.c link.c $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ARG_PARSER_LIB) 
-	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^) 
+	cc $(CFLAGS) -o $@ $(filter %.c, $^) 
 
 encodemem: encodemem.c
 	cc $(CFLAGS) -D_DEFAULT_SOURCE -o $@ $(filter %.c, $^)
 
 inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
-	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^)
+	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
 sim: sim.c $(ARG_PARSER_LIB) mem.bin 
-	cc $(CFLAGS) -DARG_PARSER_IMPLEMENTATION -o $@ $(filter %.c, $^)
+	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
 clean:
-	rm $(TARGETS) mem.bin
+	rm -r $(TARGETS) mem.bin asm/build mem

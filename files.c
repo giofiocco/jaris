@@ -507,3 +507,17 @@ void exe_encode_file(exe_t *exe, char *filename) {
 
   assert(fclose(file) == 0);
 }
+
+void bin_encode_file(exe_t *exe, char *filename) {
+  assert(exe);
+  assert(filename);
+
+  assert(exe->reloc_num == 0);
+
+  FILE *file = fopen(filename, "wb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  assert(fwrite(&exe->code, 1, exe->code_size, file) == exe->code_size);
+}
