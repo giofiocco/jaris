@@ -73,10 +73,10 @@ Jaris is a 16bit computer
 | 2        | 'SO'                          |
 | 1        | globals table size            |
 |          | globals table                 |
-| 2        | number of reloc table entries |
-| 4\*#     | reloc table                   |
 | 2        | code size                     |
 |          | code                          |
+| 2        | number of reloc table entries |
+| 4\*#     | reloc table                   |
 
 #### Globals Table Entry
 

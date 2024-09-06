@@ -106,4 +106,8 @@ void exe_encode_file(exe_t *exe, char *filename);
 
 void bin_encode_file(exe_t *exe, char *filename);
 
+void so_dump(exe_state_t *exes);
+exe_state_t so_decode_file(char *filename);
+void so_encode_file(exe_state_t *exes, char *filename);
+
 #endif  // FILES_H__

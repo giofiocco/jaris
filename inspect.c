@@ -14,26 +14,40 @@ typedef enum {
   KUNSET,
   KOBJ,
   KEXE,
+  KSO,
   KMEM,
 } kind_t;
 
 void disassemble(uint8_t *code, uint16_t code_size);
 
-void inspect_obj(char *filename) {
+void inspect_obj(char *filename, int disassemble_flag) {
   assert(filename);
 
   sv_allocator_t alloc = {0};
   obj_t obj = obj_decode_file(filename, &alloc);
   obj_dump(&obj);
-  disassemble(obj.code, obj.code_size);
+  if (disassemble_flag) {
+    disassemble(obj.code, obj.code_size);
+  }
 }
 
-void inspect_exe(char *filename) {
+void inspect_exe(char *filename, int disassemble_flag) {
   assert(filename);
 
   exe_t exe = exe_decode_file(filename);
   exe_dump(&exe);
-  disassemble(exe.code, exe.code_size);
+  if (disassemble_flag) {
+    disassemble(exe.code, exe.code_size);
+  }
+}
+void inspect_so(char *filename, int disassemble_flag) {
+  assert(filename);
+
+  exe_state_t exes = so_decode_file(filename);
+  so_dump(&exes);
+  if (disassemble_flag) {
+    disassemble(exes.exe.code, exes.exe.code_size);
+  }
 }
 
 void inspect_mem(char *filename) {
@@ -73,13 +87,16 @@ void inspect_mem(char *filename) {
 
 int main(int argc, char **argv) {
   int kind = 1 << KUNSET;
+  int disassemble_flag = 0;
 
   struct argparse_option options[] = {
     OPT_GROUP("Options:"),
+    OPT_BOOLEAN('d', "disassemble", &disassemble_flag, "dump disassembled code", NULL, 0, 0),
     OPT_HELP(),
     OPT_GROUP("Kinds:"),
     OPT_BIT(0, "obj", &kind, "analyse the file as an obj", NULL, KOBJ, 0),
     OPT_BIT(0, "exe", &kind, "analyse the file as an exe", NULL, KEXE, 0),
+    OPT_BIT(0, "so", &kind, "analyse the file as a so", NULL, KEXE, 0),
     OPT_BIT(0, "mem", &kind, "analyse the file as a mem.bin file", NULL, KMEM, 0),
     OPT_END(),
   };
@@ -106,17 +123,26 @@ int main(int argc, char **argv) {
   switch (kind) {
     case 1 << KUNSET:
       if (strcmp(filename + len - 2, ".o") == 0) {
-        inspect_obj(filename);
+        inspect_obj(filename, disassemble_flag);
+      } else if (strcmp(filename + len - 4, ".exe") == 0) {
+        inspect_exe(filename, disassemble_flag);
+      } else if (strcmp(filename + len - 3, ".so") == 0) {
+        inspect_so(filename, disassemble_flag);
+      } else if (strcmp(filename, "mem.bin") == 0) {
+        inspect_mem(filename);
       } else {
         fprintf(stderr, "ERROR: cannot deduce file kind from '%s'\n", filename);
         exit(1);
       }
       break;
     case 1 << KOBJ:
-      inspect_obj(filename);
+      inspect_obj(filename, disassemble_flag);
       break;
     case 1 << KEXE:
-      inspect_exe(filename);
+      inspect_exe(filename, disassemble_flag);
+      break;
+    case 1 << KSO:
+      inspect_so(filename, disassemble_flag);
       break;
     case 1 << KMEM:
       inspect_mem(filename);

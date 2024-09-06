@@ -29,7 +29,7 @@ void exe_link_obj(exe_state_t *exes, obj_t *obj) {
   }
 }
 
-exe_t link(obj_t *objs_list, int objs_count, link_debug_flag_t flags) {
+exe_state_t link(obj_t *objs_list, int objs_count, link_debug_flag_t flags) {
   assert(objs_list);
 
   exe_state_t exes = {0};
@@ -78,5 +78,5 @@ exe_t link(obj_t *objs_list, int objs_count, link_debug_flag_t flags) {
     }
   }
 
-  return exes.exe;
+  return exes;
 }

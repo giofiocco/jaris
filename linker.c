@@ -18,8 +18,8 @@ int main(int argc, char **argv) {
     OPT_HELP(),
     OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
     OPT_BIT(0, "bin", &flags, "output bin file", NULL, LINK_FLAG_BIN, 0),
-    OPT_BIT(0, "so", &flags, "output so file", NULL, LINK_FLAG_BIN, 0),
-    OPT_BIT(0, "dexe", &flags, "exe state debug info", NULL, LINK_FLAG_EXE_STATE, 0),
+    OPT_BIT(0, "so", &flags, "output so file", NULL, LINK_FLAG_SO, 0),
+    OPT_BIT('d', "debug", &flags, "debug info", NULL, LINK_FLAG_EXE_STATE, 0),
     OPT_END(),
   };
 
@@ -46,12 +46,13 @@ int main(int argc, char **argv) {
     objs[i] = obj_decode_file(argv[i], &alloc);
   }
 
-  exe_t exe = link(objs, argc, flags);
-
-  if (flags & LINK_FLAG_BIN) {
-    bin_encode_file(&exe, output);
+  exe_state_t exes = link(objs, argc, flags);
+  if (flags & LINK_FLAG_SO) {
+    so_encode_file(&exes, output);
+  } else if (flags & LINK_FLAG_BIN) {
+    bin_encode_file(&exes.exe, output);
   } else {
-    exe_encode_file(&exe, output);
+    exe_encode_file(&exes.exe, output);
   }
 
   return 0;

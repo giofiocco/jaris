@@ -520,4 +520,109 @@ void bin_encode_file(exe_t *exe, char *filename) {
   }
 
   assert(fwrite(&exe->code, 1, exe->code_size, file) == exe->code_size);
+
+  assert(fclose(file) == 0);
+}
+
+void so_dump(exe_state_t *exes) {
+  assert(exes);
+
+  printf("GLOBALS:\n");
+  for (int i = 0; i < exes->global_num; ++i) {
+    printf("\t%s %04X\n", exes->globals[i].name, exes->globals[i].pos);
+  }
+  printf("CODE:\n");
+  printf("\t");
+  for (int i = 0; i < exes->exe.code_size; ++i) {
+    if (i != 0) {
+      printf(" ");
+    }
+    printf("%02X", exes->exe.code[i]);
+  }
+  printf("\n");
+  printf("RELOC:\n");
+  for (int i = 0; i < exes->exe.reloc_num; ++i) {
+    printf("\t%04X %04X\n", exes->exe.reloc_table[i].where, exes->exe.reloc_table[i].what);
+  }
+}
+
+exe_state_t so_decode_file(char *filename) {
+  assert(filename);
+
+  exe_state_t exes = {0};
+  exe_t *exe = &exes.exe;
+
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  char magic_number[2] = {0};
+  assert(fread(magic_number, 1, 2, file) == 2);
+  if (strcmp(magic_number, "SO") != 0) {
+    eprintf("%s: expected magic number to be 'SO': found '%s'", filename, magic_number);
+  }
+
+  int global_table_size = 0;
+  assert(fread(&global_table_size, 2, 1, file) == 1);
+  while (global_table_size > 0) {
+    size_t len = 0;
+    assert(fread(&len, 1, 1, file) == 1);
+    assert(fread(exes.globals[exes.global_num].name, 1, len, file) == len);
+    assert(fread(&exes.globals[exes.global_num].pos, 2, 1, file) == 1);
+    ++exes.global_num;
+    global_table_size -= 1 + len + 2;
+  }
+  assert(global_table_size == 0);
+
+  assert(fread(&exe->code_size, 2, 1, file) == 1);
+  assert(fread(exe->code, 1, exe->code_size, file) == exe->code_size);
+
+  assert(fread(&exe->reloc_num, 2, 1, file) == 1);
+  for (int i = 0; i < exe->reloc_num; ++i) {
+    assert(fread(&exe->reloc_table[i].where, 2, 1, file) == 1);
+    assert(fread(&exe->reloc_table[i].what, 2, 1, file) == 1);
+  }
+
+  assert(fclose(file) == 0);
+
+  return exes;
+}
+
+void so_encode_file(exe_state_t *exes, char *filename) {
+  assert(exes);
+  assert(filename);
+
+  exe_t *exe = &exes->exe;
+
+  FILE *file = fopen(filename, "wb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  assert(fwrite("SO", 1, 2, file) == 2);
+
+  int global_table_size = 0;
+  assert(fwrite(&global_table_size, 2, 1, file) == 1);
+  for (int i = 0; i < exes->global_num; ++i) {
+    size_t len = strlen(exes->globals[i].name);
+    assert(fwrite(&len, 1, 1, file) == 1);
+    assert(fwrite(exes->globals[i].name, 1, len, file) == len);
+    assert(fwrite(&exes->globals[i].pos, 2, 1, file) == 1);
+    global_table_size += 1 + len + 2;
+  }
+  assert(fseek(file, 2, SEEK_SET) == 0);
+  assert(fwrite(&global_table_size, 2, 1, file) == 1);
+  assert(fseek(file, 4 + global_table_size, SEEK_SET) == 0);
+
+  assert(fwrite(&exe->code_size, 2, 1, file) == 1);
+  assert(fwrite(&exe->code, 1, exe->code_size, file) == exe->code_size);
+
+  assert(fwrite(&exe->reloc_num, 2, 1, file) == 1);
+  for (int i = 0; i < exe->reloc_num; ++i) {
+    assert(fwrite(&exe->reloc_table[i].where, 2, 1, file) == 1);
+    assert(fwrite(&exe->reloc_table[i].what, 2, 1, file) == 1);
+  }
+
+  assert(fclose(file) == 0);
 }
