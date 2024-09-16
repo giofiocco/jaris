@@ -9,6 +9,8 @@ typedef enum {
   LINK_FLAG_EXE_STATE = 1 << 2,
 } link_debug_flag_t;
 
-exe_state_t link(obj_t *objs_list, int objs_count, link_debug_flag_t flag);
+void exe_link_obj(exe_state_t *exes, obj_t *obj);
+void exe_link_boilerplate(exe_state_t *exes);
+void exe_state_dump(exe_state_t *exes);
 
 #endif  // LINK_H__

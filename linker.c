@@ -8,14 +8,28 @@
 #include "files.h"
 #include "link.h"
 
+char *dynamic_files[DYNAMIC_COUNT] = {0};
+int dynamic_file_count = 0;
+
+int add_dynamic_file(struct argparse *self, const struct argparse_option *option) {
+  (void)self;
+  assert(option);
+
+  dynamic_files[dynamic_file_count++] = (char *)self->argv[0];
+
+  return 0;
+}
+
 int main(int argc, char **argv) {
   int flags = 0;
   char *output = "a.out";
+  char *dynamic_filename = NULL;
 
   struct argparse_option options[] = {
     OPT_GROUP("Options"),
     OPT_HELP(),
     OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
+    OPT_STRING('l', NULL, &dynamic_filename, "link dynamically with file name", add_dynamic_file, 0, 0),
     OPT_BIT(0, "bin", &flags, "output bin file", NULL, LINK_FLAG_BIN, 0),
     OPT_BIT(0, "so", &flags, "output so file", NULL, LINK_FLAG_SO, 0),
     OPT_BIT('d', "debug", &flags, "debug info", NULL, LINK_FLAG_EXE_STATE, 0),
@@ -37,13 +51,31 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  obj_t objs[argc];
+  exe_state_t exes = {0};
 
-  for (int i = 0; i < argc; ++i) {
-    objs[i] = obj_decode_file(argv[i]);
+  if (!(flags & LINK_FLAG_BIN) && !(flags & LINK_FLAG_SO)) {
+    exe_link_boilerplate(&exes);
   }
 
-  exe_state_t exes = link(objs, argc, flags);
+  for (int i = 0; i < argc; ++i) {
+    obj_t obj = obj_decode_file(argv[i]);
+    exe_link_obj(&exes, &obj);
+  }
+
+  for (int i = 0; i < dynamic_file_count; ++i) {
+    so_t so = so_decode_file(dynamic_files[i]);
+    assert(exes.so_num + 1 < DYNAMIC_COUNT);
+    exes.sos[exes.so_num] = so;
+    exes.so_names[exes.so_num] = dynamic_files[i];
+    ++exes.so_num;
+  }
+
+  if (flags & LINK_FLAG_EXE_STATE) {
+    exe_state_dump(&exes);
+  }
+
+  exe_state_check_exe(&exes);
+
   if (flags & LINK_FLAG_SO) {
     so_encode_file(&exes, output);
   } else if (flags & LINK_FLAG_BIN) {

@@ -11,7 +11,7 @@ Jaris is a 16bit computer
    - [BIN](#bin-file)
    - [SO](#so-file)
 3. [File System](#file-system)
-   - [Dir Sector](#dir-sector)
+   - [Dir Sector](#directory-sector)
    - [File Sector](#file-sector)
 
 ## Assembler
@@ -48,8 +48,9 @@ Jaris is a 16bit computer
 |          | code                          |
 | 2        | number of reloc table entries |
 | 4\*#     | reloc table                   |
-| 2        | dynamic linking table size    |
 |          | dynamic linking table         |
+
+The ending `Dynamic Linking Table Entry` has file name empty (only the null char).
 
 ### OBJ file
 
@@ -109,11 +110,15 @@ Jaris is a 16bit computer
 
 #### Dynamic Linking Table Entry
 
+If the file is the std-lib the file name is 0x01 0x00.
+
 | size [B] | description                 |
 | :------- | :-------------------------- |
 |          | file name (null terminated) |
-| 1        | extern table size           |
-|          | extern table                |
+| 2        | number of reloc enries      |
+|          | reloc entries               |
+
+The reloc `where` is relative to the `exe` code the reloc `what` is relative to the `so` code.
 
 ## File System
 

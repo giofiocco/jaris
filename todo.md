@@ -1,6 +1,10 @@
 # SO
 
-- add dynamic linking
+- special linking for std.so
+
+# Inspect
+
+- read from the stdin
 
 # Other
 

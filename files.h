@@ -30,9 +30,9 @@ typedef struct {
 
 typedef struct {
   char file_name[LABEL_MAX_LEN];
-  int extern_count;
-  extern_entry_t externs[EXTERN_COUNT];
-} dynamic_linking_entry_t;
+  uint16_t reloc_num;
+  reloc_entry_t reloc_table[RELOC_COUNT];
+} dynamic_entry_t;
 
 typedef struct {
   uint16_t global_num;
@@ -50,9 +50,18 @@ typedef struct {
   uint8_t code[1 << 16];
   uint16_t reloc_num;
   reloc_entry_t reloc_table[RELOC_COUNT];
-  int dynamic_entry_num;
-  dynamic_linking_entry_t dynamic_linking_table[DYNAMIC_COUNT];
+  int dynamic_num;
+  dynamic_entry_t dynamics_table[DYNAMIC_COUNT];
 } exe_t;
+
+typedef struct {
+  uint16_t global_num;
+  global_entry_t globals[GLOBAL_COUNT];
+  uint16_t code_size;
+  uint8_t code[1 << 16];
+  uint16_t reloc_num;
+  reloc_entry_t reloc_table[RELOC_COUNT];
+} so_t;
 
 typedef struct {
   char image[LABEL_MAX_LEN];
@@ -75,6 +84,9 @@ typedef struct {
   global_entry_t globals[GLOBAL_COUNT];
   uint16_t extern_num;
   extern_entry_t externs[EXTERN_COUNT];
+  int so_num;
+  so_t sos[DYNAMIC_COUNT];
+  char *so_names[DYNAMIC_COUNT];
 } exe_state_t;
 
 void extern_entry_add_pos(extern_entry_t *e, uint16_t pos);
@@ -114,8 +126,9 @@ void exe_encode_file(exe_t *exe, char *filename);
 
 void bin_encode_file(exe_t *exe, char *filename);
 
-void so_dump(exe_state_t *exes);
-exe_state_t so_decode_file(char *filename);
+void so_dump(so_t *so);
+so_t so_decode_file(char *filename);
 void so_encode_file(exe_state_t *exes, char *filename);
+uint16_t so_find_global(so_t *so, char *name);
 
 #endif  // FILES_H__

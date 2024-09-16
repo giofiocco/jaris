@@ -42,10 +42,10 @@ void inspect_exe(char *filename, int disassemble_flag) {
 void inspect_so(char *filename, int disassemble_flag) {
   assert(filename);
 
-  exe_state_t exes = so_decode_file(filename);
-  so_dump(&exes);
+  so_t so = so_decode_file(filename);
+  so_dump(&so);
   if (disassemble_flag) {
-    disassemble(exes.exe.code, exes.exe.code_size);
+    disassemble(so.code, so.code_size);
   }
 }
 
@@ -108,7 +108,10 @@ int main(int argc, char **argv) {
                   NULL,
                 },
                 0);
-  argparse_describe(&argparse, NULL, "if the kind is not specified it's deduced from the file extension");
+  argparse_describe(&argparse,
+                    NULL,
+                    "if the kind is not specified it's deduced from the file extension\n"
+                    "set the file to '-' to use the stdin\n");
   argc = argparse_parse(&argparse, argc, (const char **)argv);
   if (argc != 1) {
     fprintf(stderr, "ERROR: expected ONE file\n");
@@ -118,6 +121,11 @@ int main(int argc, char **argv) {
 
   char *filename = argv[0];
   int len = strlen(filename);
+
+  if (strcmp(filename, "-") == 0) {
+    printf("TO IMPLEMENT\n");
+    return 1;
+  }
 
   switch (kind) {
     case KUNSET:

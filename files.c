@@ -393,6 +393,15 @@ void exe_dump(exe_t *exe) {
   for (int i = 0; i < exe->reloc_num; ++i) {
     printf("\t%04X %04X\n", exe->reloc_table[i].where, exe->reloc_table[i].what);
   }
+  printf("DYNAMIC LINKING:\n");
+  for (int i = 0; i < exe->dynamic_num; ++i) {
+    printf("\t%s:\n", exe->dynamics_table[i].file_name);
+    for (int j = 0; j < exe->dynamics_table[i].reloc_num; ++j) {
+      printf("\t\t%04X %04X\n",
+             exe->dynamics_table[i].reloc_table[i].where,
+             exe->dynamics_table[i].reloc_table[i].what);
+    }
+  }
 }
 
 uint16_t exe_state_find_global(exe_state_t *exes, char *name) {
@@ -434,15 +443,46 @@ void exe_state_add_extern(exe_state_t *exes, extern_entry_t extern_, uint16_t of
 void exe_state_check_exe(exe_state_t *exes) {
   assert(exes);
 
-  for (int i = 0; i < exes->extern_num; ++i) {
-    extern_entry_t extern_ = exes->externs[i];
-    uint16_t pos = exe_state_find_global(exes, extern_.name);
-    if (pos == 0xFFFF) {
-      eprintf("global unset: %s", extern_.name);
+  int done[exes->extern_num];
+  memset(done, 0, exes->extern_num * sizeof(int));
+  int fileused = 0;
+
+  for (int i = 0; i < exes->so_num; ++i) {
+    fileused = 0;
+    dynamic_entry_t *dt = &exes->exe.dynamics_table[exes->exe.dynamic_num];
+
+    for (int j = 0; j < exes->extern_num; ++j) {
+      extern_entry_t extern_ = exes->externs[j];
+
+      uint16_t pos = so_find_global(&exes->sos[i], extern_.name);
+      if (pos != 0xFFFF) {
+        fileused = 1;
+        done[j] = 1;
+        dt->reloc_num = extern_.pos_num;
+        for (int l = 0; l < extern_.pos_num; ++l) {
+          dt->reloc_table[l] = (reloc_entry_t){extern_.pos[i], pos};
+        }
+      }
     }
 
-    for (int j = 0; j < extern_.pos_num; ++j) {
-      exe_add_reloc(&exes->exe, (reloc_entry_t){extern_.pos[i], pos});
+    if (fileused) {
+      ++exes->exe.dynamic_num;
+      strcpy(dt->file_name, exes->so_names[i]);
+      fileused = 0;
+    }
+  }
+
+  for (int i = 0; i < exes->extern_num; ++i) {
+    if (!done[i]) {
+      extern_entry_t extern_ = exes->externs[i];
+      uint16_t pos = exe_state_find_global(exes, extern_.name);
+      if (pos == 0xFFFF) {
+        eprintf("global unset: %s", extern_.name);
+      }
+
+      for (int j = 0; j < extern_.pos_num; ++j) {
+        exe_add_reloc(&exes->exe, (reloc_entry_t){extern_.pos[i], pos});
+      }
     }
   }
 }
@@ -463,6 +503,7 @@ void exe_add_reloc(exe_t *exe, reloc_entry_t reloc) {
   exe->reloc_table[exe->reloc_num++] = reloc;
 }
 
+#include <stdlib.h>
 exe_t exe_decode_file(char *filename) {
   assert(filename);
 
@@ -487,6 +528,23 @@ exe_t exe_decode_file(char *filename) {
     assert(fread(&exe.reloc_table[i].where, 2, 1, file) == 1);
     assert(fread(&exe.reloc_table[i].what, 2, 1, file) == 1);
   }
+
+  do {
+    dynamic_entry_t *dt = &exe.dynamics_table[exe.dynamic_num];
+
+    int i = 0;
+    do {
+      assert(fread(&dt->file_name[i], 1, 1, file) == 1);
+    } while (dt->file_name[i++] != 0);
+
+    assert(fread(&dt->reloc_num, 2, 1, file) == 1);
+    for (int j = 0; j < dt->reloc_num; ++j) {
+      assert(fread(&dt->reloc_table[j].where, 2, 1, file) == 1);
+      assert(fread(&dt->reloc_table[j].what, 2, 1, file) == 1);
+    }
+
+    ++exe.dynamic_num;
+  } while (exe.dynamics_table[exe.dynamic_num].file_name[0] != 0);
 
   assert(fclose(file) == 0);
 
@@ -513,6 +571,19 @@ void exe_encode_file(exe_t *exe, char *filename) {
     assert(fwrite(&exe->reloc_table[i].what, 2, 1, file) == 1);
   }
 
+  for (int i = 0; i < exe->dynamic_num; ++i) {
+    dynamic_entry_t *dt = &exe->dynamics_table[i];
+    uint8_t len = strlen(dt->file_name) + 1;
+    assert(fwrite(dt->file_name, 1, len, file) == len);
+    assert(fwrite(&dt->reloc_num, 2, 1, file) == 1);
+    for (int j = 0; j < dt->reloc_num; ++j) {
+      assert(fwrite(&dt->reloc_table[j].where, 2, 1, file) == 1);
+      assert(fwrite(&dt->reloc_table[j].what, 2, 1, file) == 1);
+    }
+  }
+  uint8_t num = 0;
+  assert(fwrite(&num, 1, 1, file) == 1);
+
   assert(fclose(file) == 0);
 }
 
@@ -532,33 +603,32 @@ void bin_encode_file(exe_t *exe, char *filename) {
   assert(fclose(file) == 0);
 }
 
-void so_dump(exe_state_t *exes) {
-  assert(exes);
+void so_dump(so_t *so) {
+  assert(so);
 
   printf("GLOBALS:\n");
-  for (int i = 0; i < exes->global_num; ++i) {
-    printf("\t%s %04X\n", exes->globals[i].name, exes->globals[i].pos);
+  for (int i = 0; i < so->global_num; ++i) {
+    printf("\t%s %04X\n", so->globals[i].name, so->globals[i].pos);
   }
   printf("CODE:\n");
   printf("\t");
-  for (int i = 0; i < exes->exe.code_size; ++i) {
+  for (int i = 0; i < so->code_size; ++i) {
     if (i != 0) {
       printf(" ");
     }
-    printf("%02X", exes->exe.code[i]);
+    printf("%02X", so->code[i]);
   }
   printf("\n");
   printf("RELOC:\n");
-  for (int i = 0; i < exes->exe.reloc_num; ++i) {
-    printf("\t%04X %04X\n", exes->exe.reloc_table[i].where, exes->exe.reloc_table[i].what);
+  for (int i = 0; i < so->reloc_num; ++i) {
+    printf("\t%04X %04X\n", so->reloc_table[i].where, so->reloc_table[i].what);
   }
 }
 
-exe_state_t so_decode_file(char *filename) {
+so_t so_decode_file(char *filename) {
   assert(filename);
 
-  exe_state_t exes = {0};
-  exe_t *exe = &exes.exe;
+  so_t so = {0};
 
   FILE *file = fopen(filename, "rb");
   if (!file) {
@@ -576,25 +646,25 @@ exe_state_t so_decode_file(char *filename) {
   while (global_table_size > 0) {
     size_t len = 0;
     assert(fread(&len, 1, 1, file) == 1);
-    assert(fread(exes.globals[exes.global_num].name, 1, len, file) == len);
-    assert(fread(&exes.globals[exes.global_num].pos, 2, 1, file) == 1);
-    ++exes.global_num;
+    assert(fread(so.globals[so.global_num].name, 1, len, file) == len);
+    assert(fread(&so.globals[so.global_num].pos, 2, 1, file) == 1);
+    ++so.global_num;
     global_table_size -= 1 + len + 2;
   }
   assert(global_table_size == 0);
 
-  assert(fread(&exe->code_size, 2, 1, file) == 1);
-  assert(fread(exe->code, 1, exe->code_size, file) == exe->code_size);
+  assert(fread(&so.code_size, 2, 1, file) == 1);
+  assert(fread(so.code, 1, so.code_size, file) == so.code_size);
 
-  assert(fread(&exe->reloc_num, 2, 1, file) == 1);
-  for (int i = 0; i < exe->reloc_num; ++i) {
-    assert(fread(&exe->reloc_table[i].where, 2, 1, file) == 1);
-    assert(fread(&exe->reloc_table[i].what, 2, 1, file) == 1);
+  assert(fread(&so.reloc_num, 2, 1, file) == 1);
+  for (int i = 0; i < so.reloc_num; ++i) {
+    assert(fread(&so.reloc_table[i].where, 2, 1, file) == 1);
+    assert(fread(&so.reloc_table[i].what, 2, 1, file) == 1);
   }
 
   assert(fclose(file) == 0);
 
-  return exes;
+  return so;
 }
 
 void so_encode_file(exe_state_t *exes, char *filename) {
@@ -633,4 +703,17 @@ void so_encode_file(exe_state_t *exes, char *filename) {
   }
 
   assert(fclose(file) == 0);
+}
+
+uint16_t so_find_global(so_t *so, char *name) {
+  assert(so);
+  assert(name);
+
+  for (int i = 0; i < so->global_num; ++i) {
+    if (strcmp(so->globals[i].name, name) == 0) {
+      return so->globals[i].pos;
+    }
+  }
+
+  return 0xFFFF;
 }
