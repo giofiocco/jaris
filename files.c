@@ -145,16 +145,25 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
       obj_add_hex(&objs->obj, bc.arg.num);
       break;
     case BINSTHEX2:
+      if (objs->obj.code_size % 2 == 0) {
+        obj_add_instruction(&objs->obj, NOP);
+      }
       obj_add_instruction(&objs->obj, bc.inst);
       obj_add_hex2(&objs->obj, bc.arg.num);
       break;
     case BINSTLABEL:
+      if (objs->obj.code_size % 2 == 0) {
+        obj_add_instruction(&objs->obj, NOP);
+      }
       obj_add_instruction(&objs->obj, bc.inst);
       obj_state_add_reloc(objs, bc.arg.string, objs->obj.code_size);
       objs->obj.code_size += 2;
       break;
     case BINSTRELLABEL:
       {
+        if (objs->obj.code_size % 2 == 0) {
+          obj_add_instruction(&objs->obj, NOP);
+        }
         obj_add_instruction(&objs->obj, bc.inst);
         uint16_t pos = obj_state_find_label(objs, bc.arg.string);
         if (pos != 0xFFFF) {

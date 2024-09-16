@@ -1,12 +1,9 @@
-GLOBAL _start
-
 { root_A RAM_AL 0x01 }
 { entry_start_NDX RAM_NDX 0x0C }
 { data_start_NDX RAM_NDX 0x04 }
 { max_index_NDX RAM_NDX 0x03 }
 { next_subsector_index_NDX RAM_NDX 0x01 }
 
-_start:
   RAM_A 0xFFFE A_SP
 
   root_A A_SEC 
