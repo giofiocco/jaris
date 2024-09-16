@@ -50,16 +50,17 @@ uint16_t encode_file(FILE *file, int offset) {
 
   uint16_t sector_ptr = SECTORI;
   uint8_t *sector = SECTORS[SECTORI++];
+  uint8_t *sector_start = sector;
 
   sector_push_u8(&sector, 'F');
 
   if (size + 4 > SECTOR_SIZE) {
-    assert(fread(sector + 4, 1, SECTOR_SIZE - 4, file) == SECTOR_SIZE - 4);
+    assert(fread(sector_start + 4, 1, SECTOR_SIZE - 4, file) == SECTOR_SIZE - 4);
     uint16_t ptr = encode_file(file, offset + SECTOR_SIZE - 4);
     sector_push_u16(&sector, ptr);
     sector_push_u8(&sector, 0xFF);
   } else {
-    assert(fread(sector + 4, 1, size, file) == size);
+    assert(fread(sector_start + 4, 1, size, file) == size);
     sector_push_u16(&sector, 0xFFFF);
     sector_push_u8(&sector, size + 4);
   }
