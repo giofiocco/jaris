@@ -10,6 +10,7 @@ Jaris is a 16bit computer
    - [OBJ](#obj-file)
    - [BIN](#bin-file)
    - [SO](#so-file)
+3. [File System](#file-system)
 
 ## Assembler
 
@@ -45,6 +46,8 @@ Jaris is a 16bit computer
 |          | code                          |
 | 2        | number of reloc table entries |
 | 4\*#     | reloc table                   |
+| 2        | dynamic linking table size    |
+|          | dynamic linking table         |
 
 ### OBJ file
 
@@ -101,3 +104,55 @@ Jaris is a 16bit computer
 | :------- | :------------- |
 | 2        | where to subst |
 | 2        | what to subst  |
+
+#### Dynamic Linking Table Entry
+
+| size [B] | description                 |
+| :------- | :-------------------------- |
+|          | file name (null terminated) |
+| 1        | extern table size           |
+|          | extern table                |
+
+## File System
+
+The NV memory is divided in sectors of size 256 bytes.
+The sector 0 is reserved for the bootloader.
+The other sectors can be a directory or file
+The sector 1 is the root directory.
+
+### Directory sector
+
+The `next dir sector` is 0xFFFF if the dir fit in the sector.
+The `parent dir sector` is 0xFFFF if the dir is the root.
+The `head dir sector` is 0xFFFF if the dir is not the `next dir sector` of anyother sector.
+
+| size [B] | description       |
+| :------- | :---------------- |
+| 1        | 'D'               |
+| 2        | next dir sector   |
+| 3        | '..\0'            |
+| 2        | parent dir sector |
+| 2        | '.\0'             |
+| 2        | head dir sector   |
+|          | other dir entries |
+
+The last entry must have empty name.
+
+#### Dir Entry
+
+| size [B] | description                  |
+| :------- | :--------------------------- |
+|          | entry name (null terminated) |
+| 2        | sector of the entry          |
+
+### File Sector
+
+The `next file sector` is 0xFFFF if the file fit in the sector.
+The `max index` is 0xFF if the file doesn't fit in the sector (or if it size is 256 - 4).
+
+| size [B] | description      |
+| :------- | :--------------- |
+| 1        | 'F'              |
+| 2        | next file sector |
+| 1        | max index        |
+|          | data             |
