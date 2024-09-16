@@ -7,6 +7,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "argparse/argparse.h"
+
 #define SV_IMPLEMENTATION
 #include "instructions.h"
 
@@ -300,7 +302,25 @@ void load_input_string(cpu_t *cpu, char *string) {
   }
 }
 
-int main() {
+int main(int argc, char **argv) {
+  int step_mode = 0;
+
+  struct argparse_option options[] = {
+    OPT_GROUP("Options"),
+    OPT_HELP(),
+    OPT_BOOLEAN('s', "step", &step_mode, "enable step mode after the cpu is HLTed", NULL, 0, 0),
+    OPT_END(),
+  };
+  struct argparse argparse;
+  argparse_init(&argparse,
+                options,
+                (const char *const[]){
+                  "sim [options]",
+                  NULL,
+                },
+                0);
+  argparse_parse(&argparse, argc, (const char **)argv);
+
   cpu_t cpu = {0};
   cpu_init(&cpu);
   bool running = true;
@@ -308,22 +328,27 @@ int main() {
   while (running) {
     tick(&cpu, &running);
   }
-  char input[100] = {0};
-  cpu.SC = 0;
-  do {
-    if (strcmp(input, "end\n") == 0) {
-      break;
-    }
-    printf("\e[1;1H\e[2J");
-    printf("step mode...\n");
-    cpu_dump(&cpu);
-
-    microcode_t mc = 0;
+  if (step_mode) {
+    char input[100] = {0};
+    cpu.SC = 0;
     do {
-      tick(&cpu, &running);
-      mc = control_rom[cpu.IR | (cpu.SC << 6) | (cpu.FR << (6 + 4))];
-    } while (!(mc & (1 << SCr)));
-  } while (fgets(input, 100, stdin));
+      if (strcmp(input, "end\n") == 0) {
+        break;
+      }
+      // printf("\e[1;1H\e[2J");
+      printf("STEP MODE (enter `end` to quit)\n");
+      cpu_dump(&cpu);
+
+      microcode_t mc = 0;
+      do {
+        tick(&cpu, &running);
+        mc = control_rom[cpu.IR | (cpu.SC << 6) | (cpu.FR << (6 + 4))];
+      } while (!(mc & (1 << SCr)));
+    } while (fgets(input, 100, stdin));
+  }
+
+  // printf("\e[1;1H\e[2J");
+  cpu_dump(&cpu);
 
   return 0;
 }

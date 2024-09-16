@@ -20,8 +20,8 @@ asm/build/%.o: asm/%.asm assembler | asm/build
 mem/__bootloader: asm/build/bootloader.o linker | mem
 	./linker --bin -o $@ $<
 
-mem/__os: asm/build/os.o linker | mem
-	#./linker --dexe -o $@ $<
+mem/__os: asm/build/os2.o linker | mem
+	./linker -o $@ $<
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
 SV_LIB=mystb/sv.h
@@ -29,6 +29,7 @@ ERRORS_LIB=errors.c errors.h
 FILES_DEP=files.c files.h $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
 INSTRUCTIONS_DEP=instructions.c instructions.h $(SV_LIB)
 ASSEMBLE_DEP=assemble.c assemble.h $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
+SIM_DEP=instructions.c instructions.h
 
 assembler: assembler.c $(ASSEMBLE_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB) 
 	cc $(CFLAGS) -o $@ $(filter %.c, $^) 
@@ -42,7 +43,7 @@ encodemem: encodemem.c
 inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
-sim: sim.c $(ARG_PARSER_LIB) mem.bin 
+sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) mem.bin 
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
 clean:
