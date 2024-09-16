@@ -23,8 +23,7 @@ void disassemble(uint8_t *code, uint16_t code_size);
 void inspect_obj(char *filename, int disassemble_flag) {
   assert(filename);
 
-  sv_allocator_t alloc = {0};
-  obj_t obj = obj_decode_file(filename, &alloc);
+  obj_t obj = obj_decode_file(filename);
   obj_dump(&obj);
   if (disassemble_flag) {
     disassemble(obj.code, obj.code_size);

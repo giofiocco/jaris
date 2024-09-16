@@ -11,6 +11,8 @@ Jaris is a 16bit computer
    - [BIN](#bin-file)
    - [SO](#so-file)
 3. [File System](#file-system)
+   - [Dir Sector](#dir-sector)
+   - [File Sector](#file-sector)
 
 ## Assembler
 

@@ -1,6 +1,5 @@
 # SO
 
-- so encode
 - add dynamic linking
 
 # Other

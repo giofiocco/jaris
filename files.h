@@ -5,6 +5,13 @@
 
 #include "instructions.h"
 
+#define GLOBAL_COUNT       256
+#define EXTERN_COUNT       256
+#define RELOC_COUNT        1024
+#define DYNAMIC_COUNT      16
+#define LABEL_COUNT        256
+#define INTERN_RELOC_COUNT 256
+
 typedef struct {
   uint16_t where;
   uint16_t what;
@@ -21,9 +28,11 @@ typedef struct {
   uint16_t pos[256];
 } extern_entry_t;
 
-#define GLOBAL_COUNT 256
-#define EXTERN_COUNT 256
-#define RELOC_COUNT  1024
+typedef struct {
+  char file_name[LABEL_MAX_LEN];
+  int extern_count;
+  extern_entry_t externs[EXTERN_COUNT];
+} dynamic_linking_entry_t;
 
 typedef struct {
   uint16_t global_num;
@@ -41,10 +50,9 @@ typedef struct {
   uint8_t code[1 << 16];
   uint16_t reloc_num;
   reloc_entry_t reloc_table[RELOC_COUNT];
+  int dynamic_entry_num;
+  dynamic_linking_entry_t dynamic_linking_table[DYNAMIC_COUNT];
 } exe_t;
-
-#define LABEL_COUNT        256
-#define INTERN_RELOC_COUNT 256
 
 typedef struct {
   char image[LABEL_MAX_LEN];
@@ -88,7 +96,7 @@ void obj_add_instruction(obj_t *obj, instruction_t inst);
 void obj_add_hex(obj_t *obj, uint8_t num);
 void obj_add_hex2(obj_t *obj, uint16_t num);
 
-obj_t obj_decode_file(char *filename, sv_allocator_t *alloc);
+obj_t obj_decode_file(char *filename);
 void obj_encode_file(obj_t *obj, char *filename);
 
 void exe_dump(exe_t *exe);

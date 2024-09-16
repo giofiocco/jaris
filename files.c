@@ -268,9 +268,8 @@ void obj_add_hex2(obj_t *obj, uint16_t num) {
   obj->code[obj->code_size++] = num >> 8;
 }
 
-obj_t obj_decode_file(char *filename, sv_allocator_t *alloc) {
+obj_t obj_decode_file(char *filename) {
   assert(filename);
-  assert(alloc);
 
   obj_t obj = {0};
 

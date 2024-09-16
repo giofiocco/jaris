@@ -6,7 +6,6 @@
 #define SV_IMPLEMENTATION
 #include "argparse/argparse.h"
 #include "files.h"
-#include "instructions.h"
 #include "link.h"
 
 int main(int argc, char **argv) {
@@ -38,12 +37,10 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  sv_allocator_t alloc = {0};
-
   obj_t objs[argc];
 
   for (int i = 0; i < argc; ++i) {
-    objs[i] = obj_decode_file(argv[i], &alloc);
+    objs[i] = obj_decode_file(argv[i]);
   }
 
   exe_state_t exes = link(objs, argc, flags);
