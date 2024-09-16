@@ -62,7 +62,7 @@ void inspect_mem(char *filename) {
   assert(fread(sectors, 1, 1 << 19, file) == 1 << 19);
   assert(fclose(file) == 0);
 
-  for (int i = 0; sectors[i][0] != 0; ++i) {
+  for (int i = 1; sectors[i][0] != 0; ++i) {
     uint8_t *sector = sectors[i];
     printf("%d ", i);
     if (sector[0] == 'D') {
@@ -86,7 +86,7 @@ void inspect_mem(char *filename) {
 }
 
 int main(int argc, char **argv) {
-  int kind = 1 << KUNSET;
+  int kind = 0;
   int disassemble_flag = 0;
 
   struct argparse_option options[] = {
@@ -96,7 +96,7 @@ int main(int argc, char **argv) {
     OPT_GROUP("Kinds:"),
     OPT_BIT(0, "obj", &kind, "analyse the file as an obj", NULL, KOBJ, 0),
     OPT_BIT(0, "exe", &kind, "analyse the file as an exe", NULL, KEXE, 0),
-    OPT_BIT(0, "so", &kind, "analyse the file as a so", NULL, KEXE, 0),
+    OPT_BIT(0, "so", &kind, "analyse the file as a so", NULL, KSO, 0),
     OPT_BIT(0, "mem", &kind, "analyse the file as a mem.bin file", NULL, KMEM, 0),
     OPT_END(),
   };
@@ -121,7 +121,7 @@ int main(int argc, char **argv) {
   int len = strlen(filename);
 
   switch (kind) {
-    case 1 << KUNSET:
+    case KUNSET:
       if (strcmp(filename + len - 2, ".o") == 0) {
         inspect_obj(filename, disassemble_flag);
       } else if (strcmp(filename + len - 4, ".exe") == 0) {
@@ -135,16 +135,16 @@ int main(int argc, char **argv) {
         exit(1);
       }
       break;
-    case 1 << KOBJ:
+    case KOBJ:
       inspect_obj(filename, disassemble_flag);
       break;
-    case 1 << KEXE:
+    case KEXE:
       inspect_exe(filename, disassemble_flag);
       break;
-    case 1 << KSO:
+    case KSO:
       inspect_so(filename, disassemble_flag);
       break;
-    case 1 << KMEM:
+    case KMEM:
       inspect_mem(filename);
       break;
     default:
