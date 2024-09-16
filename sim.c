@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -6,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define SV_IMPLEMENTATION
 #include "instructions.h"
 
 // clang-format off
@@ -34,7 +36,11 @@ typedef uint64_t microcode_t;
 
 microcode_t control_rom[1 << (6 + 4 + 3)] = {0};
 
-typedef enum { Z, N, C } flag_t;
+typedef enum {
+  Z,
+  N,
+  C,
+} flag_t;
 
 typedef struct {
   uint16_t A;
@@ -60,19 +66,46 @@ typedef struct {
   // RenderTexture2D screen;
 } cpu_t;
 
+void set_control_rom();
 void cpu_init(cpu_t *cpu) {
   assert(cpu);
+
+  set_control_rom();
 
   FILE *file = fopen("mem.bin", "rb");
   if (!file) {
     fprintf(stderr, "ERROR: cannot open file: 'mem.bin': %s\n", strerror(errno));
     exit(1);
   }
-  fread(cpu->MEM, 1 << 19, 1, file);
+  assert(fread(cpu->MEM, 1, 1 << 19, file) == 1 << 19);
   assert(fclose(file) == 0);
 
   memcpy(cpu->RAM + 0xFF00, cpu->MEM, 256);
   cpu->IP = 0xFF00;
+}
+
+void cpu_dump(cpu_t *cpu) {
+  assert(cpu);
+
+  printf("A:   %5d %04X %c\n", cpu->A, cpu->A, isprint(cpu->A) ? cpu->A : ' ');
+  printf("B:   %5d %04X %c\n", cpu->B, cpu->B, isprint(cpu->B) ? cpu->B : ' ');
+  printf("IP:  %5d %04X %s\n", cpu->IP, cpu->IP, instruction_to_string(cpu->IR));
+  printf("FR:         %c%c%c\n",
+         cpu->FR & (1 << C) ? 'C' : ' ',
+         cpu->FR & (1 << N) ? 'N' : ' ',
+         cpu->FR & (1 << Z) ? 'Z' : ' ');
+  printf("SEC: %5d %04X\n", cpu->SEC, cpu->SEC);
+  printf("NDX: %5d %04X\n", cpu->NDX, cpu->NDX);
+}
+
+void cpu_dump_ram_range(cpu_t *cpu, uint16_t from, uint16_t to) {
+  assert(cpu);
+  assert(from <= to);
+
+  printf("RAM:\n");
+  for (int i = from; i < to; i += 2) {
+    printf("%04X %02X %02X %d\n", i, cpu->RAM[i], cpu->RAM[i + 1], cpu->RAM[i] | (cpu->RAM[i + 1] << 8));
+  }
 }
 
 void set_instruction_flags(instruction_t inst, uint8_t step, uint8_t flags, bool invert, microcode_t code) {
@@ -267,8 +300,6 @@ void load_input_string(cpu_t *cpu, char *string) {
   }
 }
 
-void set_control_rom();
-
 int main() {
   cpu_t cpu = {0};
   cpu_init(&cpu);
@@ -277,6 +308,22 @@ int main() {
   while (running) {
     tick(&cpu, &running);
   }
+  char input[100] = {0};
+  cpu.SC = 0;
+  do {
+    if (strcmp(input, "end\n") == 0) {
+      break;
+    }
+    printf("\e[1;1H\e[2J");
+    printf("step mode...\n");
+    cpu_dump(&cpu);
+
+    microcode_t mc = 0;
+    do {
+      tick(&cpu, &running);
+      mc = control_rom[cpu.IR | (cpu.SC << 6) | (cpu.FR << (6 + 4))];
+    } while (!(mc & (1 << SCr)));
+  } while (fgets(input, 100, stdin));
 
   return 0;
 }
