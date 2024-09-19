@@ -395,7 +395,11 @@ void exe_dump(exe_t *exe) {
   }
   printf("DYNAMIC LINKING:\n");
   for (int i = 0; i < exe->dynamic_num; ++i) {
-    printf("\t%s:\n", exe->dynamics_table[i].file_name);
+    if (exe->dynamics_table[i].file_name[0] == 1) {
+      printf("\tSTD LIB:\n");
+    } else {
+      printf("\t%s:\n", exe->dynamics_table[i].file_name);
+    }
     for (int j = 0; j < exe->dynamics_table[i].reloc_num; ++j) {
       printf("\t\t%04X %04X\n",
              exe->dynamics_table[i].reloc_table[i].where,
@@ -440,6 +444,7 @@ void exe_state_add_extern(exe_state_t *exes, extern_entry_t extern_, uint16_t of
   exes->externs[exes->extern_num++] = extern_;
 }
 
+#include <stdlib.h>
 void exe_state_check_exe(exe_state_t *exes) {
   assert(exes);
 
