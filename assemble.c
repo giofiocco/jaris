@@ -373,6 +373,9 @@ bytecode_t compile(preprocessor_t *pre) {
             } else if (arg.kind == T_SYM) {
               bytecode = (bytecode_t){BINSTLABEL, token.as.inst, {}};
               memcpy(bytecode.arg.string, arg.image.start, arg.image.len);
+            } else if (arg.kind == T_STRING && arg.image.len == 2 + 2) {
+              bytecode =
+                (bytecode_t){BINSTHEX2, token.as.inst, {.num = arg.image.start[1] | (arg.image.start[2] << 8)}};
             } else {
               eprintfloc(arg.loc, "expected HEX2, found %s", token_kind_to_string(arg.kind));
             }

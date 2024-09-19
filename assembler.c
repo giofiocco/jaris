@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   }
   assert(fseek(file, 0, SEEK_END) == 0);
   int size = ftell(file);
-  assert(size > 0);
+  assert(size >= 0);
   assert(fseek(file, 0, SEEK_SET) == 0);
   char buffer[size];
   assert((long int)fread(buffer, 1, size, file) == size);
