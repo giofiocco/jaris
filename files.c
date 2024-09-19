@@ -534,13 +534,17 @@ exe_t exe_decode_file(char *filename) {
     assert(fread(&exe.reloc_table[i].what, 2, 1, file) == 1);
   }
 
-  do {
+  while (1) {
     dynamic_entry_t *dt = &exe.dynamics_table[exe.dynamic_num];
 
     int i = 0;
     do {
       assert(fread(&dt->file_name[i], 1, 1, file) == 1);
     } while (dt->file_name[i++] != 0);
+
+    if (dt->file_name[0] == 0) {
+      break;
+    }
 
     assert(fread(&dt->reloc_num, 2, 1, file) == 1);
     for (int j = 0; j < dt->reloc_num; ++j) {
@@ -549,7 +553,7 @@ exe_t exe_decode_file(char *filename) {
     }
 
     ++exe.dynamic_num;
-  } while (exe.dynamics_table[exe.dynamic_num].file_name[0] != 0);
+  }
 
   assert(fclose(file) == 0);
 
@@ -586,8 +590,8 @@ void exe_encode_file(exe_t *exe, char *filename) {
       assert(fwrite(&dt->reloc_table[j].what, 2, 1, file) == 1);
     }
   }
-  uint8_t num = 0;
-  assert(fwrite(&num, 1, 1, file) == 1);
+  uint8_t finaldltentry[] = {0};
+  assert(fwrite(&finaldltentry, 1, sizeof(finaldltentry), file) == sizeof(finaldltentry));
 
   assert(fclose(file) == 0);
 }
