@@ -55,7 +55,7 @@ typedef struct {
 } exe_t;
 
 typedef struct {
-  uint16_t global_num;
+  uint8_t global_num;
   global_entry_t globals[GLOBAL_COUNT];
   uint16_t code_size;
   uint8_t code[1 << 16];

@@ -1,6 +1,11 @@
+# Obj
+
+- check if global and extern table size are 1 byte
+
 # SO
 
-- special linking for std.so
+- `bootloader.asm` load and reloc std-lib
+- `execute.asm` load so and reloc properly
 
 # Inspect
 
@@ -8,4 +13,4 @@
 
 # Other
 
-assemble memcpy -> memncpy(dest, src, len, max);
+- assemble memcpy -> memncpy(dest, src, len, max);
