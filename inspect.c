@@ -16,6 +16,7 @@ typedef enum {
   KEXE,
   KSO,
   KMEM,
+  KBIN,
 } kind_t;
 
 void disassemble(uint8_t *code, uint16_t code_size);
@@ -46,6 +47,33 @@ void inspect_so(char *filename, int disassemble_flag) {
   so_dump(&so);
   if (disassemble_flag) {
     disassemble(so.code, so.code_size);
+  }
+}
+
+void inspect_bin(char *filename, int disassemble_flag) {
+  assert(filename);
+
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+  assert(fseek(file, 0, SEEK_END) == 0);
+  size_t size = ftell(file);
+  assert(fseek(file, 0, SEEK_SET) == 0);
+  uint8_t buffer[size];
+  assert(fread(buffer, 1, size, file) == size);
+  assert(fclose(file) == 0);
+
+  printf("CODE:\n\t");
+  for (size_t i = 0; i < size; ++i) {
+    if (i != 0) {
+      printf(" ");
+    }
+    printf("%02X", buffer[i]);
+  }
+  printf("\n");
+  if (disassemble_flag) {
+    disassemble(buffer, size);
   }
 }
 
@@ -97,6 +125,7 @@ int main(int argc, char **argv) {
     OPT_BIT(0, "exe", &kind, "analyse the file as an exe", NULL, KEXE, 0),
     OPT_BIT(0, "so", &kind, "analyse the file as a so", NULL, KSO, 0),
     OPT_BIT(0, "mem", &kind, "analyse the file as a mem.bin file", NULL, KMEM, 0),
+    OPT_BIT(0, "bin", &kind, "analyse the file as a bin", NULL, KBIN, 0),
     OPT_END(),
   };
 
@@ -153,6 +182,9 @@ int main(int argc, char **argv) {
       break;
     case KMEM:
       inspect_mem(filename);
+      break;
+    case KBIN:
+      inspect_bin(filename, disassemble_flag);
       break;
     default:
       fprintf(stderr, "ERROR: expected ONE kind specification\n");
