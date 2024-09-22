@@ -5,7 +5,7 @@ all: $(TARGETS)
 
 .PHONY: clean
 
-mem.bin: encodemem mem/__bootloader mem/__os mem/stdlib.so $(wildcard mem/*) | mem
+mem.bin: encodemem mem/__bootloader mem/stdlib mem/os $(wildcard mem/*) | mem
 	./encodemem
 
 asm/build:
@@ -19,11 +19,12 @@ asm/build/%.o: asm/%.asm assembler | asm/build
 
 mem/__bootloader: asm/build/bootloader.o linker | mem
 	./linker --bin --nostdlib -o $@ $<
+	wc -c $@ 
 
-mem/__os: asm/build/os2.o mem/stdlib.so linker | mem
+mem/os: asm/build/os2.o mem/stdlib linker | mem
 	./linker -o $@ $<
 
-mem/stdlib.so: asm/build/mul.o linker | mem 
+mem/stdlib: asm/build/mul.o linker | mem 
 	./linker --so --nostdlib -o $@ $(filter %.o, $^) 
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h

@@ -106,7 +106,7 @@ void cpu_dump_ram_range(cpu_t *cpu, uint16_t from, uint16_t to) {
 
   printf("RAM:\n");
   for (int i = from; i < to; i += 2) {
-    printf("%04X %02X %02X %d\n", i, cpu->RAM[i], cpu->RAM[i + 1], cpu->RAM[i] | (cpu->RAM[i + 1] << 8));
+    printf("\t%04X   %02X %02X %d\n", i, cpu->RAM[i], cpu->RAM[i + 1], cpu->RAM[i] | (cpu->RAM[i + 1] << 8));
   }
 }
 
@@ -309,6 +309,7 @@ int main(int argc, char **argv) {
     OPT_GROUP("Options"),
     OPT_HELP(),
     OPT_BOOLEAN('s', "step", &step_mode, "enable step mode after the cpu is HLTed", NULL, 0, 0),
+    OPT_BOOLEAN('s', "step", &step_mode, "enable step mode after the cpu is HLTed", NULL, 0, 0),
     OPT_END(),
   };
   struct argparse argparse;
@@ -349,6 +350,7 @@ int main(int argc, char **argv) {
 
   // printf("\e[1;1H\e[2J");
   cpu_dump(&cpu);
+  cpu_dump_ram_range(&cpu, 0, 20);
 
   return 0;
 }
