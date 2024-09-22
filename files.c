@@ -652,6 +652,7 @@ so_t so_decode_file(char *filename) {
 
   int global_table_size = 0;
   assert(fread(&global_table_size, 1, 1, file) == 1);
+  assert(fread(&so.code_size, 2, 1, file) == 1);
   while (global_table_size > 0) {
     size_t len = 0;
     assert(fread(&len, 1, 1, file) == 1);
@@ -662,7 +663,6 @@ so_t so_decode_file(char *filename) {
   }
   assert(global_table_size == 0);
 
-  assert(fread(&so.code_size, 2, 1, file) == 1);
   assert(fread(so.code, 1, so.code_size, file) == so.code_size);
 
   assert(fread(&so.reloc_num, 2, 1, file) == 1);
@@ -691,6 +691,7 @@ void so_encode_file(exe_state_t *exes, char *filename) {
 
   int global_table_size = 0;
   assert(fwrite(&global_table_size, 1, 1, file) == 1);
+  assert(fwrite(&exe->code_size, 2, 1, file) == 1);
   for (int i = 0; i < exes->global_num; ++i) {
     size_t len = strlen(exes->globals[i].name);
     assert(fwrite(&len, 1, 1, file) == 1);
@@ -700,9 +701,8 @@ void so_encode_file(exe_state_t *exes, char *filename) {
   }
   assert(fseek(file, 2, SEEK_SET) == 0);
   assert(fwrite(&global_table_size, 1, 1, file) == 1);
-  assert(fseek(file, 3 + global_table_size, SEEK_SET) == 0);
+  assert(fseek(file, 5 + global_table_size, SEEK_SET) == 0);
 
-  assert(fwrite(&exe->code_size, 2, 1, file) == 1);
   assert(fwrite(&exe->code, 1, exe->code_size, file) == exe->code_size);
 
   assert(fwrite(&exe->reloc_num, 2, 1, file) == 1);

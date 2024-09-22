@@ -50,7 +50,8 @@ Jaris is a 16bit computer
 | 4\*#     | reloc table                   |
 |          | dynamic linking table         |
 
-The ending `Dynamic Linking Table Entry` has file name empty (only the null char).
+The code size is always an even number
+The ending `Dynamic Linking Table Entry` is 0x00.
 
 ### OBJ file
 
@@ -78,8 +79,8 @@ The ending `Dynamic Linking Table Entry` has file name empty (only the null char
 | :------- | :---------------------------- |
 | 2        | 'SO'                          |
 | 1        | globals table size            |
-|          | globals table                 |
 | 2        | code size                     |
+|          | globals table                 |
 |          | code                          |
 | 2        | number of reloc table entries |
 | 4\*#     | reloc table                   |
