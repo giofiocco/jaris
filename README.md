@@ -78,12 +78,12 @@ The ending `Dynamic Linking Table Entry` is 0x00.
 | size [B] | description                   |
 | :------- | :---------------------------- |
 | 2        | 'SO'                          |
-| 1        | globals table size            |
 | 2        | code size                     |
-|          | globals table                 |
 |          | code                          |
 | 2        | number of reloc table entries |
 | 4\*#     | reloc table                   |
+| 1        | globals table size            |
+|          | globals table                 |
 
 #### Globals Table Entry
 
