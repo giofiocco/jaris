@@ -98,14 +98,22 @@ uint16_t encode_dir(char *path, uint16_t parent, uint16_t head) {
     }
 
     int name_len = strlen(d->d_name);
-    sector_push(&sector, d->d_name, name_len);
+    if (strcmp(d->d_name, "__os") == 0) {
+      name_len = 1;
+      *(sector++) = 1;
+    } else if (strcmp(d->d_name, "__stdlib") == 0) {
+      name_len = 1;
+      *(sector++) = 2;
+    } else {
+      sector_push(&sector, d->d_name, name_len);
+    }
     sector += 1;
 
     int full_path_len = strlen(path) + name_len + 2;
     char full_path[full_path_len];
     sprintf(full_path, "%s/%s", path, d->d_name);
 
-    if (sector + full_path_len + 3 - sector_start > SECTOR_SIZE) {
+    if (sector + name_len + 1 + 3 - sector_start > SECTOR_SIZE) {
       TODO;  // subsector
     }
 

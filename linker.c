@@ -8,7 +8,7 @@
 #include "files.h"
 #include "link.h"
 
-#define STD_LIB_PATH "mem/stdlib"
+#define STD_LIB_PATH "mem/__stdlib"
 
 char *dynamic_files[DYNAMIC_COUNT] = {0};
 int dynamic_file_count = 0;

@@ -17,10 +17,7 @@ check_entry:
   
   PEEKA CMPA JMPRZ $search_os -- if (!search_stdlib) goto search_os
 
-  RAM_A "st" SUB JMPRNZ $neq
-  INCNDX MEM_A INCNDX MEM_AH RAM_B "dl" SUB JMPRNZ $neq
-  INCNDX MEM_A INCNDX MEM_AH RAM_B "ib" SUB JMPRNZ $neq
-  INCNDX MEM_A CMPA JMPRNZ $neq
+  RAM_A 0x0002 SUB JMPRNZ $neq
 
   INCNDX MEM_A INCNDX MEM_AH PUSHAR 0x04 -- found stdlib-sec
   RAM_AL 0x00 INCSP PUSHA -- set search_stdlib
@@ -40,8 +37,7 @@ search_os:
   -- ^ search_stdlib stdlib-sec [_, MEM_A MEM_AH]
   INCSP
 
-  RAM_A "os" SUB JMPRNZ $neq
-  INCNDX MEM_A CMPA JMPRNZ $neq
+  RAM_A 0x0001 SUB JMPRNZ $neq
   
 -- found os-sec
   INCNDX MEM_A INCNDX MEM_AH
