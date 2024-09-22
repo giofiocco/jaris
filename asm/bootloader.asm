@@ -4,13 +4,13 @@
 { max_index 0x03 }
 { data_start 0x04 }
 
-RAM_A 0xFEFA A_SP -- 0xFF00 - 2 - 2 (stdlib-sec) 
+RAM_A 0xFEFA A_SP -- 0xFF00 - 2 - 2 - 2 (stdlib_sec os_sec) 
 RAM_AL 0x01 A_SEC 
 PUSHA
 RAM_NDX entries_start
 
 check_entry:
-  -- ^ search_stdlib stdlib-sec(unset)
+  -- ^ search_stdlib stdlib-sec(unset) so_sec(unset)
   MEM_A CMPA JMPRZ $crash
 
   MEM_A INCNDX MEM_AH A_B
@@ -34,13 +34,14 @@ neq:
   JMPR $check_entry
 
 search_os:
-  -- ^ search_stdlib stdlib-sec [_, MEM_A MEM_AH]
+  -- ^ search_stdlib stdlib_sec os_sec [_, MEM_A MEM_AH]
   INCSP
+  -- ^ stdlib_sec os_sec [_, MEM_A MEM_AH]
 
   RAM_A 0x0001 SUB JMPRNZ $neq
   
 -- found os-sec
-  INCNDX MEM_A INCNDX MEM_AH
+  INCNDX MEM_A INCNDX MEM_AH PUSHAR 0x04
   A_SEC
   RAM_NDX 0x07 -- 4 + 3 
 
@@ -48,7 +49,7 @@ search_os:
   RAM_BL 0x00 PUSHB
   -- fall-through
 copy_code:
-  -- ^ mar code_size stdlib_sec 
+  -- ^ mar code_size stdlib_sec os_sec
   CALLR $get_16
   POPB A_rB
   PEEKA SUB INCA INCA JMPRNN $copied -- if (mar + 2 - code_size >= 0) goto copied
@@ -56,7 +57,7 @@ copy_code:
   JMPR $copy_code
 
 copied:
-  -- ^ os_size stdlib_sec 
+  -- ^ os_size stdlib_sec os_sec 
   MEM_A INCNDX MEM_AH INCNDX 
   SHL SHL -- reloc_count * 4
   A_B NDX_A SUM A_NDX -- ndx += reloc_count * 4
@@ -66,7 +67,7 @@ copied:
   MEM_A INCNDX MEM_AH INCNDX PUSHA -- dynamic_reloc_count
   NDX_A PUSHA -- os_ndx
 
-  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec
+  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec
 
   PEEKAR 0x08 A_SEC -- stdlib-sec
   RAM_NDX 0x06 -- 4 + 2: code size ndx 
@@ -75,25 +76,35 @@ copied:
   PUSHA
   PEEKAR 0x08 A_B POPA 
 copy_stdlib:
-  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec [code_size, mar]
+  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec [code_size, mar]
   PUSHA PUSHB
-  -- ^ mar code_size os_ndx dynamic_reloc_count os_size stdlib_sec 
+  -- ^ mar code_size os_ndx dynamic_reloc_count os_size stdlib_sec os_sec
   CALLR $get_16
   POPB A_rB
   B_A INCA INCA A_B 
   POPA DECA DECA JMPRNZ $copy_stdlib
   
-
-  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec [code_size, mar]
+  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec 
   MEM_A INCNDX MEM_AH INCNDX
   CMPA JMPRZ $reloced_stdlib
 
   RAM_A 0xFEFE HLT -- TODO
 
 reloced_stdlib:
-  
-  HLT
-
+  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec
+  PEEKAR 0x0A A_SEC -- os_sec
+  POPA A_NDX -- os_ndx
+  POPA
+  -- fall-through
+dynamic_reloc:
+  -- ^ os_size stdlib_sec os_sec [dynamic_reloc_count, _]
+  PUSHA
+  CALLR $get_16 PUSHA 
+  -- ^ where dynamic_reloc_count os_size stdlib_sec os_sec
+  CALLR $get_16 A_B PEEKAR 0x06 SUM -- what += os_size
+  POPB A_rB
+  POPA DECA JMPRNZ $dynamic_reloc
+  -- fall-through
 done:
   RAM_AL 0x00 JMPA
 
