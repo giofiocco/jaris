@@ -1,8 +1,8 @@
-
 { entries_start 0x0C }
 { next_index 0x01 }
 { max_index 0x03 }
 { data_start 0x04 }
+{ ptr_to_stdlib_ptr 0xF800 }
 
 RAM_A 0xFEFA A_SP -- 0xFF00 - 2 - 2 - 2 (stdlib_sec os_sec) 
 RAM_AL 0x01 A_SEC 
@@ -106,6 +106,9 @@ dynamic_reloc:
   POPA DECA JMPRNZ $dynamic_reloc
   -- fall-through
 done:
+  -- ^ os_size stdlib_sec os_sec 
+  POPA RAM_B ptr_to_stdlib_ptr A_rB
+
   RAM_AL 0x00 JMPA
 
 get_8:

@@ -13,6 +13,7 @@ Jaris is a 16bit computer
 3. [File System](#file-system)
    - [Dir Sector](#directory-sector)
    - [File Sector](#file-sector)
+4. [RAM Layout](#ram-layout)
 
 ## Assembler
 
@@ -164,3 +165,18 @@ The `max index` is 0xFF if the file doesn't fit in the sector (or if it size is 
 | 2        | next file sector |
 | 1        | max index        |
 |          | data             |
+
+## RAM Layout
+
+The RAM is divided in 32 pages of size 2048
+
+| range      | description | size |
+| :--------- | :---------- | :--- |
+|            | pages       |      |
+| F800..F820 | os struct   | 32 B |
+
+### OS Struct
+
+| size [B] | description   |
+| :------- | :------------ |
+| 2        | ptr to stdlib |
