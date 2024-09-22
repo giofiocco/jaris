@@ -444,7 +444,6 @@ void exe_state_add_extern(exe_state_t *exes, extern_entry_t extern_, uint16_t of
   exes->externs[exes->extern_num++] = extern_;
 }
 
-#include <stdlib.h>
 void exe_state_check_exe(exe_state_t *exes) {
   assert(exes);
 
@@ -489,6 +488,12 @@ void exe_state_check_exe(exe_state_t *exes) {
         exe_add_reloc(&exes->exe, (reloc_entry_t){extern_.pos[i], pos});
       }
     }
+  }
+
+  for (int i = 0; i < exes->exe.reloc_num; ++i) {
+    reloc_entry_t *reloc = &exes->exe.reloc_table[i];
+    exes->exe.code[reloc->where] = reloc->what & 0xFF;
+    exes->exe.code[reloc->where + 1] = (reloc->what >> 8) & 0xFF;
   }
 }
 
