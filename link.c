@@ -62,9 +62,15 @@ void exe_state_dump(exe_state_t *exes) {
     }
     printf("]\n");
   }
-  printf("SOS:\n");
+  printf("SOS: %d\n", exes->so_num);
   for (int i = 0; i < exes->so_num; ++i) {
-    so_dump(&exes->sos[i]);
+    printf("%s", exes->so_names[i]);
+    if (strcmp(exes->so_names[0], "\x01") == 0) {
+      printf(" (STDLIB)");
+    }
+    printf(":\n");
+    so_dump(&exes->sos[0]);
+    printf("ENDSO\n");
   }
   exe_dump(&exes->exe);
 }

@@ -485,7 +485,7 @@ void exe_state_check_exe(exe_state_t *exes) {
       }
 
       for (int j = 0; j < extern_.pos_num; ++j) {
-        exe_add_reloc(&exes->exe, (reloc_entry_t){extern_.pos[i], pos});
+        exe_add_reloc(&exes->exe, (reloc_entry_t){extern_.pos[j], pos});
       }
     }
   }
