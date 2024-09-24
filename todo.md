@@ -1,3 +1,6 @@
+- check if os is greater than page
+- reloc stdlib
+
 # Obj
 
 - check if global and extern table size are 1 byte

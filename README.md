@@ -170,13 +170,28 @@ The `max index` is 0xFF if the file doesn't fit in the sector (or if it size is 
 
 The RAM is divided in 32 pages of size 2048
 
-| range      | description | size |
-| :--------- | :---------- | :--- |
-|            | pages       |      |
-| F800..F820 | os struct   | 32 B |
+| range      | description   | size     |
+| :--------- | :------------ | :------- |
+|            | pages         |          |
+| F800..F820 | os struct     | 32 B     |
+| F820..F920 | process table | 16\*16 B |
+
+The first process struct is the os-process
 
 ### OS Struct
 
-| size [B] | description   |
-| :------- | :------------ |
-| 2        | ptr to stdlib |
+| size [B] | description                   |
+| :------- | :---------------------------- |
+| 2        | ptr to stdlib                 |
+| 2        | ptr to current process struct |
+| 2        | used process map              |
+| 4        | used page map                 |
+
+### Process Struct
+
+| size [B] | description           |
+| :------- | :-------------------- |
+| 2        | ptr to parent process |
+| 2        | cwd sec               |
+| 2        | SP                    |
+| 4        | page map mask         |

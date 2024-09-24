@@ -21,7 +21,7 @@ mem/__bootloader: asm/build/bootloader.o linker | mem
 	./linker --bin --nostdlib -o $@ $<
 	wc -c $@ 
 
-mem/__os: asm/build/os2.o mem/__stdlib linker | mem
+mem/__os: asm/build/os.o mem/__stdlib linker | mem
 	./linker -o $@ $<
 
 mem/__stdlib: $(patsubst %,asm/build/%.o,mul div solve_path) linker | mem 
