@@ -462,9 +462,8 @@ void exe_state_check_exe(exe_state_t *exes) {
       if (pos != 0xFFFF) {
         fileused = 1;
         done[j] = 1;
-        dt->reloc_num = extern_.pos_num;
         for (int l = 0; l < extern_.pos_num; ++l) {
-          dt->reloc_table[l] = (reloc_entry_t){extern_.pos[i], pos};
+          dt->reloc_table[dt->reloc_num++] = (reloc_entry_t){extern_.pos[l], pos};
         }
       }
     }
@@ -472,7 +471,6 @@ void exe_state_check_exe(exe_state_t *exes) {
     if (fileused) {
       ++exes->exe.dynamic_num;
       strcpy(dt->file_name, exes->so_names[i]);
-      fileused = 0;
     }
   }
 
