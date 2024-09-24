@@ -4,7 +4,6 @@
 
 # SO
 
-- `bootloader.asm` load and reloc std-lib
 - `execute.asm` load so and reloc properly
 
 # Inspect

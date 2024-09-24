@@ -12,7 +12,10 @@
 #define SECTOR_SIZE  256
 
 uint8_t SECTORS[SECTOR_COUNT][SECTOR_SIZE] = {0};
-uint16_t SECTORI = 0;
+uint16_t SECTORI = 1;
+
+uint16_t os_sec = 0;
+uint16_t stdlib_sec = 0;
 
 void sector_push(uint8_t **sector, void *data, int count) {
   assert(sector);
@@ -98,15 +101,7 @@ uint16_t encode_dir(char *path, uint16_t parent, uint16_t head) {
     }
 
     int name_len = strlen(d->d_name);
-    if (strcmp(d->d_name, "__os") == 0) {
-      name_len = 1;
-      *(sector++) = 1;
-    } else if (strcmp(d->d_name, "__stdlib") == 0) {
-      name_len = 1;
-      *(sector++) = 2;
-    } else {
-      sector_push(&sector, d->d_name, name_len);
-    }
+    sector_push(&sector, d->d_name, name_len);
     sector += 1;
 
     int full_path_len = strlen(path) + name_len + 2;
@@ -128,6 +123,12 @@ uint16_t encode_dir(char *path, uint16_t parent, uint16_t head) {
       }
 
       ptr = encode_file(file, 0);
+
+      if (strcmp(full_path, "mem/__os") == 0) {
+        os_sec = ptr;
+      } else if (strcmp(full_path, "mem/__stdlib") == 0) {
+        stdlib_sec = ptr;
+      }
 
       assert(fclose(file) == 0);
     } else {
@@ -152,12 +153,23 @@ void encode_bootloader(char *filename) {
   size_t size = ftell(file);
   fseek(file, 0, SEEK_SET);
 
-  if (size > SECTOR_SIZE) {
+  if (size > SECTOR_SIZE - 4) {
     fprintf(stderr, "ERROR: bootloader too big: %ld\n", size);
+    exit(1);
+  }
+  if (os_sec == 0) {
+    fprintf(stderr, "ERROR: __os not found in root\n");
+    exit(1);
+  }
+  if (stdlib_sec == 0) {
+    fprintf(stderr, "ERROR: __stdlib not found in root\n");
     exit(1);
   }
 
   assert(fread(SECTORS[0], 1, size, file) == size);
+  uint8_t *sector = &SECTORS[0][SECTOR_SIZE - 4];
+  sector_push_u16(&sector, os_sec);
+  sector_push_u16(&sector, stdlib_sec);
 
   ++SECTORI;
 
@@ -165,8 +177,8 @@ void encode_bootloader(char *filename) {
 }
 
 int main() {
-  encode_bootloader("mem/__bootloader");
   encode_dir("mem", 0xFFFF, 0xFFFF);
+  encode_bootloader("mem/__bootloader");
 
   FILE *file = fopen("mem.bin", "wb");
   assert(file);

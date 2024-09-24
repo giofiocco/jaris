@@ -5,14 +5,14 @@ all: $(TARGETS)
 
 .PHONY: clean
 
-mem.bin: encodemem mem/__bootloader mem/__stdlib mem/__os $(wildcard mem/*) | mem
+mem.bin: mem/__bootloader mem/__stdlib mem/__os mem/ encodemem | mem
 	./encodemem
 
 asm/build:
-	mkdir $@
+	mkdir -p $@
 
 mem:
-	mkdir $@
+	mkdir -p $@
 
 asm/build/%.o: asm/%.asm assembler | asm/build 
 	./assembler -o $@ $<
@@ -24,7 +24,7 @@ mem/__bootloader: asm/build/bootloader.o linker | mem
 mem/__os: asm/build/os2.o mem/__stdlib linker | mem
 	./linker -o $@ $<
 
-mem/__stdlib: asm/build/mul.o linker | mem 
+mem/__stdlib: $(patsubst %,asm/build/%.o,mul div solve_path) linker | mem 
 	./linker --so --nostdlib -o $@ $(filter %.o, $^) 
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
@@ -51,4 +51,4 @@ sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) mem.bin
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
 clean:
-	rm -r $(TARGETS) mem.bin asm/build mem
+	rm -r $(TARGETS) mem.bin asm/build 

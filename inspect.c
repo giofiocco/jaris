@@ -89,6 +89,10 @@ void inspect_mem(char *filename) {
   assert(fread(sectors, 1, 1 << 19, file) == 1 << 19);
   assert(fclose(file) == 0);
 
+  printf("0 BOOTLOADER:\n");
+  printf("\tOS SEC: %04X\n", sectors[0][252] | (sectors[0][253] << 8));
+  printf("\tSTDLIB SEC: %04X\n", sectors[0][254] | (sectors[0][255] << 8));
+
   for (int i = 1; sectors[i][0] != 0; ++i) {
     uint8_t *sector = sectors[i];
     printf("%d ", i);
@@ -99,7 +103,13 @@ void inspect_mem(char *filename) {
       int a = 3;
       while (sector[a] != 0) {
         int len = strlen((char *)(sector + a));
-        printf("\t\t%s %d\n", sector + a, sector[a + len + 1] | (sector[a + len + 2] << 8));
+        printf("\t\t%s ", sector + a);
+        if (sector[a] == 1 && sector[a + 1] == 0) {
+          printf("(OS) ");
+        } else if (sector[a] == 2 && sector[a + 1] == 0) {
+          printf("(STDLIB) ");
+        }
+        printf("%d\n", sector[a + len + 1] | (sector[a + len + 2] << 8));
         a += len + 3;
       }
     } else if (sector[0] == 'F') {
