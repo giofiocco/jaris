@@ -105,7 +105,7 @@ void cpu_dump_ram_range(cpu_t *cpu, uint16_t from, uint16_t to) {
   assert(from <= to);
 
   printf("RAM:\n");
-  for (int i = from; i < to; i += 2) {
+  for (int i = from - from % 2; i < to + to % 2; i += 2) {
     printf("\t%04X   %02X %02X %d\n", i, cpu->RAM[i], cpu->RAM[i + 1], cpu->RAM[i] | (cpu->RAM[i + 1] << 8));
   }
 }
@@ -350,7 +350,7 @@ int main(int argc, char **argv) {
 
   // printf("\e[1;1H\e[2J");
   cpu_dump(&cpu);
-  cpu_dump_ram_range(&cpu, 0, 20);
+  cpu_dump_ram_range(&cpu, 85, 90);
 
   return 0;
 }
