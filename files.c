@@ -18,11 +18,11 @@ void extern_entry_add_pos(extern_entry_t *e, uint16_t pos) {
 void obj_dump(obj_t *obj) {
   assert(obj);
 
-  printf("GLOBALS:\n");
+  printf("GLOBALS: %d\n", obj->global_num);
   for (int i = 0; i < obj->global_num; ++i) {
     printf("\t%s %04X\n", obj->globals[i].name, obj->globals[i].pos);
   }
-  printf("EXTERNS:\n");
+  printf("EXTERNS: %d\n", obj->extern_num);
   for (int i = 0; i < obj->extern_num; ++i) {
     printf("\t%s [", obj->externs[i].name);
     for (int j = 0; j < obj->externs[i].pos_num; ++j) {
@@ -33,11 +33,11 @@ void obj_dump(obj_t *obj) {
     }
     printf("]\n");
   }
-  printf("RELOC:\n");
+  printf("RELOC: %d\n", obj->reloc_num);
   for (int i = 0; i < obj->reloc_num; ++i) {
     printf("\t%04X %04X\n", obj->reloc_table[i].where, obj->reloc_table[i].what);
   }
-  printf("CODE:\n");
+  printf("CODE: %d\n", obj->code_size);
   printf("\t");
   for (int i = 0; i < obj->code_size; ++i) {
     if (i != 0) {
@@ -381,7 +381,7 @@ void obj_encode_file(obj_t *obj, char *filename) {
 void exe_dump(exe_t *exe) {
   assert(exe);
 
-  printf("CODE:\n");
+  printf("CODE: %d\n", exe->code_size);
   printf("\t");
   for (int i = 0; i < exe->code_size; ++i) {
     if (i != 0) {
@@ -389,17 +389,18 @@ void exe_dump(exe_t *exe) {
     }
     printf("%02X", exe->code[i]);
   }
-  printf("\nRELOC:\n");
+  printf("\nRELOC: %d\n", exe->reloc_num);
   for (int i = 0; i < exe->reloc_num; ++i) {
     printf("\t%04X %04X\n", exe->reloc_table[i].where, exe->reloc_table[i].what);
   }
-  printf("DYNAMIC LINKING:\n");
+  printf("DYNAMIC LINKING: %d\n", exe->dynamic_num);
   for (int i = 0; i < exe->dynamic_num; ++i) {
     if (exe->dynamics_table[i].file_name[0] == 1) {
-      printf("\tSTD LIB:\n");
+      printf("\tSTD LIB:");
     } else {
-      printf("\t%s:\n", exe->dynamics_table[i].file_name);
+      printf("\t%s:", exe->dynamics_table[i].file_name);
     }
+    printf(" %d\n", exe->dynamics_table[i].reloc_num);
     for (int j = 0; j < exe->dynamics_table[i].reloc_num; ++j) {
       printf("\t\t%04X %04X\n",
              exe->dynamics_table[i].reloc_table[i].where,
@@ -618,11 +619,11 @@ void bin_encode_file(exe_t *exe, char *filename) {
 void so_dump(so_t *so) {
   assert(so);
 
-  printf("GLOBALS:\n");
+  printf("GLOBALS: %d\n", so->global_num);
   for (int i = 0; i < so->global_num; ++i) {
     printf("\t%s %04X\n", so->globals[i].name, so->globals[i].pos);
   }
-  printf("CODE:\n");
+  printf("CODE: %d\n", so->code_size);
   printf("\t");
   for (int i = 0; i < so->code_size; ++i) {
     if (i != 0) {
@@ -631,7 +632,7 @@ void so_dump(so_t *so) {
     printf("%02X", so->code[i]);
   }
   printf("\n");
-  printf("RELOC:\n");
+  printf("RELOC: %d\n", so->reloc_num);
   for (int i = 0; i < so->reloc_num; ++i) {
     printf("\t%04X %04X\n", so->reloc_table[i].where, so->reloc_table[i].what);
   }
