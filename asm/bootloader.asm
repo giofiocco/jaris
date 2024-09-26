@@ -50,12 +50,13 @@ copy_stdlib:
   POPB A_rB
   B_A INCA INCA A_B 
   POPA DECA DECA JMPRNZ $copy_stdlib
-  
+
+
   -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec 
-  MEM_A INCNDX MEM_AH INCNDX
+  CALLR $get_16
   CMPA JMPRZ $reloced_stdlib
 
-  RAM_A 0xFEFE HLT -- TODO
+  RAM_A 0xFFFE HLT -- TODO
 
 reloced_stdlib:
   -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec
@@ -79,20 +80,19 @@ done:
   RAM_AL 0x00 JMPA
 
 get_8:
-  NDX_A A_B
-  -- if (ndx - maxndx - 1 >= 0) goto next_filesec
-  RAM_NDX max_index MEM_A SUB DECA JMPRNN $next_filesec
-  B_A A_NDX
-  MEM_A INCNDX
+  NDX_A CMPA JMPRZ $get_8_next_subsector
+  A_B
+  -- if ndx - maxndx - 1 >= 0 { goto nextsec }
+  RAM_NDX max_index MEM_A SUB DECA JMPRNN $get_8_next_subsector
+  B_A A_NDX MEM_A INCNDX
   RET
 
-next_filesec:
+get_8_next_subsector:
   RAM_NDX next_index
-  MEM_A INCNDX MEM_AH
-  A_SEC
-  RAM_NDX data_start
-  MEM_A INCNDX 
+  MEM_A INCNDX MEM_AH A_SEC
+  RAM_NDX data_start MEM_A INCNDX
   RET
+ 
 
 get_16:
   CALLR $get_8 PUSHA
