@@ -326,9 +326,15 @@ int main(int argc, char **argv) {
   cpu_init(&cpu);
   bool running = true;
 
+  int ticks = 0;
   while (running) {
     tick(&cpu, &running);
+    ++ticks;
   }
+  printf("ticks: %.3fE3 (%.3f ms @ 4 MHz, %.3f ms @ 10 MHz)\n",
+         (float)ticks / 1E3,
+         (float)ticks * 1E3 / 4E6,
+         (float)ticks * 1E3 / 10E6);
   if (step_mode) {
     char input[100] = {0};
     cpu.SC = 0;
