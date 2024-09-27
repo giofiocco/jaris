@@ -223,43 +223,43 @@ void bytecode_dump(bytecode_t bc) {
       printf("NONE\n");
       break;
     case BINST:
-      printf("INST %s\n", instruction_to_string(bc.inst));
+      printf("INST         %s\n", instruction_to_string(bc.inst));
       break;
     case BINSTHEX:
-      printf("INSTHEX %s 0x%02X\n", instruction_to_string(bc.inst), bc.arg.num);
+      printf("INSTHEX      %s 0x%02X\n", instruction_to_string(bc.inst), bc.arg.num);
       break;
     case BINSTHEX2:
-      printf("INSTHEX2 %s 0x%04X\n", instruction_to_string(bc.inst), bc.arg.num);
+      printf("INSTHEX2     %s 0x%04X\n", instruction_to_string(bc.inst), bc.arg.num);
       break;
     case BINSTLABEL:
-      printf("INSTLABEL %s %s\n", instruction_to_string(bc.inst), bc.arg.string);
+      printf("INSTLABEL    %s %s\n", instruction_to_string(bc.inst), bc.arg.string);
       break;
     case BINSTRELLABEL:
-      printf("INSTRELLABEL %s  %s, \n", instruction_to_string(bc.inst), bc.arg.string);
+      printf("INSTRELLABEL %s %s\n", instruction_to_string(bc.inst), bc.arg.string);
       break;
     case BHEX:
-      printf("HEX 0x%02X\n", bc.arg.num);
+      printf("HEX          0x%02X\n", bc.arg.num);
       break;
     case BHEX2:
-      printf("HEX2 0x%02X\n", bc.arg.num);
+      printf("HEX2         0x%02X\n", bc.arg.num);
       break;
     case BSTRING:
-      printf("STRING  %s, \n", bc.arg.string);
+      printf("STRING       %s\n", bc.arg.string);
       break;
     case BSETLABEL:
-      printf("SETLABEL  %s, \n", bc.arg.string);
+      printf("SETLABEL     %s\n", bc.arg.string);
       break;
     case BGLOBAL:
-      printf("GLOBAL  %s, \n", bc.arg.string);
+      printf("GLOBAL       %s\n", bc.arg.string);
       break;
     case BEXTERN:
-      printf("EXTERN  %s, \n", bc.arg.string);
+      printf("EXTERN       %s\n", bc.arg.string);
       break;
     case BALIGN:
       printf("ALIGN\n");
       break;
     case BDB:
-      printf("DB %d\n", bc.arg.num);
+      printf("DB           %d\n", bc.arg.num);
       break;
   }
 }

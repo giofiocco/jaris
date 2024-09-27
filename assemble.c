@@ -421,7 +421,7 @@ bytecode_t compile(preprocessor_t *pre) {
       break;
     case T_STRING:
       bytecode = (bytecode_t){BSTRING, 0, {}};
-      memcpy(bytecode.arg.string, token.image.start, token.image.len);
+      memcpy(bytecode.arg.string, token.image.start + 1, token.image.len - 2);
       break;
     case T_NONE:
       return (bytecode_t){BNONE, 0, {}};
