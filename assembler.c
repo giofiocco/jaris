@@ -17,6 +17,7 @@ int main(int argc, char **argv) {
     OPT_HELP(),
     OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
     OPT_BIT(0, "dtok", &debug, "tokenizer debug info", NULL, DEBUG_TOKENIZER, 0),
+    OPT_BIT(0, "dbyt", &debug, "bytecodes debug info", NULL, DEBUG_BYTECODES, 0),
     OPT_BIT(0, "dobj", &debug, "obj state debug info", NULL, DEBUG_OBJ_STATE, 0),
     OPT_END(),
   };

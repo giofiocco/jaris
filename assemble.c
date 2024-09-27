@@ -456,6 +456,9 @@ obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
 
   bytecode_t bc = {0};
   while ((bc = compile(&pre)).kind != BNONE) {
+    if (flag & DEBUG_BYTECODES) {
+      bytecode_dump(bc);
+    }
     obj_compile_bytecode(&objs, bc);
   }
 
