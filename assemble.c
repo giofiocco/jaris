@@ -282,35 +282,6 @@ token_t preprocessor_token_next(preprocessor_t *pre) {
     }
 
     token = preprocessor_token_next(pre);
-
-  } else if (token.kind == T_SYM && sv_eq((sv_t){token.image.start + token.image.len - 4, 4}, sv_from_cstr("_ptr"))) {
-    if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("mul_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = MUL_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("div_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = DIV_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("solve_path_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = SOLVE_PATH_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("open_file_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = OPEN_FILE_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("get_file_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = GET_FILE_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("get_file16_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = GET_FILE16_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("close_file_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = CLOSE_FILE_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("execute_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = EXECUTE_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("exit_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = EXIT_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("put_char_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = PUT_CHAR_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("print_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = PRINT_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("get_char_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = GET_CHAR_PTR}};
-    } else if (token.kind == T_SYM && sv_eq(token.image, sv_from_cstr("get_delim_ptr"))) {
-      token = (token_t){T_HEX2, token.image, token.loc, {.num = GET_DELIM_PTR}};
-    }
   }
   if (token.kind == T_SYM) {
     macro_t *macro = preprocessor_find_macro(pre, token.image);
