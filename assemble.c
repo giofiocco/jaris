@@ -420,6 +420,7 @@ bytecode_t compile(preprocessor_t *pre) {
       bytecode = (bytecode_t){token.kind == T_HEX ? BHEX : BHEX2, 0, {.num = token.as.num}};
       break;
     case T_STRING:
+      bytecode = (bytecode_t){BSTRING, 0, {}};
       memcpy(bytecode.arg.string, token.image.start, token.image.len);
       break;
     case T_NONE:
