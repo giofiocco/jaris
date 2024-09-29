@@ -29,23 +29,25 @@ typedef enum {
 // clang-format on
 #define INSTRUCTION_MAX_LEN 8
 
+typedef enum {
+  BNONE,
+  BINST,
+  BINSTHEX,
+  BINSTHEX2,
+  BINSTLABEL,
+  BINSTRELLABEL,
+  BHEX,
+  BHEX2,
+  BSTRING,
+  BSETLABEL,
+  BGLOBAL,
+  BEXTERN,
+  BALIGN,
+  BDB,
+} bytecode_kind_t;
+
 typedef struct {
-  enum {
-    BNONE,
-    BINST,
-    BINSTHEX,
-    BINSTHEX2,
-    BINSTLABEL,
-    BINSTRELLABEL,
-    BHEX,
-    BHEX2,
-    BSTRING,
-    BSETLABEL,
-    BGLOBAL,
-    BEXTERN,
-    BALIGN,
-    BDB,
-  } kind;
+  bytecode_kind_t kind;
   instruction_t inst;
   union {
     uint16_t num;
@@ -68,5 +70,6 @@ int sv_to_instruction(sv_t sv, instruction_t *out);
 instruction_stat_t instruction_stat(instruction_t instruction);
 
 void bytecode_dump(bytecode_t bc);
+bytecode_t bytecode_with_string(bytecode_kind_t kind, instruction_t instruction, char *string);
 
 #endif  // INSTRUCTIONS_H__

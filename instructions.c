@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "instructions.h"
 
@@ -262,4 +263,10 @@ void bytecode_dump(bytecode_t bc) {
       printf("DB           %d\n", bc.arg.num);
       break;
   }
+}
+
+bytecode_t bytecode_with_string(bytecode_kind_t kind, instruction_t inst, char *str) {
+  bytecode_t bc = {kind, inst, {}};
+  strcpy(bc.arg.string, str);
+  return bc;
 }
