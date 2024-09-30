@@ -1,6 +1,7 @@
 GLOBAL execute
 EXTERN open_file
-EXTERN read_char
+EXTERN read_u8
+EXTERN read_u16
 
   { iup_ptr  0xF806 }
   { iup2_ptr 0xF808 }
@@ -12,23 +13,53 @@ ALIGN file: db 4
 -- [0xFFFF, _] if file not found
 -- [0xFFFE, _] if file not an exe
 -- [0xFFFA, _] if no more space in ram
+-- [0xFAFA, _] dynamic linking TODO: 
 execute:
   PUSHB PUSHA
 
   CALLR $allocate_page
-  A_B POPA PUSHB
-  -- ^ ram_start argv [path, _]
+  A_B POPA PUSHB PUSHB
+  -- ^ ram ram_start argv [path, _]
   RAM_B file
   CALL open_file
-  CMPA JMPRNZ $not_found
+  CMPA JMPRZ $not_found
 
-  RAM_A file CALL read_char RAM_BL "E" SUB JMPRNZ $not_exe
-  RAM_A file CALL read_char RAM_BL "X" SUB JMPRNZ $not_exe
-  RAM_A file CALL read_char RAM_BL "E" SUB JMPRNZ $not_exe
+  RAM_A file CALL read_u16 RAM_B "EX" SUB JMPRNZ $not_exe
+  RAM_A file CALL read_u8 RAM_BL "E" SUB JMPRNZ $not_exe
+
+  RAM_A file CALL read_u16 
+copy_code:
+  PUSHA
+  -- ^ code_size(even) ram ram_start argv
+  RAM_A file CALL read_u16 PUSHA
+  -- ^ 2insts code_size ram ram_start argv
+  PEEKAR 0x06 A_B POPA A_rB
+  -- ^ code_size ram ram_start argv
+  PEEKAR 0x04 INCA INCA PUSHAR 0x04
+  POPA DECA DECA JMPRNZ $copy_code
+  -- ^ ram ram_start argv
+
+  INCSP
+  RAM_A file CALL read_u16 
+reloc:
+  PUSHA
+  -- ^ count ram_start argv
+  RAM_A file CALL read_u16 A_B PEEKAR 0x04 SUM PUSHA -- where += ram_start
+  -- ^ where count ram_start argv
+  RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM -- what += ram_start
+  POPB A_rB
+  POPA DECA JMPRNZ $reloc
+
+  RAM_A file CALL read_u16
+  CMPA JMPRNZ $dynamic_linking
 
   HLT
 
-not_found
+dynamic_linking:
+  RAM_A 0xFAFA
+  HLT
+
+not_found:
   RAM_A 0xFFFF
   HLT
 not_exe:
