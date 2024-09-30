@@ -15,7 +15,6 @@ _start:
   RAM_B 0xF826 RAM_A 0x8000 A_rB -- SP 
   RAM_B 0xF828 RAM_A 0x0000 A_rB -- SP 
 
-
   RAM_A path
   CALL solve_path
   HLT

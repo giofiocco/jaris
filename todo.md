@@ -1,6 +1,10 @@
 - check if os is greater than page
 - reloc stdlib
 
+# bootloader
+
+- add file checking etc
+
 # Obj
 
 - check if global and extern table size are 1 byte
