@@ -1,13 +1,14 @@
-GLOBAL read_char
+GLOBAL read_u8
+GLOBAL read_u16
 
   { next_sec_index 0x01 }
   { max_ndx_index 0x03 }
   { data_start 0x04 }
 
 -- [FILE *file, _] -> [char, _]
--- read a char from the file
+-- read a u8 from the file
 -- [0xFFFF, _] if EOF
-read_char:
+read_u8:
   A_B INCA INCA PUSHA 
   -- ^ &ndx [_, &file]
   rB_A A_SEC
@@ -29,9 +30,7 @@ return_null:
   -- ^ &ndx
   RAM_NDX next_sec_index MEM_A INCNDX MEM_AH 
   INCA JMPRNZ $next_file
-
-  RAM_A 0xFFFF
-  INCSP RET
+  JMPR $eof
 
 next_file:
   -- &ndx [next_sec + 1, _]
@@ -45,4 +44,30 @@ next_file:
   SEC_A A_rB
   -- ^ [_, &file]
 
-  B_A JMPR $read_char
+  B_A JMPR $read_u8
+
+-- [FILE *file, _] -> [char, _]
+-- read a u16 from the file
+-- if the file has only one char left that is returned
+-- [0xFFFF, _] if EOF
+read_u16:
+  PUSHA
+  CALLR $read_u8
+  INCA JMPRZ $eof
+  DECA
+  PUSHA
+  PEEKAR 0x04
+  CALLR $read_u8
+  INCA JMPRZ $only_first
+  DECA 
+  A_B POPA B_AH
+  INCSP RET
+
+only_first:
+  -- ^ first_char _
+  POPA INCSP RET
+
+eof:
+  -- ^ _
+  RAM_A 0xFFFF
+  INCSP RET
