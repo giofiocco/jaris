@@ -1,8 +1,8 @@
 GLOBAL open_file
 EXTERN solve_path
 
-  { data_start 0x04 }
   { max_ndx_index 0x03 }
+  { data_start 0x04 }
 
 -- [cstr path, FILE *file] -> [_, _]
 -- the file struct has to be aligned

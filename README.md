@@ -197,7 +197,7 @@ The first process struct is the os-process
 | 2        | ptr to parent process |
 | 2        | cwd sec               |
 | 2        | SP                    |
-| 4        | page map mask         |
+| 2        | page index            |
 
 ### FILE struct
 

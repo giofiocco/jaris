@@ -1,5 +1,9 @@
 GLOBAL read_char
 
+  { next_sec_index 0x01 }
+  { max_ndx_index 0x03 }
+  { data_start 0x04 }
+
 -- [FILE *file, _] -> [char, _]
 -- read a char from the file
 -- [0xFFFF, _] if EOF
@@ -23,5 +27,22 @@ read_char:
 
 return_null:
   -- ^ &ndx
+  RAM_NDX next_sec_index MEM_A INCNDX MEM_AH 
+  INCA JMPRNZ $next_file
+
   RAM_A 0xFFFF
   INCSP RET
+
+next_file:
+  -- &ndx [next_sec + 1, _]
+  DECA A_SEC
+  RAM_NDX max_ndx_index 
+
+  RAM_AL data_start POPB AL_rB
+  B_A INCA A_B
+  MEM_A AL_rB
+  RAM_AL 0x03 SUB A_B
+  SEC_A A_rB
+  -- ^ [_, &file]
+
+  B_A JMPR $read_char

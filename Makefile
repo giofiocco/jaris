@@ -24,7 +24,7 @@ mem/__bootloader: asm/build/bootloader.o linker | mem
 mem/__os: asm/build/os.o mem/__stdlib linker | mem
 	./linker -o $@ $<
 
-mem/__stdlib: $(patsubst %,asm/build/%.o,mul div solve_path open_file read_char) linker | mem 
+mem/__stdlib: $(patsubst %,asm/build/%.o,mul div solve_path open_file read_char execute allocate_page) linker | mem 
 	./linker --so --nostdlib -o $@ $(filter %.o, $^) 
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
