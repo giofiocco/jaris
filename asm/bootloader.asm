@@ -55,9 +55,15 @@ copy_stdlib:
   -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec 
   CALLR $get_16
   CMPA JMPRZ $reloced_stdlib
-
-  RAM_A 0xFFFE HLT -- TODO
-
+reloc_stdlib:
+  PUSHA
+  -- ^ count os_ndx dynamic_reloc_count os_size stdlib_sec os_sec 
+  CALLR $get_16 A_B PEEKAR 0x08 SUM PUSHA -- where += os_size
+  -- ^ where count os_ndx dynamic_reloc_count os_size stdlib_sec os_sec 
+  CALLR $get_16 A_B PEEKAR 0x0A SUM -- what += os_size
+  POPB A_rB
+  POPA DECA JMPRNZ $reloc_stdlib
+  -- fall-throuh
 reloced_stdlib:
   -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec
   PEEKAR 0x0A A_SEC -- os_sec

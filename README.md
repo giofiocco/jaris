@@ -14,6 +14,9 @@ Jaris is a 16bit computer
    - [Dir Sector](#directory-sector)
    - [File Sector](#file-sector)
 4. [RAM Layout](#ram-layout)
+   - [OS struct](#os-struct)
+   - [Process struct](#process-struct)
+   - [FILE struct](#file-struct)
 
 ## Assembler
 
@@ -195,3 +198,11 @@ The first process struct is the os-process
 | 2        | cwd sec               |
 | 2        | SP                    |
 | 4        | page map mask         |
+
+### FILE struct
+
+| size [B] | description |
+| :------- | :---------- |
+| 2        | sec of file |
+| 1        | ndx         |
+| 1        | max ndx     |

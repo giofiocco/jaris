@@ -20,12 +20,10 @@ solve_path:
   RAM_NDX entry_start
 check_entry:
   -- ^ pathi path
-  MEM_A CMPA JMPRZ $not_found
-check_char:
-  -- ^ pathi path
   PEEKB rB_AL CMPA JMPRZ $path_end
   A_B RAM_AL "/" SUB JMPRZ $sub_dir
-  MEM_A INCNDX SUB JMPRNZ $neq
+  MEM_A INCNDX CMPA JMPRZ $not_found
+  SUB JMPRNZ $neq
 
   POPA INCA PUSHA -- pathi ++
   JMPR $check_entry

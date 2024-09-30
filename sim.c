@@ -356,7 +356,7 @@ int main(int argc, char **argv) {
 
   // printf("\e[1;1H\e[2J");
   cpu_dump(&cpu);
-  cpu_dump_ram_range(&cpu, 85, 90);
+  cpu_dump_ram_range(&cpu, 90, 100);
 
   return 0;
 }
