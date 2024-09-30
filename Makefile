@@ -5,7 +5,7 @@ all: $(TARGETS)
 
 .PHONY: clean
 
-mem.bin: mem/__bootloader mem/__stdlib mem/__os mem/ encodemem | mem
+mem.bin: $(patsubst %,mem/%,__bootloader __os __stdlib shutdown) encodemem | mem
 	./encodemem
 
 asm/build:
@@ -24,8 +24,11 @@ mem/__bootloader: asm/build/bootloader.o linker | mem
 mem/__os: asm/build/os.o mem/__stdlib linker | mem
 	./linker -o $@ $<
 
-mem/__stdlib: $(patsubst %,asm/build/%.o,mul div solve_path open_file read_char execute allocate_page) linker | mem 
+mem/__stdlib: $(patsubst %,asm/build/%.o,mul div solve_path open_file read_char execute) linker | mem 
 	./linker --so --nostdlib -o $@ $(filter %.o, $^) 
+
+mem/shutdown: asm/build/shutdown.o linker | mem
+	./linker -o $@ $<
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
 SV_LIB=mystb/sv.h

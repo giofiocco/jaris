@@ -1,4 +1,4 @@
-- check if os is greater than page
+- check if os + stdlib is greater than page
 - reloc stdlib
 
 # bootloader

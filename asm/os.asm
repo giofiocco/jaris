@@ -19,4 +19,4 @@ _start:
 
   HLT
 
-path: "a/b" 0x00
+path: "shutdown" 0x00
