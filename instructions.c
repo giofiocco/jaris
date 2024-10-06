@@ -242,7 +242,7 @@ void bytecode_dump(bytecode_t bc) {
       printf("HEX          0x%02X\n", bc.arg.num);
       break;
     case BHEX2:
-      printf("HEX2         0x%02X\n", bc.arg.num);
+      printf("HEX2         0x%04X\n", bc.arg.num);
       break;
     case BSTRING:
       printf("STRING       %s\n", bc.arg.string);
