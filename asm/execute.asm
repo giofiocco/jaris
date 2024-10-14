@@ -5,6 +5,9 @@ EXTERN read_u16
 
   { iup_ptr  0xF806 }
   { iup2_ptr 0xF808 }
+  { process_table_start 0xF820 }
+  { process_map_ptr 0xF804 }
+  { current_process_ptr 0xF802 }
 
 page_index: 0x00
 ALIGN file: db 4
@@ -49,9 +52,23 @@ reloc:
   RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM -- what += ram_start
   POPB A_rB
   POPA DECA JMPRNZ $reloc
+  -- ^ ram_start argv
 
   RAM_A file CALL read_u16
   CMPA JMPRNZ $dynamic_linking
+
+  RAM_A process_table_start PUSHA
+  RAM_B process_map_ptr rB_A
+  -- TODO: check if no more processes
+  SHL
+search_process:
+  PUSHA
+  -- ^ map process_ptr ram_start argv
+  PEEKAR 0x04 RAM_BL 0x10 SUM PUSHAR 0x04
+  POPA SHL JMPRC $search_process
+  -- ^ process_ptr ram_start argv
+
+  RAM_B current_process_ptr rB_A PEEKB A_rB
 
   HLT
 

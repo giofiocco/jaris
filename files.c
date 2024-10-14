@@ -48,85 +48,108 @@ void obj_dump(obj_t *obj) {
   printf("\n");
 }
 
-void obj_state_add_label(obj_state_t *objs, char *label, uint16_t pos) {
+void obj_state_add_symbol(obj_state_t *objs, char *name, uint16_t pos) {
   assert(objs);
-  assert(label);
+  assert(name);
 
-  assert(objs->label_num + 1 < LABEL_COUNT);
-  strcpy(objs->labels[objs->label_num].image, label);
-  objs->labels[objs->label_num].pos = pos;
-  ++objs->label_num;
+  symbol_t *s = obj_state_find_symbol(objs, name);
+  if (s) {
+    if (s->pos != 0xFFFF) {
+      eprintf("label redifinition: %s", name);
+    }
+    s->pos = pos;
+    return;
+  }
+
+  assert(objs->symbol_num + 1 < SYMBOL_COUNT);
+  strcpy(objs->symbols[objs->symbol_num].image, name);
+  objs->symbols[objs->symbol_num].pos = pos;
+  ++objs->symbol_num;
 }
 
-uint16_t obj_state_find_label(obj_state_t *objs, char *label) {
+symbol_t *obj_state_find_symbol(obj_state_t *objs, char *name) {
   assert(objs);
-  assert(label);
+  assert(name);
 
-  for (int i = 0; i < objs->label_num; ++i) {
-    if (strcmp(label, objs->labels[i].image) == 0) {
-      return objs->labels[i].pos;
+  for (int i = 0; i < objs->symbol_num; ++i) {
+    if (strcmp(name, objs->symbols[i].image) == 0) {
+      return &objs->symbols[i];
     }
   }
-  return 0xFFFF;
+  return NULL;
+}
+
+uint16_t obj_state_find_symbol_pos(obj_state_t *objs, char *name) {
+  assert(objs);
+  assert(name);
+
+  symbol_t *s = obj_state_find_symbol(objs, name);
+  return s ? s->pos : 0xFFFF;
 }
 
 void obj_state_add_relreloc(obj_state_t *objs, char *name, uint16_t pos) {
   assert(objs);
   assert(name);
 
-  assert(objs->relreloc_num + 1 < INTERN_RELOC_COUNT);
-  label_t label = {0};
-  strcpy(label.image, name);
-  label.pos = pos;
-  objs->relrelocs[objs->relreloc_num++] = label;
+  symbol_t *s = obj_state_find_symbol(objs, name);
+  if (s == NULL) {
+    obj_state_add_symbol(objs, name, 0xFFFF);
+    s = &objs->symbols[objs->symbol_num - 1];
+  }
+  assert(s->relreloc_num + 1 < RELOC_COUNT);
+  s->relrelocs[s->relreloc_num++] = pos;
 }
 
 void obj_state_add_reloc(obj_state_t *objs, char *name, uint16_t pos) {
   assert(objs);
   assert(name);
 
-  assert(objs->reloc_num + 1 < INTERN_RELOC_COUNT);
-  label_t label = {0};
-  strcpy(label.image, name);
-  label.pos = pos;
-  objs->relocs[objs->reloc_num++] = label;
+  symbol_t *s = obj_state_find_symbol(objs, name);
+  if (s == NULL) {
+    obj_state_add_symbol(objs, name, 0xFFFF);
+    s = &objs->symbols[objs->symbol_num - 1];
+  }
+  assert(s->reloc_num + 1 < RELOC_COUNT);
+  s->relocs[s->reloc_num++] = pos;
 }
 
 void obj_state_check_obj(obj_state_t *objs) {
   assert(objs);
 
-  for (int i = 0; i < objs->relreloc_num; ++i) {
-    uint16_t pos = obj_state_find_label(objs, objs->relrelocs[i].image);
-    if (pos == 0xFFFF) {
-      eprintf("label unset: %s", objs->relrelocs[i].image);
+  symbol_t *s = NULL;
+  extern_entry_t *e = NULL;
+  for (int i = 0; i < objs->symbol_num; ++i) {
+    s = &objs->symbols[i];
+    e = NULL;
+
+    if (s->pos == 0xFFFF) {
+      e = obj_find_extern(&objs->obj, s->image);
+      if (e == NULL) {
+        eprintf("label undef: %s", s->image);
+      }
+      assert(s->relreloc_num == 0);
     }
 
-    uint16_t num = pos - objs->relrelocs[i].pos;
-    objs->obj.code[objs->relrelocs[i].pos] = num & 0xFF;
-    objs->obj.code[objs->relrelocs[i].pos + 1] = num >> 8;
-  }
+    for (int j = 0; j < s->relreloc_num; ++j) {
+      uint16_t num = s->pos - s->relrelocs[j];
+      objs->obj.code[s->relrelocs[j]] = num & 0xFF;
+      objs->obj.code[s->relrelocs[j] + 1] = num >> 8;
+    }
 
-  for (int i = 0; i < objs->reloc_num; ++i) {
-    uint16_t pos = obj_state_find_label(objs, objs->relocs[i].image);
-    if (pos == 0xFFFF) {
-      extern_entry_t *e = obj_find_extern(&objs->obj, objs->relocs[i].image);
-
-      if (e == NULL) {
-        eprintf("label unset: %s", objs->relocs[i].image);
+    for (int j = 0; j < s->reloc_num; ++j) {
+      if (e) {
+        extern_entry_add_pos(e, s->relocs[j]);
+      } else {
+        obj_add_reloc(&objs->obj, s->relocs[j], s->pos);
       }
-
-      extern_entry_add_pos(e, objs->relocs[i].pos);
-    } else {
-      obj_add_reloc(&objs->obj, objs->relocs[i].pos, pos);
     }
   }
 
   for (int i = 0; i < objs->obj.global_num; ++i) {
-    uint16_t pos = obj_state_find_label(objs, objs->obj.globals[i].name);
+    uint16_t pos = obj_state_find_symbol_pos(objs, objs->obj.globals[i].name);
     if (pos == 0xFFFF) {
       eprintf("label unset: %s", objs->obj.globals[i].name);
     }
-
     objs->obj.globals[i].pos = pos;
   }
 }
@@ -165,7 +188,7 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
           obj_add_instruction(&objs->obj, NOP);
         }
         obj_add_instruction(&objs->obj, bc.inst);
-        uint16_t pos = obj_state_find_label(objs, bc.arg.string);
+        uint16_t pos = obj_state_find_symbol_pos(objs, bc.arg.string);
         if (pos != 0xFFFF) {
           obj_add_hex2(&objs->obj, (uint16_t)(pos - objs->obj.code_size));
         } else {
@@ -186,10 +209,10 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
       }
       break;
     case BSETLABEL:
-      if (obj_state_find_label(objs, bc.arg.string) != 0xFFFF) {
+      if (obj_state_find_symbol_pos(objs, bc.arg.string) != 0xFFFF) {
         eprintf("label redefinition %s", bc.arg.string);
       }
-      obj_state_add_label(objs, bc.arg.string, objs->obj.code_size);
+      obj_state_add_symbol(objs, bc.arg.string, objs->obj.code_size);
       break;
     case BGLOBAL:
       obj_add_global(&objs->obj, bc.arg.string);

@@ -89,6 +89,11 @@ The ending `Dynamic Linking Table Entry` is 0x00.
 | 1        | globals table size            |
 |          | globals table                 |
 
+### Debug info
+
+| size [B] | description |
+| :------- | :---------- |
+
 #### Globals Table Entry
 
 | size [B] | description |

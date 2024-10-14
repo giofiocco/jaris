@@ -407,7 +407,7 @@ bytecode_t compile(preprocessor_t *pre) {
   return bytecode;
 }
 
-obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
+obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag, int debug_info) {
   assert(buffer);
 
   tokenizer_t tokenizer;
@@ -434,18 +434,25 @@ obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
     obj_compile_bytecode(&objs, bc);
   }
 
-  if (flag & DEBUG_OBJ_STATE) {
-    printf("labelS:\n");
-    for (int i = 0; i < objs.label_num; ++i) {
-      printf("\t%s %04X\n", objs.labels[i].image, objs.labels[i].pos);
-    }
-    printf("RELRELOCS:\n");
-    for (int i = 0; i < objs.relreloc_num; ++i) {
-      printf("\t%s %04X\n", objs.relrelocs[i].image, objs.relrelocs[i].pos);
-    }
-    printf("RELOCS:\n");
-    for (int i = 0; i < objs.reloc_num; ++i) {
-      printf("\t%s %04X\n", objs.relocs[i].image, objs.relocs[i].pos);
+  if (debug_info || (flag & DEBUG_OBJ_STATE)) {
+    printf("SYMBOLS: %d\n", objs.symbol_num);
+    for (int i = 0; i < objs.symbol_num; ++i) {
+      symbol_t *s = &objs.symbols[i];
+      printf("\t%s: %04X\n", s->image, s->pos);
+      if (s->relreloc_num != 0) {
+        printf("\t\tRELRELOCS:");
+        for (int j = 0; j < s->relreloc_num; ++j) {
+          printf(" %04X", s->relrelocs[j]);
+        }
+        printf("\n");
+      }
+      if (s->reloc_num) {
+        printf("\t\tRELOCS:");
+        for (int j = 0; j < s->reloc_num; ++j) {
+          printf(" %04X", s->relocs[j]);
+        }
+        printf("\n");
+      }
     }
     obj_dump(&objs.obj);
   }

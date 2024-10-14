@@ -11,6 +11,7 @@
 #define DYNAMIC_COUNT      16
 #define LABEL_COUNT        256
 #define INTERN_RELOC_COUNT 256
+#define SYMBOL_COUNT       256
 
 typedef struct {
   uint16_t where;
@@ -69,13 +70,18 @@ typedef struct {
 } label_t;
 
 typedef struct {
-  obj_t obj;
-  label_t labels[LABEL_COUNT];
-  int label_num;
-  label_t relocs[INTERN_RELOC_COUNT];
+  char image[LABEL_MAX_LEN];
+  uint16_t pos;
+  uint16_t relocs[RELOC_COUNT];
   int reloc_num;
-  label_t relrelocs[RELOC_COUNT];
+  uint16_t relrelocs[RELOC_COUNT];
   int relreloc_num;
+} symbol_t;
+
+typedef struct {
+  obj_t obj;
+  symbol_t symbols[SYMBOL_COUNT];
+  int symbol_num;
 } obj_state_t;
 
 typedef struct {
@@ -93,10 +99,11 @@ void extern_entry_add_pos(extern_entry_t *e, uint16_t pos);
 
 void obj_dump(obj_t *obj);
 
-void obj_state_add_label(obj_state_t *objs, char *label, uint16_t pos);
-uint16_t obj_state_find_label(obj_state_t *objs, char *label);
-void obj_state_add_reloc(obj_state_t *objs, char *label, uint16_t pos);
-void obj_state_add_relreloc(obj_state_t *objs, char *label, uint16_t pos);
+void obj_state_add_symbol(obj_state_t *objs, char *name, uint16_t pos);
+symbol_t *obj_state_find_symbol(obj_state_t *objs, char *name);
+uint16_t obj_state_find_symbol_pos(obj_state_t *objs, char *name);
+void obj_state_add_reloc(obj_state_t *objs, char *name, uint16_t pos);
+void obj_state_add_relreloc(obj_state_t *objs, char *name, uint16_t pos);
 void obj_state_check_obj(obj_state_t *objs);
 void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc);
 
