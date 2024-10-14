@@ -98,6 +98,7 @@ void cpu_dump(cpu_t *cpu) {
          cpu->FR & (1 << Z) ? 'Z' : ' ');
   printf("SEC: %5d %04X\n", cpu->SEC, cpu->SEC);
   printf("NDX: %5d %04X\n", cpu->NDX, cpu->NDX);
+  printf("SP:        %04X\n", cpu->SP);
 }
 
 void cpu_dump_ram_range(cpu_t *cpu, uint16_t from, uint16_t to) {

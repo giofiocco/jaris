@@ -3,16 +3,21 @@ EXTERN open_file
 EXTERN read_u8
 EXTERN read_u16
 
+  { page_size 0x0800 }
   { iup_ptr  0xF806 }
   { iup2_ptr 0xF808 }
   { process_table_start 0xF820 }
   { process_map_ptr 0xF804 }
   { current_process_ptr 0xF802 }
+  { cwd_offset 0x02 }
+  { SP_offset 0x04 }
 
-page_index: 0x00
+-- TODO: page_index
+
+page_index: 0x0000
 ALIGN file: db 4
 
--- [cstr path, cstr argv[] (null terminated)] -> [_, _]
+-- [cstr path, cstr argv[] (null terminated list)] -> [_, _]
 -- [0xFFFF, _] if file not found
 -- [0xFFFE, _] if file not an exe
 -- [0xFFFA, _] if no more space in ram
@@ -60,17 +65,36 @@ reloc:
   RAM_A process_table_start PUSHA
   RAM_B process_map_ptr rB_A
   -- TODO: check if no more processes
-  SHL
+  SHL 
+  RAM_B 0x8000 PUSHB
 search_process:
   PUSHA
-  -- ^ map process_ptr ram_start argv
-  PEEKAR 0x04 RAM_BL 0x10 SUM PUSHAR 0x04
+  -- ^ map process_mask process_ptr ram_start argv
+  PEEKAR 0x06 RAM_BL 0x10 SUM PUSHAR 0x06
+  PEEKAR 0x04 SHR PUSHAR 0x04
   POPA SHL JMPRC $search_process
+  -- ^ process_mask process_ptr ram_start argv
+
+  RAM_B process_map_ptr rB_A POPB SUM RAM_B process_map_ptr A_rB -- *process_map_ptr = process_mask
+  RAM_B current_process_ptr rB_A PEEKB A_rB -- process_ptr->parent_process = current_process_ptr
+  B_A RAM_B current_process_ptr A_rB -- *current_process_ptr = process_ptr
   -- ^ process_ptr ram_start argv
 
-  RAM_B current_process_ptr rB_A PEEKB A_rB
+  PEEKB rB_A RAM_BL cwd_offset SUM A_B rB_A PUSHA
+  PEEKAR 0x04 RAM_BL cwd_offset SUM A_B POPA A_rB -- process_ptr->cwd = process_ptr->parent_process->cwd
 
-  HLT
+  PEEKAR 0x04 RAM_B page_size SUM DECA DECA PUSHA
+  PEEKAR 0x04 RAM_BL SP_offset SUM A_B POPA A_rB -- process_ptr->SP = ram_start + page_size - 2 
+
+  SP_A RAM_BL 0x06 SUM PUSHA -- sp before return ptr
+  PEEKAR 0x04 A_B rB_A RAM_BL SP_offset SUM A_B POPA A_rB -- process_ptr->parent_process->SP = sp before return ptr
+
+  -- TODO: process_ptr->page_index
+
+  -- ^ process_ptr ram_start argv
+  INCSP
+  PEEKAR 0x04 A_B
+  POPA JMPA
 
 dynamic_linking:
   RAM_A 0xFAFA
@@ -95,7 +119,7 @@ search_page:
   -- ^ mask page_start [iup, _]
   PUSHA
   PEEKAR 0x04 SHR PUSHAR 0x04 
-  PEEKAR 0x06 RAM_B 0x0800 SUM PUSHAR 0x06 -- 2048
+  PEEKAR 0x06 RAM_B page_size SUM PUSHAR 0x06 -- 2048
   POPA SHL JMPRC $search_page
 
   RAM_B iup_ptr rB_A POPB SUM
@@ -114,7 +138,7 @@ search_page2:
   -- ^ mask page_start [iup, _]
   PUSHA
   PEEKAR 0x04 SHR PUSHAR 0x04 
-  PEEKAR 0x06 RAM_B 0x0800 SUM PUSHAR 0x06 -- 2048
+  PEEKAR 0x06 RAM_B page_size SUM PUSHAR 0x06 -- 2048
   POPA SHL JMPRC $search_page2
 
   RAM_B iup2_ptr rB_A POPB SUM
