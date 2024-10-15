@@ -1,4 +1,5 @@
 GLOBAL _start
+EXTERN exit
 
 _start:
-  HLT
+  CALL exit

@@ -11,6 +11,7 @@ EXTERN read_u16
   { current_process_ptr 0xF802 }
   { cwd_offset 0x02 }
   { SP_offset 0x04 }
+  { stdlib_ptr_ptr 0xF800 }
 
 -- TODO: page_index
 
@@ -21,7 +22,7 @@ ALIGN file: db 4
 -- [0xFFFF, _] if file not found
 -- [0xFFFE, _] if file not an exe
 -- [0xFFFA, _] if no more space in ram
--- [0xFAFA, _] dynamic linking TODO: 
+-- [0xFAFA, _] TODO: dynamic linking with not the stdlib
 execute:
   PUSHB PUSHA
 
@@ -59,8 +60,11 @@ reloc:
   POPA DECA JMPRNZ $reloc
   -- ^ ram_start argv
 
-  RAM_A file CALL read_u16
-  CMPA JMPRNZ $dynamic_linking
+  RAM_A file CALL read_u8
+  CMPA JMPRZ $done_dynamic_linking
+  PEEKB CALL dynamic_link
+done_dynamic_linking:
+  -- ^ ram_start argv
 
   RAM_A process_table_start PUSHA
   RAM_B process_map_ptr rB_A
@@ -95,10 +99,6 @@ search_process:
   INCSP
   PEEKAR 0x04 A_B
   POPA JMPA
-
-dynamic_linking:
-  RAM_A 0xFAFA
-  HLT
 
 not_found:
   RAM_A 0xFFFF
@@ -151,3 +151,28 @@ no_more_space:
   RAM_A 0xFFFE
   INCSP INCSP RET
 
+-- [char first_char_of_name, ram_start] -> [_, _]
+dynamic_link:
+  PUSHB PUSHA
+  RAM_A file CALL read_u8
+  A_B POPA B_AH
+
+  A_B RAM_AL 0x01 SUB JMPRNZ $not_stdlib
+
+  RAM_B stdlib_ptr_ptr rB_A PUSHA
+  RAM_A file CALL read_u16 PUSHA
+dynamic_reloc:
+  -- ^ reloc_count lib_pos ram_start
+  RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM PUSHA
+  -- ^ where reloc_count lib_pos ram_start
+  RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM
+  POPB A_rB
+  POPA DECA JMPRNZ $dynamic_reloc
+  -- ^ lib_pos ram_start
+  INCSP INCSP
+  RET
+
+not_stdlib:
+  -- ^ ram_start [_, first 2 char of name]
+  RAM_A 0xFAFA
+  HLT
