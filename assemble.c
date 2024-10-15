@@ -306,6 +306,13 @@ token_t preprocessor_token_expect(preprocessor_t *pre, token_kind_t kind) {
   return token;
 }
 
+bytecode_t bytecode_with_sv(bytecode_kind_t kind, instruction_t inst, sv_t sv) {
+  bytecode_t b = {kind, inst, {}};
+  assert(sv.len < LABEL_MAX_LEN);
+  memcpy(b.arg.string, sv.start, sv.len);
+  return b;
+}
+
 bytecode_t compile(preprocessor_t *pre) {
   assert(pre);
 
@@ -316,8 +323,7 @@ bytecode_t compile(preprocessor_t *pre) {
   switch (token.kind) {
     case T_SYM:
       preprocessor_token_expect(pre, T_COLON);
-      bytecode.kind = BSETLABEL;
-      memcpy(bytecode.arg.string, token.image.start, token.image.len);
+      bytecode = bytecode_with_sv(BSETLABEL, 0, token.image);
       break;
     case T_INST:
       switch (instruction_stat(token.as.inst).arg) {
@@ -342,8 +348,7 @@ bytecode_t compile(preprocessor_t *pre) {
             if (arg.kind == T_HEX2) {
               bytecode = (bytecode_t){BINSTHEX2, token.as.inst, {.num = arg.as.num}};
             } else if (arg.kind == T_SYM) {
-              bytecode = (bytecode_t){BINSTLABEL, token.as.inst, {}};
-              memcpy(bytecode.arg.string, arg.image.start, arg.image.len);
+              bytecode = bytecode_with_sv(BINSTLABEL, token.as.inst, arg.image);
             } else if (arg.kind == T_STRING && arg.image.len == 2 + 2) {
               bytecode =
                 (bytecode_t){BINSTHEX2, token.as.inst, {.num = arg.image.start[1] | (arg.image.start[2] << 8)}};
@@ -355,16 +360,14 @@ bytecode_t compile(preprocessor_t *pre) {
         case INST_LABEL_ARG:
           {
             token_t arg = preprocessor_token_expect(pre, T_SYM);
-            bytecode = (bytecode_t){BINSTLABEL, token.as.inst, {}};
-            memcpy(bytecode.arg.string, arg.image.start, arg.image.len);
+            bytecode = bytecode_with_sv(BINSTLABEL, token.as.inst, arg.image);
           }
           break;
         case INST_RELLABEL_ARG:
           {
             preprocessor_token_expect(pre, T_REL);
             token_t arg = preprocessor_token_expect(pre, T_SYM);
-            bytecode = (bytecode_t){BINSTRELLABEL, token.as.inst, {}};
-            memcpy(bytecode.arg.string, arg.image.start, arg.image.len);
+            bytecode = bytecode_with_sv(BINSTRELLABEL, token.as.inst, arg.image);
           }
           break;
       }
@@ -373,8 +376,7 @@ bytecode_t compile(preprocessor_t *pre) {
     case T_EXTERN:
       {
         token_t arg = preprocessor_token_expect(pre, T_SYM);
-        bytecode = (bytecode_t){token.kind == T_GLOBAL ? BGLOBAL : BEXTERN, 0, {}};
-        memcpy(bytecode.arg.string, arg.image.start, arg.image.len);
+        bytecode = bytecode_with_sv(token.kind == T_GLOBAL ? BGLOBAL : BEXTERN, 0, arg.image);
       }
       break;
     case T_ALIGN:
@@ -391,8 +393,7 @@ bytecode_t compile(preprocessor_t *pre) {
       bytecode = (bytecode_t){token.kind == T_HEX ? BHEX : BHEX2, 0, {.num = token.as.num}};
       break;
     case T_STRING:
-      bytecode = (bytecode_t){BSTRING, 0, {}};
-      memcpy(bytecode.arg.string, token.image.start + 1, token.image.len - 2);
+      bytecode = bytecode_with_sv(BSTRING, 0, (sv_t){token.image.start + 1, token.image.len - 2});
       break;
     case T_NONE:
       return (bytecode_t){BNONE, 0, {}};

@@ -183,19 +183,12 @@ void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc) {
       objs->obj.code_size += 2;
       break;
     case BINSTRELLABEL:
-      {
-        if (objs->obj.code_size % 2 == 0) {
-          obj_add_instruction(&objs->obj, NOP);
-        }
-        obj_add_instruction(&objs->obj, bc.inst);
-        uint16_t pos = obj_state_find_symbol_pos(objs, bc.arg.string);
-        if (pos != 0xFFFF) {
-          obj_add_hex2(&objs->obj, (uint16_t)(pos - objs->obj.code_size));
-        } else {
-          obj_state_add_relreloc(objs, bc.arg.string, objs->obj.code_size);
-          objs->obj.code_size += 2;
-        }
+      if (objs->obj.code_size % 2 == 0) {
+        obj_add_instruction(&objs->obj, NOP);
       }
+      obj_add_instruction(&objs->obj, bc.inst);
+      obj_state_add_relreloc(objs, bc.arg.string, objs->obj.code_size);
+      objs->obj.code_size += 2;
       break;
     case BHEX:
       obj_add_hex(&objs->obj, bc.arg.num);
@@ -308,7 +301,7 @@ obj_t obj_decode_file(char *filename) {
   }
 
   int global_table_size = 0;
-  assert(fread(&global_table_size, 2, 1, file) == 1);
+  assert(fread(&global_table_size, 1, 1, file) == 1);
   while (global_table_size > 0) {
     size_t len = 0;
     assert(fread(&len, 1, 1, file) == 1);
@@ -320,7 +313,7 @@ obj_t obj_decode_file(char *filename) {
   assert(global_table_size == 0);
 
   int extern_table_size = 0;
-  assert(fread(&extern_table_size, 2, 1, file) == 1);
+  assert(fread(&extern_table_size, 1, 1, file) == 1);
   while (extern_table_size > 0) {
     size_t len = 0;
     assert(fread(&len, 1, 1, file) == 1);
@@ -360,7 +353,7 @@ void obj_encode_file(obj_t *obj, char *filename) {
   assert(fwrite("OBJ", 1, 3, file) == 3);
 
   int global_table_size = 0;
-  assert(fwrite(&global_table_size, 2, 1, file) == 1);
+  assert(fwrite(&global_table_size, 1, 1, file) == 1);
   for (int i = 0; i < obj->global_num; ++i) {
     size_t len = strlen(obj->globals[i].name);
     assert(fwrite(&len, 1, 1, file) == 1);
@@ -368,12 +361,14 @@ void obj_encode_file(obj_t *obj, char *filename) {
     assert(fwrite(&obj->globals[i].pos, 2, 1, file) == 1);
     global_table_size += 1 + len + 2;
   }
+  int ret = ftell(file);
   assert(fseek(file, 3, SEEK_SET) == 0);
-  assert(fwrite(&global_table_size, 2, 1, file) == 1);
-  assert(fseek(file, 5 + global_table_size, SEEK_SET) == 0);
+  assert(fwrite(&global_table_size, 1, 1, file) == 1);
+  assert(fseek(file, ret, SEEK_SET) == 0);
 
+  int extern_table_size_pos = ftell(file);
   int extern_table_size = 0;
-  assert(fwrite(&extern_table_size, 2, 1, file) == 1);
+  assert(fwrite(&extern_table_size, 1, 1, file) == 1);
   for (int i = 0; i < obj->extern_num; ++i) {
     uint8_t len = strlen(obj->externs[i].name);
     uint8_t num = obj->externs[i].pos_num;
@@ -385,9 +380,10 @@ void obj_encode_file(obj_t *obj, char *filename) {
     }
     extern_table_size += 1 + len + 1 + 2 * num;
   }
-  assert(fseek(file, 5 + global_table_size, SEEK_SET) == 0);
-  assert(fwrite(&extern_table_size, 2, 1, file) == 1);
-  assert(fseek(file, 5 + global_table_size + 2 + extern_table_size, SEEK_SET) == 0);
+  ret = ftell(file);
+  assert(fseek(file, extern_table_size_pos, SEEK_SET) == 0);
+  assert(fwrite(&extern_table_size, 1, 1, file) == 1);
+  assert(fseek(file, ret, SEEK_SET) == 0);
 
   assert(fwrite(&obj->reloc_num, 2, 1, file) == 1);
   for (int i = 0; i < obj->reloc_num; ++i) {

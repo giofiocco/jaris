@@ -24,7 +24,7 @@ mem/__bootloader: asm/build/bootloader.o linker | mem
 mem/__os: asm/build/os.o mem/__stdlib linker | mem
 	./linker -o $@ $<
 
-mem/__stdlib: $(patsubst %,asm/build/%.o,mul div solve_path open_file read_file execute exit dynamic_link) linker | mem 
+mem/__stdlib: $(patsubst %,asm/build/%.o,mul div solve_path open_file read_file execute exit) linker | mem 
 	./linker --so --nostdlib -o $@ $(filter %.o, $^) 
 
 mem/shutdown: asm/build/shutdown.o linker | mem
