@@ -58,7 +58,6 @@ char *instruction_to_string(instruction_t instruction) {
     case MEM_AH: return "MEM_AH";
     case CALL: return "CALL";
     case CALLR: return "CALLR";
-    case CALLrRAM: return "CALLrRAM";
     case RET: return "RET";
     case KEY: return "KEY";
     case HLT: return "HLT";
@@ -170,8 +169,6 @@ int sv_to_instruction(sv_t sv, instruction_t *out) {
     *out = CALL;
   } else if (sv_eq(sv, sv_from_cstr("CALLR"))) {
     *out = CALLR;
-  } else if (sv_eq(sv, sv_from_cstr("CALLrRAM"))) {
-    *out = CALLrRAM;
   } else if (sv_eq(sv, sv_from_cstr("RET"))) {
     *out = RET;
   } else if (sv_eq(sv, sv_from_cstr("KEY"))) {
@@ -206,7 +203,6 @@ instruction_stat_t instruction_stat(instruction_t instruction) {
       return (instruction_stat_t){INST_8BITS_ARG};
     case RAM_A: case RAM_B:
     case JMP:
-    case CALLrRAM:
       return (instruction_stat_t){INST_16BITS_ARG};
     case CALL:
       return (instruction_stat_t){INST_LABEL_ARG};

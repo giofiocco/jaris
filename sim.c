@@ -554,14 +554,6 @@ void set_control_rom() {
   set_instruction_allflag(CALLR, 5, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
   set_instruction_allflag(CALLR, 6, micro(ALUo) | micro(IPi));
   set_instruction_allflag(CALLR, 7, micro(SCr));
-  set_instruction_allflag(CALLrRAM, 2, micro(SPo) | micro(MARi));
-  set_instruction_allflag(CALLrRAM, 3, micro(IPo) | micro(RAM) | micro(RAM16) | micro(SPu) | micro(SPm));
-  set_instruction_allflag(CALLrRAM, 4, micro(IPo) | micro(MARi));
-  set_instruction_allflag(CALLrRAM, 5, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
-  set_instruction_allflag(CALLrRAM, 6, micro(Yi));
-  set_instruction_allflag(CALLrRAM, 7, micro(ALUo) | micro(MARi));
-  set_instruction_allflag(CALLrRAM, 8, micro(RAM) | micro(RAM16) | micro(RAMo) | micro(IPi));
-  set_instruction_allflag(CALLrRAM, 9, micro(SCr));
   set_instruction_allflag(RET, 2, micro(SPu));
   set_instruction_allflag(RET, 3, micro(SPo) | micro(MARi));
   set_instruction_allflag(RET, 4, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(IPi));

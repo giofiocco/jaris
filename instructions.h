@@ -22,7 +22,7 @@ typedef enum {
   A_SP, SP_A, 
   A_SEC, SEC_A, 
   RAM_NDX, INCNDX, NDX_A, A_NDX, MEM_A, MEM_AH,
-  CALL, CALLR, CALLrRAM, RET,
+  CALL, CALLR, RET,
   KEY,
   HLT = 0x3F
 } instruction_t;
