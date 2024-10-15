@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "argparse/argparse.h"
 
@@ -305,12 +306,13 @@ void load_input_string(cpu_t *cpu, char *string) {
 
 int main(int argc, char **argv) {
   int step_mode = 0;
+  int real_time_mode = 0;
 
   struct argparse_option options[] = {
     OPT_GROUP("Options"),
     OPT_HELP(),
     OPT_BOOLEAN('s', "step", &step_mode, "enable step mode after the cpu is HLTed", NULL, 0, 0),
-    OPT_BOOLEAN('s', "step", &step_mode, "enable step mode after the cpu is HLTed", NULL, 0, 0),
+    OPT_BOOLEAN('r', "realtime", &real_time_mode, "enable real-time mode (sleep for 1/4E6 s each tick)", NULL, 0, 0),
     OPT_END(),
   };
   struct argparse argparse;
@@ -331,6 +333,9 @@ int main(int argc, char **argv) {
   while (running) {
     tick(&cpu, &running);
     ++ticks;
+    if (real_time_mode) {
+      sleep(1.0 / 4.0E6);
+    }
   }
   printf("ticks: %.3fE3 (%.3f ms @ 4 MHz, %.3f ms @ 10 MHz)\n",
          (float)ticks / 1E3,
@@ -357,7 +362,7 @@ int main(int argc, char **argv) {
 
   // printf("\e[1;1H\e[2J");
   cpu_dump(&cpu);
-  cpu_dump_ram_range(&cpu, 90, 100);
+  cpu_dump_ram_range(&cpu, 250, 270);
 
   return 0;
 }
