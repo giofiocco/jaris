@@ -17,6 +17,7 @@ _start:
   RAM_A path
   CALL execute
 
+  RAM_A 0x0000
   HLT
 
 path: "shutdown" 0x00

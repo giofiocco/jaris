@@ -79,7 +79,7 @@ search_process:
   POPA SHL JMPRC $search_process
   -- ^ process_mask process_ptr ram_start argv
 
-  RAM_B process_map_ptr rB_A POPB SUM RAM_B process_map_ptr A_rB -- *process_map_ptr = process_mask
+  RAM_B process_map_ptr rB_A POPB SUM RAM_B process_map_ptr A_rB -- *process_map_ptr += process_mask
   RAM_B current_process_ptr rB_A PEEKB A_rB -- process_ptr->parent_process = current_process_ptr
   B_A RAM_B current_process_ptr A_rB -- *current_process_ptr = process_ptr
   -- ^ process_ptr ram_start argv
@@ -94,6 +94,7 @@ search_process:
   PEEKAR 0x04 A_B rB_A RAM_BL SP_offset SUM A_B POPA A_rB -- process_ptr->parent_process->SP = sp before return ptr
 
   -- TODO: process_ptr->page_index
+  --       page map
 
   -- ^ process_ptr ram_start argv
   INCSP
