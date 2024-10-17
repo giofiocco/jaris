@@ -87,6 +87,12 @@ void cpu_init(cpu_t *cpu) {
   cpu->IP = 0xFF00;
 }
 
+uint16_t cpu_read16(cpu_t *cpu, uint16_t at) {
+  assert(cpu);
+  assert(at % 2 == 0);
+  return cpu->RAM[at] | (cpu->RAM[at + 1] << 8);
+}
+
 void cpu_dump(cpu_t *cpu) {
   assert(cpu);
 
@@ -108,8 +114,21 @@ void cpu_dump_ram_range(cpu_t *cpu, uint16_t from, uint16_t to) {
 
   printf("RAM:\n");
   for (int i = from - from % 2; i < to + to % 2; i += 2) {
-    printf("\t%04X   %02X %02X %d\n", i, cpu->RAM[i], cpu->RAM[i + 1], cpu->RAM[i] | (cpu->RAM[i + 1] << 8));
+    printf("\t%04X   %02X %02X %d\n", i, cpu->RAM[i], cpu->RAM[i + 1], cpu_read16(cpu, i));
   }
+}
+
+void cpu_dump_stdout(cpu_t *cpu) {
+  assert(cpu);
+
+  uint16_t stdout_ptr = cpu_read16(cpu, 0xF80A);
+  uint16_t stdout_next_char = cpu_read16(cpu, stdout_ptr);
+
+  printf("STDOUT: %d\n", stdout_next_char - stdout_ptr - 4);
+  for (uint16_t i = stdout_ptr + 4; i < stdout_next_char; ++i) {
+    printf("%c", cpu->RAM[i]);
+  }
+  printf("\n");
 }
 
 void set_instruction_flags(instruction_t inst, uint8_t step, uint8_t flags, bool invert, microcode_t code) {
@@ -312,7 +331,7 @@ int main(int argc, char **argv) {
     OPT_GROUP("Options"),
     OPT_HELP(),
     OPT_BOOLEAN('s', "step", &step_mode, "enable step mode after the cpu is HLTed", NULL, 0, 0),
-    OPT_BOOLEAN('r', "realtime", &real_time_mode, "enable real-time mode (sleep for 1/4E6 s each tick)", NULL, 0, 0),
+    OPT_BOOLEAN('r', "realtime", &real_time_mode, "sleeps each tick to simulate a 4MHz clock", NULL, 0, 0),
     OPT_END(),
   };
   struct argparse argparse;
@@ -362,7 +381,9 @@ int main(int argc, char **argv) {
 
   // printf("\e[1;1H\e[2J");
   cpu_dump(&cpu);
-  cpu_dump_ram_range(&cpu, 250, 270);
+  cpu_dump_ram_range(&cpu, 0, 20);
+
+  cpu_dump_stdout(&cpu);
 
   return 0;
 }

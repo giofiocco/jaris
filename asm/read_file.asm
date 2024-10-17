@@ -10,12 +10,12 @@ GLOBAL read_u16
 -- [0xFFFF, _] if EOF
 read_u8:
   A_B INCA INCA PUSHA 
-  -- ^ &ndx [_, &file]
+  -- ^ &ndx [_, file]
   rB_A A_SEC
   PEEKB rB_AL A_NDX PUSHA 
   B_A INCA A_B rB_AL POPB
   -- ^ &ndx [max_ndx, ndx]
-  SUB JMPRZ $return_null -- if (ndx == max_ndx) goto return_null
+  SUB DECA JMPRZ $return_null -- if (ndx - max_ndx - 1 == 0) goto return_null
   -- ^ &ndx [_, ndx]
   MEM_A PUSHA
   PUSHB

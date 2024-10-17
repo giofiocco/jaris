@@ -229,6 +229,8 @@ void obj_add_reloc(obj_t *obj, uint16_t where, uint16_t what) {
 
   assert(obj->reloc_num + 1 < RELOC_COUNT);
   obj->reloc_table[obj->reloc_num++] = (reloc_entry_t){where, what};
+  obj->code[where] = what & 0xFF;
+  obj->code[where + 1] = (what >> 8) & 0xFF;
 }
 
 void obj_add_global(obj_t *obj, char *image) {
@@ -613,8 +615,8 @@ void exe_encode_file(exe_t *exe, char *filename) {
       assert(fwrite(&dt->reloc_table[j].what, 2, 1, file) == 1);
     }
   }
-  uint8_t finaldltentry[] = {0};
-  assert(fwrite(&finaldltentry, 1, sizeof(finaldltentry), file) == sizeof(finaldltentry));
+  int ending = 0;
+  assert(fwrite(&ending, 1, 1, file) == 1);
 
   assert(fclose(file) == 0);
 }

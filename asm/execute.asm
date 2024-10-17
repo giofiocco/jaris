@@ -29,7 +29,7 @@ execute:
   CALLR $allocate_page
   A_B POPA PUSHB PUSHB
   -- ^ ram ram_start argv [path, _]
-  RAM_B file
+  RAM_B file 
   CALL open_file
   CMPA JMPRZ $not_found
 
@@ -62,9 +62,10 @@ reloc:
 
   RAM_A file CALL read_u8
   CMPA JMPRZ $done_dynamic_linking
-  PEEKB CALL dynamic_link
+  PEEKB CALLR $dynamic_link
 done_dynamic_linking:
   -- ^ ram_start argv
+
 
   RAM_A process_table_start PUSHA
   RAM_B process_map_ptr rB_A
@@ -97,6 +98,7 @@ search_process:
   --       page map
 
   -- ^ process_ptr ram_start argv
+
   INCSP
   PEEKAR 0x04 A_B
   POPA JMPA
@@ -161,14 +163,18 @@ dynamic_link:
   A_B RAM_AL 0x01 SUB JMPRNZ $not_stdlib
 
   RAM_B stdlib_ptr_ptr rB_A PUSHA
-  RAM_A file CALL read_u16 PUSHA
+  RAM_A file CALL read_u16
+  -- ^ lib_pos ram_start
+  CMPA JMPRZ $done_dynamic_reloc
 dynamic_reloc:
+  PUSHA
   -- ^ reloc_count lib_pos ram_start
   RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM PUSHA
   -- ^ where reloc_count lib_pos ram_start
   RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM
   POPB A_rB
   POPA DECA JMPRNZ $dynamic_reloc
+done_dynamic_reloc:
   -- ^ lib_pos ram_start
   INCSP INCSP
   RET

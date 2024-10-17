@@ -194,6 +194,7 @@ The first process struct is the os-process
 | 2        | ptr to current process struct |
 | 2        | used process map              |
 | 4        | used page map                 |
+| 2        | stdout struct ptr             |
 
 ### Process Struct
 
@@ -211,3 +212,11 @@ The first process struct is the os-process
 | 2        | sec of file |
 | 1        | ndx         |
 | 1        | max ndx     |
+
+### Stdout struct
+
+| size [B] | description   |
+| :------- | :------------ |
+| 2        | next char ptr |
+| 2        | end ptr       |
+|          | chars         |
