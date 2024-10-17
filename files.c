@@ -424,8 +424,8 @@ void exe_dump(exe_t *exe) {
     printf(" %d\n", exe->dynamics_table[i].reloc_num);
     for (int j = 0; j < exe->dynamics_table[i].reloc_num; ++j) {
       printf("\t\t%04X %04X\n",
-             exe->dynamics_table[i].reloc_table[i].where,
-             exe->dynamics_table[i].reloc_table[i].what);
+             exe->dynamics_table[i].reloc_table[j].where,
+             exe->dynamics_table[i].reloc_table[j].what);
     }
   }
 }
@@ -533,7 +533,6 @@ void exe_add_reloc(exe_t *exe, reloc_entry_t reloc) {
   exe->reloc_table[exe->reloc_num++] = reloc;
 }
 
-#include <stdlib.h>
 exe_t exe_decode_file(char *filename) {
   assert(filename);
 
