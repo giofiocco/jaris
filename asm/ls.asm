@@ -20,9 +20,11 @@ loop:
   JMPR $loop
 
 next:
-  RAM_AL 0x0A CALL put_char -- new line
+  RAM_AL " " CALL put_char
   INCNDX INCNDX -- skip ptr
   JMPR $entry
 
 end:
+  RAM_AL 0x0A CALL put_char -- new line
+  RAM_AL 0x00
   CALL exit

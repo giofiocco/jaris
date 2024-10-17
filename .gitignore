@@ -7,3 +7,5 @@ linker
 encodemem
 inspect
 sim
+decodemem
+makemddocs

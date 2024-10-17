@@ -23,7 +23,7 @@ typedef enum {
   A_SEC, SEC_A, 
   RAM_NDX, INCNDX, NDX_A, A_NDX, MEM_A, MEM_AH,
   CALL, CALLR, RET,
-  KEY,
+  KEY_A,
   HLT = 0x3F
 } instruction_t;
 // clang-format on

@@ -348,6 +348,8 @@ int main(int argc, char **argv) {
   cpu_init(&cpu);
   bool running = true;
 
+  load_input_string(&cpu, "diocane");
+
   int ticks = 0;
   while (running) {
     tick(&cpu, &running);
@@ -381,7 +383,7 @@ int main(int argc, char **argv) {
 
   // printf("\e[1;1H\e[2J");
   cpu_dump(&cpu);
-  cpu_dump_ram_range(&cpu, 0, 20);
+  cpu_dump_ram_range(&cpu, 0x0800, 0x0820);
 
   cpu_dump_stdout(&cpu);
 
@@ -587,8 +589,8 @@ void set_control_rom() {
   set_instruction_allflag(RET, 6, micro(IPp));
   set_instruction_allflag(RET, 7, micro(SCr));
 
-  set_instruction_allflag(KEY, 2, micro(KEYo) | micro(Ai));
-  set_instruction_allflag(KEY, 3, micro(SCr));
+  set_instruction_allflag(KEY_A, 2, micro(KEYo) | micro(Ai));
+  set_instruction_allflag(KEY_A, 3, micro(SCr));
 
   set_instruction_allflag(HLT, 2, micro(_HLT));
 }

@@ -65,8 +65,6 @@ reloc:
   PEEKB CALLR $dynamic_link
 done_dynamic_linking:
   -- ^ ram_start argv
-
-
   RAM_A process_table_start PUSHA
   RAM_B process_map_ptr rB_A
   -- TODO: check if no more processes

@@ -23,7 +23,7 @@ _start:
   RAM_A path
   CALL execute
 
-  RAM_A 0x0000
+  RAM_B 0x0000
   HLT
 
-path: "ls" 0x00
+path: "sh" 0x00
