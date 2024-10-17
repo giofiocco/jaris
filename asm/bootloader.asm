@@ -1,19 +1,21 @@
 -- expects in the last 4 bytes of sec 0 the ptr to os and stdlib sec 
+-- [0xFFFF, _] if os + stdlib is more than one page
 
-{ entries_start 0x0C }
+{ os_sec_pos 0xFC }
 { next_index 0x01 }
 { max_index 0x03 }
 { data_start 0x04 }
 { ptr_to_stdlib_ptr 0xF800 }
+{ page_size 0x0800 }
 
 RAM_A 0xFEFE A_SP -- 0xFF00 - 2
 RAM_AL 0x00 A_SEC 
-RAM_NDX 0xFC 
+RAM_NDX os_sec_pos
 MEM_A INCNDX MEM_AH INCNDX PUSHA -- os_sec
 MEM_A INCNDX MEM_AH INCNDX PUSHA -- stdlib_sec
 -- ^ stdlib_sec os_sec
 PEEKAR 0x04 A_SEC 
-RAM_NDX 0x07 -- 4 + 3 
+RAM_NDX 0x07
 
 CALLR $get_16 PUSHA
 RAM_BL 0x00 PUSHB
@@ -31,59 +33,57 @@ copied:
   CALLR $get_16 SHL SHL -- reloc_count * 4
   A_B NDX_A SUM A_NDX -- ndx += reloc_count * 4
 
-  CALLR $get_8 CMPA JMPRZ $done -- if no dynamic linking goto done
-  CALLR $get_8 -- if the name is 0x01 0x00 the 0x01 is already read so skip the 0x00 
-  CALLR $get_16 PUSHA -- dynamic_reloc_count
-  NDX_A PUSHA -- os_ndx
+  CALLR $get_16 RAM_BL 0x01 SUB JMPRNZ $not_stdlib
+  CALLR $get_16 
+dynamic_reloc: 
+  PUSHA 
+  -- ^ dynamic_reloc_count os_size stdlib_sec os_sec
+  CALLR $get_16 PUSHA
+  -- ^ where dynamic_reloc_count os_size stdlib_sec os_sec
+  CALLR $get_16 A_B PEEKAR 0x06 SUM -- what += os_size
+  POPB A_rB
+  POPA DECA JMPRNZ $dynamic_reloc
 
-  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec
-  PEEKAR 0x08 A_SEC -- stdlib
+  -- ^ os_size stdlib_sec os_sec
+  PEEKAR 0x04 A_SEC -- stdlib
   RAM_NDX 0x06 -- 4 + 2
   CALLR $get_16 PUSHA -- stdlib code_size
-  -- ^ code_size os_ndx dynamic_reloc_count os_size stdlib_sec os_sec
-  PEEKAR 0x08 A_B POPA 
+
+  A_B PEEKAR 0x04 SUM RAM_B page_size SUB JMPRN $too_big
+
+  -- ^ code_size os_size stdlib_sec os_sec
+  PEEKAR 0x04 A_B POPA
 copy_stdlib:
-  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec [code_size, mar]
+  -- ^ os_size stdlib_sec os_sec [code_size, mar]
   PUSHA PUSHB
-  -- ^ mar code_size os_ndx dynamic_reloc_count os_size stdlib_sec os_sec
+  -- ^ mar code_size os_size stdlib_sec os_sec
   CALLR $get_16
   POPB A_rB
   B_A INCA INCA A_B 
   POPA DECA DECA JMPRNZ $copy_stdlib
 
-
-  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec 
+  -- ^ dynamic_reloc_count os_size stdlib_sec os_sec 
   CALLR $get_16
   CMPA JMPRZ $reloced_stdlib
 reloc_stdlib:
   PUSHA
-  -- ^ count os_ndx dynamic_reloc_count os_size stdlib_sec os_sec 
-  CALLR $get_16 A_B PEEKAR 0x08 SUM PUSHA -- where += os_size
-  -- ^ where count os_ndx dynamic_reloc_count os_size stdlib_sec os_sec 
-  CALLR $get_16 A_B PEEKAR 0x0A SUM -- what += os_size
+  -- ^ count os_size stdlib_sec os_sec
+  CALLR $get_16 A_B PEEKAR 0x04 SUM PUSHA -- where += os_size
+  -- ^ where count os_size stdlib_sec os_sec 
+  CALLR $get_16 A_B PEEKAR 0x06 SUM -- what += os_size
   POPB A_rB
   POPA DECA JMPRNZ $reloc_stdlib
   -- fall-throuh
 reloced_stdlib:
-  -- ^ os_ndx dynamic_reloc_count os_size stdlib_sec os_sec
-  PEEKAR 0x0A A_SEC -- os_sec
-  POPA A_NDX -- os_ndx
-  POPA
-  -- fall-through
-dynamic_reloc:
-  -- ^ os_size stdlib_sec os_sec [dynamic_reloc_count, _]
-  PUSHA
-  CALLR $get_16 PUSHA 
-  -- ^ where dynamic_reloc_count os_size stdlib_sec os_sec
-  CALLR $get_16 A_B PEEKAR 0x06 SUM -- what += os_size
-  POPB A_rB
-  POPA DECA JMPRNZ $dynamic_reloc
-  -- fall-through
-done:
-  -- ^ os_size stdlib_sec os_sec 
+  -- ^ os_size stdlib_sec os_sec
   POPA RAM_B ptr_to_stdlib_ptr A_rB
 
   RAM_AL 0x00 JMPA
+
+not_stdlib:
+  RAM_A 0xFFFF
+  RAM_B 0xFFFF
+  HLT
 
 get_8:
   NDX_A CMPA JMPRZ $get_8_next_subsector
@@ -98,10 +98,11 @@ get_8_next_subsector:
   MEM_A INCNDX MEM_AH A_SEC
   RAM_NDX data_start MEM_A INCNDX
   RET
- 
 
 get_16:
   CALLR $get_8 PUSHA
   CALLR $get_8 A_B POPA B_AH
   RET
 
+too_big:
+  RAM_A 0xFFFF

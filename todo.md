@@ -1,8 +1,17 @@
+bss section
+
+# encodemem
+
+- pass bootloader stdlib os as args
+
 # bootloader
 
-- check if os + stdlib is greater than page
 - add file checking etc
 
 # Inspect
 
 - read from the stdin
+
+# Execute
+
+- files with more then one sector?
