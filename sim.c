@@ -140,7 +140,7 @@ void cpu_dump_stdout(cpu_t *cpu) {
         printf("·");
         break;
       case '\n':
-        printf("␣");
+        printf("⏎\n");
         break;
       default:
         printf("%c", cpu->RAM[i]);
