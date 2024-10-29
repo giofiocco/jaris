@@ -127,30 +127,38 @@ int main(int argc, char **argv) {
   int disassemble_flag = 0;
 
   struct argparse_option options[] = {
-    OPT_GROUP("Options:"),
-    OPT_BOOLEAN('d', "disassemble", &disassemble_flag, "dump disassembled code", NULL, 0, 0),
-    OPT_HELP(),
-    OPT_GROUP("Kinds:"),
-    OPT_BIT(0, "obj", &kind, "analyse the file as an obj", NULL, KOBJ, 0),
-    OPT_BIT(0, "exe", &kind, "analyse the file as an exe", NULL, KEXE, 0),
-    OPT_BIT(0, "so", &kind, "analyse the file as a so", NULL, KSO, 0),
-    OPT_BIT(0, "mem", &kind, "analyse the file as a mem.bin file", NULL, KMEM, 0),
-    OPT_BIT(0, "bin", &kind, "analyse the file as a bin", NULL, KBIN, 0),
-    OPT_END(),
+      OPT_GROUP("Options:"),
+      OPT_BOOLEAN('d',
+                  "disassemble",
+                  &disassemble_flag,
+                  "dump disassembled code",
+                  NULL,
+                  0,
+                  0),
+      OPT_HELP(),
+      OPT_GROUP("Kinds:"),
+      OPT_BIT(0, "obj", &kind, "analyse the file as an obj", NULL, KOBJ, 0),
+      OPT_BIT(0, "exe", &kind, "analyse the file as an exe", NULL, KEXE, 0),
+      OPT_BIT(0, "so", &kind, "analyse the file as a so", NULL, KSO, 0),
+      OPT_BIT(
+          0, "mem", &kind, "analyse the file as a mem.bin file", NULL, KMEM, 0),
+      OPT_BIT(0, "bin", &kind, "analyse the file as a bin", NULL, KBIN, 0),
+      OPT_END(),
   };
 
   struct argparse argparse;
   argparse_init(&argparse,
                 options,
                 (const char *const[]){
-                  "inspect [options] [kind] file",
-                  NULL,
+                    "inspect [options] [kind] file",
+                    NULL,
                 },
                 0);
-  argparse_describe(&argparse,
-                    NULL,
-                    "if the kind is not specified it's deduced from the file extension\n"
-                    "set the file to '-' to use the stdin\n");
+  argparse_describe(
+      &argparse,
+      NULL,
+      "if the kind is not specified it's deduced from the file extension\n"
+      "set the file to '-' to use the stdin\n");
   argc = argparse_parse(&argparse, argc, (const char **)argv);
   if (argc != 1) {
     fprintf(stderr, "ERROR: expected ONE file\n");
@@ -166,20 +174,40 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  switch (kind) {
-    case KUNSET:
-      if (strcmp(filename + len - 2, ".o") == 0) {
-        inspect_obj(filename, disassemble_flag);
-      } else if (strcmp(filename + len - 4, ".exe") == 0) {
-        inspect_exe(filename, disassemble_flag);
-      } else if (strcmp(filename + len - 3, ".so") == 0) {
-        inspect_so(filename, disassemble_flag);
-      } else if (strcmp(filename, "mem.bin") == 0) {
-        inspect_mem(filename);
+  if (kind == KUNSET) {
+    if (strcmp(filename + len - 2, ".o") == 0) {
+      kind = KOBJ;
+    } else if (strcmp(filename + len - 4, ".exe") == 0) {
+      kind = KEXE;
+    } else if (strcmp(filename + len - 3, ".so") == 0) {
+      kind = KSO;
+    } else if (strcmp(filename, "mem.bin") == 0) {
+      kind = KMEM;
+    } else {
+      FILE *file = fopen(filename, "rb");
+      if (!file) {
+        eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+      }
+      char magic_number[4] = {0};
+      assert(fread(magic_number, 1, 3, file) == 3);
+      assert(fclose(file) == 0);
+
+      if (strcmp(magic_number, "EXE") == 0) {
+        kind = KEXE;
+      } else if (strcmp(magic_number, "OBJ") == 0) {
+        kind = KOBJ;
+      } else if (strcmp(magic_number, "SO") == 0) {
+        kind = KSO;
       } else {
         fprintf(stderr, "ERROR: cannot deduce file kind from '%s'\n", filename);
         exit(1);
       }
+    }
+  }
+
+  switch (kind) {
+    case KUNSET:
+      assert(0);
       break;
     case KOBJ:
       inspect_obj(filename, disassemble_flag);
@@ -230,11 +258,17 @@ void disassemble(uint8_t *code, uint16_t code_size) {
           break;
         case INST_16BITS_ARG:
         case INST_LABEL_ARG:
-          printf("%-*s %04X ", INSTRUCTION_MAX_LEN, inst, code[i + 1] | (code[i + 2] << 8));
+          printf("%-*s %04X ",
+                 INSTRUCTION_MAX_LEN,
+                 inst,
+                 code[i + 1] | (code[i + 2] << 8));
           i += 3;
           break;
         case INST_RELLABEL_ARG:
-          printf("%-*s %d ", INSTRUCTION_MAX_LEN, inst, (int16_t)(code[i + 1] | (code[i + 2] << 8)));
+          printf("%-*s %d ",
+                 INSTRUCTION_MAX_LEN,
+                 inst,
+                 (int16_t)(code[i + 1] | (code[i + 2] << 8)));
           i += 3;
           break;
       }
