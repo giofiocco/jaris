@@ -10,6 +10,7 @@ char *instruction_to_string(instruction_t instruction) {
     case NOP: return "NOP";
     case INCA: return "INCA";
     case DECA: return "DECA";
+    case INCB: return "INCB";
     case RAM_AL: return "RAM_AL";
     case RAM_BL: return "RAM_BL";
     case RAM_A: return "RAM_A";
@@ -73,6 +74,8 @@ int sv_to_instruction(sv_t sv, instruction_t *out) {
     *out = INCA;
   } else if (sv_eq(sv, sv_from_cstr("DECA"))) {
     *out = DECA;
+  } else if (sv_eq(sv, sv_from_cstr("INCB"))) {
+    *out = INCB;
   } else if (sv_eq(sv, sv_from_cstr("RAM_AL"))) {
     *out = RAM_AL;
   } else if (sv_eq(sv, sv_from_cstr("RAM_BL"))) {
@@ -184,7 +187,7 @@ int sv_to_instruction(sv_t sv, instruction_t *out) {
 // clang-format off
 instruction_stat_t instruction_stat(instruction_t instruction) {
   switch (instruction) {
-    case NOP: case INCA: case DECA: case INCSP: case DECSP:
+    case NOP: case INCA: case DECA: case INCB: case INCSP: case DECSP:
     case PUSHA: case POPA: case PEEKA: case PUSHB: case POPB: case PEEKB:
     case SUM: case SUB: case SHR: case SHL: case CMPA: case CMPB:
     case JMPA:
@@ -223,16 +226,24 @@ void bytecode_dump(bytecode_t bc) {
       printf("INST         %s\n", instruction_to_string(bc.inst));
       break;
     case BINSTHEX:
-      printf("INSTHEX      %s 0x%02X\n", instruction_to_string(bc.inst), bc.arg.num);
+      printf("INSTHEX      %s 0x%02X\n",
+             instruction_to_string(bc.inst),
+             bc.arg.num);
       break;
     case BINSTHEX2:
-      printf("INSTHEX2     %s 0x%04X\n", instruction_to_string(bc.inst), bc.arg.num);
+      printf("INSTHEX2     %s 0x%04X\n",
+             instruction_to_string(bc.inst),
+             bc.arg.num);
       break;
     case BINSTLABEL:
-      printf("INSTLABEL    %s %s\n", instruction_to_string(bc.inst), bc.arg.string);
+      printf("INSTLABEL    %s %s\n",
+             instruction_to_string(bc.inst),
+             bc.arg.string);
       break;
     case BINSTRELLABEL:
-      printf("INSTRELLABEL %s %s\n", instruction_to_string(bc.inst), bc.arg.string);
+      printf("INSTRELLABEL %s %s\n",
+             instruction_to_string(bc.inst),
+             bc.arg.string);
       break;
     case BHEX:
       printf("HEX          0x%02X\n", bc.arg.num);
@@ -261,7 +272,8 @@ void bytecode_dump(bytecode_t bc) {
   }
 }
 
-bytecode_t bytecode_with_string(bytecode_kind_t kind, instruction_t inst, char *str) {
+bytecode_t
+bytecode_with_string(bytecode_kind_t kind, instruction_t inst, char *str) {
   bytecode_t bc = {kind, inst, {}};
   strcpy(bc.arg.string, str);
   return bc;

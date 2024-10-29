@@ -11,6 +11,7 @@
 typedef enum {
   NOP = 0,
   INCA, DECA,
+  INCB,
   RAM_AL, RAM_BL, RAM_A, RAM_B,
   INCSP, DECSP,
   PUSHA, POPA, PEEKA, PEEKAR, PUSHAR, 
@@ -70,6 +71,8 @@ int sv_to_instruction(sv_t sv, instruction_t *out);
 instruction_stat_t instruction_stat(instruction_t instruction);
 
 void bytecode_dump(bytecode_t bc);
-bytecode_t bytecode_with_string(bytecode_kind_t kind, instruction_t instruction, char *string);
+bytecode_t bytecode_with_string(bytecode_kind_t kind,
+                                instruction_t instruction,
+                                char *string);
 
-#endif  // INSTRUCTIONS_H__
+#endif // INSTRUCTIONS_H__
