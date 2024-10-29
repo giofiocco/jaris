@@ -1,30 +1,41 @@
 GLOBAL _start
 EXTERN solve_path
+EXTERN get_char
 EXTERN get_delim
+EXTERN put_char
 EXTERN print
 EXTERN print_with_len
 EXTERN execute
 EXTERN exit
 
 input: db 128
-not_found_string: "command not found" 0x00
-
-path: "ls" 0x00
+not_found_string: "command not found" 0x0A 0x00
 
 _start:
-  -- TODO: do better echoing
-  RAM_AL 0x0A RAM_B input CALL get_delim
-  A_B RAM_A input CALL print_with_len
+  RAM_A input PUSHA
+echo:
+  -- ^ inputi
+  CALL get_char
+  CMPA JMPRZ $quit
+  PUSHA CALL put_char
+  POPB RAM_AL 0x0A SUB JMPRZ $execute_program
+  B_A
+  POPB AL_rB INCB PUSHB
+  JMPR $echo
 
+execute_program:
+  -- ^ inputi
+  POPB INCB RAM_AL 0x00 AL_rB -- *inputi = 0
   RAM_A input CALL solve_path
-  CMPA JMPRN $not_found
+  CMPB JMPRN $not_found
 
-  RAM_B input rB_A HLT
+  RAM_A input CALL execute
 
-  -- TODO: desn't work: even if add RAM_B input rB_A HLT
-  -- RAM_A input CALL execute
-  CALL exit
+  JMPR $_start
 
 not_found:
   RAM_A not_found_string CALL print
-  RAM_AL 0xFF CALL exit
+  JMPR $_start
+
+quit:
+  RAM_AL 0x00 CALL exit
