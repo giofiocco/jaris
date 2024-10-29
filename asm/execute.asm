@@ -120,7 +120,7 @@ search_page:
   -- ^ mask page_start [iup, _]
   PUSHA
   PEEKAR 0x04 SHR PUSHAR 0x04 
-  PEEKAR 0x06 RAM_B page_size SUM PUSHAR 0x06 -- 2048
+  PEEKAR 0x06 RAM_B page_size SUM PUSHAR 0x06
   POPA SHL JMPRC $search_page
 
   RAM_B iup_ptr rB_A POPB SUM
@@ -139,7 +139,7 @@ search_page2:
   -- ^ mask page_start [iup, _]
   PUSHA
   PEEKAR 0x04 SHR PUSHAR 0x04 
-  PEEKAR 0x06 RAM_B page_size SUM PUSHAR 0x06 -- 2048
+  PEEKAR 0x06 RAM_B page_size SUM PUSHAR 0x06
   POPA SHL JMPRC $search_page2
 
   RAM_B iup2_ptr rB_A POPB SUM

@@ -1,8 +1,6 @@
 bss section
 
-# exit
-
-- if add 1 inst is ok, if 2 doesn't work
+print_stringview
 
 # encodemem
 
@@ -15,6 +13,7 @@ bss section
 # Inspect
 
 - read from the stdin
+- deduce from magic number
 
 # Execute
 

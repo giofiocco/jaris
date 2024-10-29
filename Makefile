@@ -1,7 +1,7 @@
 TARGETS=assembler linker encodemem sim inspect decodemem makemddocs
 CFLAGS=-Wall -Wextra -Werror -std=c99
 
-STDLIB_FILES=mul div solve_path open_file read_file execute exit put_char get_char get_delim
+STDLIB_FILES=mul div solve_path open_file read_file execute exit put_char print get_char get_delim
 PROGRAMS=shutdown ls sh
 MEM_FILES=__bootloader __os __stdlib $(PROGRAMS)
 
