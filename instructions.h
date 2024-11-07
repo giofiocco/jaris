@@ -2,6 +2,7 @@
 #define INSTRUCTIONS_H__
 
 #include <stdint.h>
+#include <stdio.h>
 
 #include "mystb/sv.h"
 
@@ -71,8 +72,8 @@ int sv_to_instruction(sv_t sv, instruction_t *out);
 instruction_stat_t instruction_stat(instruction_t instruction);
 
 void bytecode_dump(bytecode_t bc);
-bytecode_t bytecode_with_string(bytecode_kind_t kind,
-                                instruction_t instruction,
-                                char *string);
+bytecode_t bytecode_with_string(bytecode_kind_t kind, instruction_t instruction, char *string);
+
+void bytecode_to_asm(FILE *stream, bytecode_t bc);
 
 #endif // INSTRUCTIONS_H__

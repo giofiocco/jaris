@@ -226,24 +226,16 @@ void bytecode_dump(bytecode_t bc) {
       printf("INST         %s\n", instruction_to_string(bc.inst));
       break;
     case BINSTHEX:
-      printf("INSTHEX      %s 0x%02X\n",
-             instruction_to_string(bc.inst),
-             bc.arg.num);
+      printf("INSTHEX      %s 0x%02X\n", instruction_to_string(bc.inst), bc.arg.num);
       break;
     case BINSTHEX2:
-      printf("INSTHEX2     %s 0x%04X\n",
-             instruction_to_string(bc.inst),
-             bc.arg.num);
+      printf("INSTHEX2     %s 0x%04X\n", instruction_to_string(bc.inst), bc.arg.num);
       break;
     case BINSTLABEL:
-      printf("INSTLABEL    %s %s\n",
-             instruction_to_string(bc.inst),
-             bc.arg.string);
+      printf("INSTLABEL    %s %s\n", instruction_to_string(bc.inst), bc.arg.string);
       break;
     case BINSTRELLABEL:
-      printf("INSTRELLABEL %s %s\n",
-             instruction_to_string(bc.inst),
-             bc.arg.string);
+      printf("INSTRELLABEL %s %s\n", instruction_to_string(bc.inst), bc.arg.string);
       break;
     case BHEX:
       printf("HEX          0x%02X\n", bc.arg.num);
@@ -272,9 +264,55 @@ void bytecode_dump(bytecode_t bc) {
   }
 }
 
-bytecode_t
-bytecode_with_string(bytecode_kind_t kind, instruction_t inst, char *str) {
+bytecode_t bytecode_with_string(bytecode_kind_t kind, instruction_t inst, char *str) {
   bytecode_t bc = {kind, inst, {}};
   strcpy(bc.arg.string, str);
   return bc;
+}
+
+void bytecode_to_asm(FILE *stream, bytecode_t bc) {
+  switch (bc.kind) {
+    case BNONE:
+      assert(0);
+      break;
+    case BINST:
+      fprintf(stream, "%s ", instruction_to_string(bc.inst));
+      break;
+    case BINSTHEX:
+      fprintf(stream, "%s 0x%02X ", instruction_to_string(bc.inst), bc.arg.num);
+      break;
+    case BINSTHEX2:
+      fprintf(stream, "%s 0x%04X ", instruction_to_string(bc.inst), bc.arg.num);
+      break;
+    case BINSTLABEL:
+      fprintf(stream, "%s %s ", instruction_to_string(bc.inst), bc.arg.string);
+      break;
+    case BINSTRELLABEL:
+      fprintf(stream, "%s $%s ", instruction_to_string(bc.inst), bc.arg.string);
+      break;
+    case BHEX:
+      fprintf(stream, "0x%02X ", bc.arg.num);
+      break;
+    case BHEX2:
+      fprintf(stream, "0x%04X ", bc.arg.num);
+      break;
+    case BSTRING:
+      fprintf(stream, "\"%s\" ", bc.arg.string);
+      break;
+    case BSETLABEL:
+      fprintf(stream, "%s:\n", bc.arg.string);
+      break;
+    case BGLOBAL:
+      fprintf(stream, "GLOBAL %s\n", bc.arg.string);
+      break;
+    case BEXTERN:
+      fprintf(stream, "EXTERN %s\n", bc.arg.string);
+      break;
+    case BALIGN:
+      fprintf(stream, "ALIGN ");
+      break;
+    case BDB:
+      fprintf(stream, "DB %d\n", bc.arg.num);
+      break;
+  }
 }
