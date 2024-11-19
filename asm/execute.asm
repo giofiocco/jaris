@@ -19,24 +19,23 @@ page_index: 0x0000
 ALIGN file: db 4
 
 -- [cstr path, cstr argv[] (null terminated list)] -> [_, _]
--- [0xFFFF, _] if file not found
--- [0xFFFE, _] if file not an exe
--- [0xFFFA, _] if no more space in ram
--- [0xFAFA, _] TODO: dynamic linking with not the stdlib
+-- crash [0xFFFF, _] if file not found
+-- crash [0xFFFE, _] if file not an exe
+-- crash [0xFFFA, _] if no more space in ram
+-- crash [0xFAFA, _] TODO: dynamic linking with not the stdlib
 execute:
   PUSHB PUSHA
 
   CALLR $allocate_page
   A_B POPA PUSHB PUSHB
   -- ^ ram ram_start argv [path, _]
-  RAM_B file 
-  CALL open_file
+  RAM_B file CALL open_file
   CMPA JMPRZ $not_found
 
   RAM_A file CALL read_u16 RAM_B "EX" SUB JMPRNZ $not_exe
   RAM_A file CALL read_u8 RAM_BL "E" SUB JMPRNZ $not_exe
 
-  RAM_A file CALL read_u16 
+  RAM_A file CALL read_u16
 copy_code:
   PUSHA
   -- ^ code_size(even) ram ram_start argv
@@ -65,6 +64,7 @@ reloc:
   PEEKB CALLR $dynamic_link
 done_dynamic_linking:
   -- ^ ram_start argv
+
   RAM_A process_table_start PUSHA
   RAM_B process_map_ptr rB_A
   -- TODO: check if no more processes
@@ -159,6 +159,7 @@ dynamic_link:
   A_B POPA B_AH
 
   A_B RAM_AL 0x01 SUB JMPRNZ $not_stdlib
+
 
   RAM_B stdlib_ptr_ptr rB_A PUSHA
   RAM_A file CALL read_u16

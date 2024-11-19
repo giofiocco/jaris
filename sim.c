@@ -669,7 +669,7 @@ int main(int argc, char **argv) {
   cpu_init(&cpu);
   bool running = true;
 
-  load_input_string(&cpu, "ls\n");
+  load_input_string(&cpu, "shutdown\n");
 
   int ticks = 0;
   while (running) {

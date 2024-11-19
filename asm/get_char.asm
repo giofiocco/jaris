@@ -1,5 +1,6 @@
 GLOBAL get_char
 
+-- [_, _] -> [char, _]
 get_char:
   KEY_A A_B 
   RAM_AL 0xF0 SUB JMPRZ $release 

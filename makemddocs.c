@@ -9,7 +9,8 @@
 #define MAX_TOKEN_LEN 256
 
 int is_id(char c) {
-  return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || c == '_';
+  return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z')
+         || ('0' <= c && c <= '9') || c == '_';
 }
 
 int next_token(char *token, char **bufferi) {
@@ -23,7 +24,8 @@ int next_token(char *token, char **bufferi) {
   if (len == 0) {
     return 0;
   }
-  if (**bufferi == ' ' || **bufferi == '\t' || **bufferi == '\r' || **bufferi == '\n') {
+  if (**bufferi == ' ' || **bufferi == '\t' || **bufferi == '\r'
+      || **bufferi == '\n') {
     ++*bufferi;
     return next_token(token, bufferi);
   } else if (buffer[0] == '-' && buffer[1] == '-') {
@@ -53,15 +55,15 @@ int next_token(char *token, char **bufferi) {
 
 int main(int argc, char **argv) {
   struct argparse_option options[] = {
-    OPT_END(),
+      OPT_END(),
   };
 
   struct argparse argparse;
   argparse_init(&argparse,
                 options,
                 (const char *const[]){
-                  "makemddocs [options] files ...",
-                  NULL,
+                    "makemddocs [options] files ...",
+                    NULL,
                 },
                 0);
   argc = argparse_parse(&argparse, argc, (const char **)argv);
@@ -76,7 +78,10 @@ int main(int argc, char **argv) {
     char *filename = argv[i];
     FILE *file = fopen(filename, "r");
     if (!file) {
-      fprintf(stderr, "ERROR: cannot open file '%s': '%s'", filename, strerror(errno));
+      fprintf(stderr,
+              "ERROR: cannot open file '%s': '%s'",
+              filename,
+              strerror(errno));
     }
     assert(fseek(file, 0, SEEK_END) == 0);
     int size = ftell(file);

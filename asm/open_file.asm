@@ -4,7 +4,7 @@ EXTERN solve_path
   { max_ndx_index 0x03 }
   { data_start 0x04 }
 
--- [cstr path, FILE *file] -> [_, _]
+-- [cstr path, FILE *file] -> [file, _]
 -- the file struct has to be aligned
 -- ERRORS:
 -- [0, 0xFFFF] if file not found
@@ -18,13 +18,13 @@ open_file:
   RAM_NDX 0x00
   MEM_A RAM_BL "F" SUB JMPRNZ $is_not_file
 
-  POPB SEC_A A_rB 
-  B_A INCA INCA A_B 
-  RAM_AL data_start AL_rB 
-  B_A INCA A_B 
+  PEEKB SEC_A A_rB
+  B_A INCA INCA A_B
+  RAM_AL data_start AL_rB
+  B_A INCA A_B
   RAM_NDX max_ndx_index MEM_A AL_rB
 
-  RET
+  POPA RET
 
 not_found:
   -- ^ file [0, _]

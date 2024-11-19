@@ -4,6 +4,8 @@ EXTERN execute
 stdout: db 256
 stdout_end:
 
+ALIGN file: db 4
+
 _start:
   -- ptr to stdlib set by the bootloader
   RAM_B 0xF802 RAM_A 0xF820 A_rB -- ptr to current process struct 
@@ -26,4 +28,4 @@ _start:
   RAM_B 0x0000
   HLT
 
-path: "sh" 0x00
+path: "shutdown" 0x00

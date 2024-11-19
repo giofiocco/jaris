@@ -5,9 +5,13 @@ STDLIB_FILES=mul div solve_path open_file read_file execute exit put_char print 
 PROGRAMS=shutdown ls sh
 MEM_FILES=__bootloader __os __stdlib $(PROGRAMS)
 
-all: $(TARGETS)
+all: $(TARGETS) docs.md
 
 .PHONY: clean
+
+docs.md: makemddocs $(patsubst %,asm/%.asm,$(STDLIB_FILES))
+	echo TODO docs.md
+	#./makemddocs $(patsubst %,asm/%.asm,$(STDLIB_FILES)) > docs.md
 
 mem.bin: $(patsubst %,mem/%,$(MEM_FILES)) encodemem | mem
 	./encodemem

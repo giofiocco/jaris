@@ -13,7 +13,7 @@ read_u8:
   INCB INCB rB_AL PUSHB PUSHA
   -- ^ ndx &ndx
   INCB rB_AL
-  POPB SUB JMPRZ $next_file -- if next_char == max_char
+  POPB SUB DECA JMPRZ $next_file -- if next_char == max_char
   B_A A_NDX MEM_A PUSHA -- [char, ndx]
   -- ^ char &ndx
   PUSHB
@@ -41,9 +41,9 @@ next_file: -- next_char == max_char
 read_u16:
   PUSHA
   CALLR $read_u8
+  PUSHA
   INCA JMPRZ $eof
   DECA
-  PUSHA
   PEEKAR 0x04
   CALLR $read_u8
   INCA JMPRZ $only_first
@@ -56,6 +56,6 @@ only_first:
   POPA INCSP RET
 
 eof:
-  -- ^ _
+  -- ^ _ _
   RAM_A 0xFFFF
-  INCSP RET
+  INCSP INCSP RET

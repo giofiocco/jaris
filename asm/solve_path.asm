@@ -22,7 +22,8 @@ check_entry:
   -- ^ pathi path
   PEEKB rB_AL CMPA JMPRZ $path_end
   A_B RAM_AL "/" SUB JMPRZ $sub_dir
-  MEM_A INCNDX CMPA JMPRZ $not_found
+  -- MEM_A INCNDX CMPA JMPRZ $not_found
+  MEM_A INCNDX CMPA JMPRZ $neq2
   SUB JMPRNZ $neq
 
   POPA INCA PUSHA -- pathi ++
@@ -31,6 +32,7 @@ check_entry:
 neq:
   -- ^ pathi path
   MEM_A INCNDX CMPA JMPRNZ $neq -- skip while *mem != 0
+neq2:
   INCNDX INCNDX -- skip the ptr
   INCSP PEEKA PUSHA -- pathi = path
   JMPR $check_entry

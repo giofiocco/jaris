@@ -300,7 +300,7 @@ void bytecode_to_asm(FILE *stream, bytecode_t bc) {
       fprintf(stream, "\"%s\" ", bc.arg.string);
       break;
     case BSETLABEL:
-      fprintf(stream, "%s:\n", bc.arg.string);
+      fprintf(stream, "\n%s:\n\t", bc.arg.string);
       break;
     case BGLOBAL:
       fprintf(stream, "GLOBAL %s\n", bc.arg.string);

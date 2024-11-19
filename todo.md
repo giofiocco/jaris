@@ -1,7 +1,5 @@
 bss section
 
-print_stringview
-
 # encodemem
 
 - pass bootloader stdlib os as args
@@ -13,7 +11,6 @@ print_stringview
 # Inspect
 
 - read from the stdin
-- deduce from magic number
 
 # Execute
 
