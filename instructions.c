@@ -11,6 +11,7 @@ char *instruction_to_string(instruction_t instruction) {
     case INCA: return "INCA";
     case DECA: return "DECA";
     case INCB: return "INCB";
+    case DECB: return "DECB";
     case RAM_AL: return "RAM_AL";
     case RAM_BL: return "RAM_BL";
     case RAM_A: return "RAM_A";
@@ -76,6 +77,8 @@ int sv_to_instruction(sv_t sv, instruction_t *out) {
     *out = DECA;
   } else if (sv_eq(sv, sv_from_cstr("INCB"))) {
     *out = INCB;
+  } else if (sv_eq(sv, sv_from_cstr("DECB"))) {
+    *out = DECB;
   } else if (sv_eq(sv, sv_from_cstr("RAM_AL"))) {
     *out = RAM_AL;
   } else if (sv_eq(sv, sv_from_cstr("RAM_BL"))) {
@@ -187,7 +190,7 @@ int sv_to_instruction(sv_t sv, instruction_t *out) {
 // clang-format off
 instruction_stat_t instruction_stat(instruction_t instruction) {
   switch (instruction) {
-    case NOP: case INCA: case DECA: case INCB: case INCSP: case DECSP:
+    case NOP: case INCA: case DECA: case INCB: case DECB: case INCSP: case DECSP:
     case PUSHA: case POPA: case PEEKA: case PUSHB: case POPB: case PEEKB:
     case SUM: case SUB: case SHR: case SHL: case CMPA: case CMPB:
     case JMPA:

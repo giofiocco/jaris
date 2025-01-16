@@ -77,8 +77,7 @@ void cpu_init(cpu_t *cpu) {
 
   FILE *file = fopen("mem.bin", "rb");
   if (!file) {
-    fprintf(
-        stderr, "ERROR: cannot open file: 'mem.bin': %s\n", strerror(errno));
+    fprintf(stderr, "ERROR: cannot open file: 'mem.bin': %s\n", strerror(errno));
     exit(1);
   }
   assert(fread(cpu->MEM, 1, 1 << 19, file) == 1 << 19);
@@ -99,8 +98,7 @@ void cpu_dump(cpu_t *cpu) {
 
   printf("A:   %5d %04X %c\n", cpu->A, cpu->A, isprint(cpu->A) ? cpu->A : ' ');
   printf("B:   %5d %04X %c\n", cpu->B, cpu->B, isprint(cpu->B) ? cpu->B : ' ');
-  printf(
-      "IP:  %5d %04X %s\n", cpu->IP, cpu->IP, instruction_to_string(cpu->IR));
+  printf("IP:  %5d %04X %s\n", cpu->IP, cpu->IP, instruction_to_string(cpu->IR));
   printf("FR:         %c%c%c\n",
          cpu->FR & (1 << C) ? 'C' : ' ',
          cpu->FR & (1 << N) ? 'N' : ' ',
@@ -116,11 +114,7 @@ void cpu_dump_ram_range(cpu_t *cpu, uint16_t from, uint16_t to) {
 
   printf("RAM:\n");
   for (int i = from - from % 2; i < to + to % 2; i += 2) {
-    printf("\t%04X   %02X %02X %d\n",
-           i,
-           cpu->RAM[i],
-           cpu->RAM[i + 1],
-           cpu_read16(cpu, i));
+    printf("\t%04X   %02X %02X %d\n", i, cpu->RAM[i], cpu->RAM[i + 1], cpu_read16(cpu, i));
   }
 }
 
@@ -149,11 +143,8 @@ void cpu_dump_stdout(cpu_t *cpu) {
   printf("\n");
 }
 
-void set_instruction_flags(instruction_t inst,
-                           uint8_t step,
-                           uint8_t flags,
-                           bool invert,
-                           microcode_t code) {
+void set_instruction_flags(
+    instruction_t inst, uint8_t step, uint8_t flags, bool invert, microcode_t code) {
   for (int i = 0; i < 1 << 3; ++i) {
     if (invert ? !(flags & i) : flags & i) {
       control_rom[inst | (step << 6) | (i << (6 + 4))] = code;
@@ -161,9 +152,7 @@ void set_instruction_flags(instruction_t inst,
   }
 }
 
-void set_instruction_allflag(instruction_t inst,
-                             uint8_t step,
-                             microcode_t code) {
+void set_instruction_allflag(instruction_t inst, uint8_t step, microcode_t code) {
   for (int i = 0; i < 1 << 3; ++i) {
     control_rom[inst | (step << 6) | (i << (6 + 4))] = code;
   }
@@ -188,6 +177,7 @@ void tick(cpu_t *cpu, bool *running) {
 
   if (mc & (1 << _HLT)) {
     *running = false;
+    cpu->SC = 0;
   }
   if (mc & (1 << IPo)) {
     bus = cpu->IP;
@@ -200,8 +190,7 @@ void tick(cpu_t *cpu, bool *running) {
   }
   if ((mc & (1 << RAM)) && (mc & (1 << RAMo))) {
     if (mc & (1 << RAM16)) {
-      bus = (cpu->RAM[((cpu->MAR / 2) * 2) + 1] << 8)
-            | cpu->RAM[(cpu->MAR / 2) * 2];
+      bus = (cpu->RAM[((cpu->MAR / 2) * 2) + 1] << 8) | cpu->RAM[(cpu->MAR / 2) * 2];
     } else {
       bus = cpu->RAM[cpu->MAR];
     }
@@ -219,8 +208,7 @@ void tick(cpu_t *cpu, bool *running) {
         ++result;
       }
       bus = result + cpu->Y;
-      cpu->FR = (bus == 0) | ((bus >> 15) << 1)
-                | ((((uint32_t)result + cpu->Y) >> 16) << 2);
+      cpu->FR = (bus == 0) | ((bus >> 15) << 1) | ((((uint32_t)result + cpu->Y) >> 16) << 2);
     }
   }
   if (mc & (1 << SPo)) {
@@ -241,9 +229,7 @@ void tick(cpu_t *cpu, bool *running) {
   if (mc & (1 << KEYo)) {
     // if (!cpu->KEY_FIFO[0]) { cpu->KEY_FIFO[0] = getchar(); }
     bus = cpu->KEY_FIFO[0];
-    memcpy(cpu->KEY_FIFO,
-           cpu->KEY_FIFO + 1,
-           sizeof(cpu->KEY_FIFO) - sizeof(cpu->KEY_FIFO[0]));
+    memcpy(cpu->KEY_FIFO, cpu->KEY_FIFO + 1, sizeof(cpu->KEY_FIFO) - sizeof(cpu->KEY_FIFO[0]));
   }
   if (mc & (1 << IPi)) {
     cpu->IP = bus;
@@ -310,8 +296,7 @@ void load_input_string(cpu_t *cpu, char *string) {
                        0x1b, 0x2c, 0x3c, 0x2a, 0x1d, 0x22, 0x35, 0x1a};
   memcpy(table + (int)'a', letters, sizeof(letters));
   memcpy(table + (int)'A', letters, sizeof(letters));
-  uint8_t digits[] = {
-      0x45, 0x16, 0x1e, 0x26, 0x25, 0x2e, 0x36, 0x3d, 0x3e, 0x46, 0x79};
+  uint8_t digits[] = {0x45, 0x16, 0x1e, 0x26, 0x25, 0x2e, 0x36, 0x3d, 0x3e, 0x46, 0x79};
   memcpy(table + (int)'0', digits, sizeof(digits));
 
   table[' '] = 0x29;
@@ -344,6 +329,20 @@ void load_input_string(cpu_t *cpu, char *string) {
         cpu->KEY_FIFO[i++] = 0xf0;
         cpu->KEY_FIFO[i++] = 0x5a;
         break;
+      case '\\':
+        ++ string;
+      if (*string == 'n') {
+        assert(i + 5 < 1000);
+        cpu->KEY_FIFO[i++] = 0xe0;
+        cpu->KEY_FIFO[i++] = 0x5a;
+        cpu->KEY_FIFO[i++] = 0xe0;
+        cpu->KEY_FIFO[i++] = 0xf0;
+        cpu->KEY_FIFO[i++] = 0x5a;
+        } else {
+        printf("load_input_string not implemented for char: '\\%c'\n", *string);
+        exit(1);
+        }
+      break;
       default:
         printf("load_input_string not implemented for char: '%c'\n", *string);
         exit(1);
@@ -356,8 +355,7 @@ void load_input_string(cpu_t *cpu, char *string) {
 void set_control_rom() {
   for (int i = 0; i < 1 << 6; ++i) {
     set_instruction_allflag(i, 0, micro(IPo) | micro(MARi));
-    set_instruction_allflag(
-        i, 1, micro(RAM) | micro(RAMo) | micro(IRi) | micro(IPp));
+    set_instruction_allflag(i, 1, micro(RAM) | micro(RAMo) | micro(IRi) | micro(IPp));
   }
   set_instruction_allflag(NOP, 2, micro(SCr));
   set_instruction_allflag(INCA, 2, micro(Ao) | micro(Yi));
@@ -372,26 +370,24 @@ void set_control_rom() {
   set_instruction_allflag(INCB, 3, micro(Xi));
   set_instruction_allflag(INCB, 4, micro(Ci) | micro(ALUo) | micro(Bi));
   set_instruction_allflag(INCB, 5, micro(SCr));
+  set_instruction_allflag(DECB, 2, micro(Bo) | micro(Yi));
+  set_instruction_allflag(DECB, 3, micro(Xi));
+  set_instruction_allflag(DECB, 4, micro(_SUB) | micro(ALUo) | micro(Bi));
+  set_instruction_allflag(DECB, 5, micro(SCr));
   set_instruction_allflag(RAM_AL, 2, micro(IPo) | micro(MARi));
-  set_instruction_allflag(
-      RAM_AL, 3, micro(RAM) | micro(RAMo) | micro(Ai) | micro(IPp));
+  set_instruction_allflag(RAM_AL, 3, micro(RAM) | micro(RAMo) | micro(Ai) | micro(IPp));
   set_instruction_allflag(RAM_AL, 4, micro(SCr));
   set_instruction_allflag(RAM_BL, 2, micro(IPo) | micro(MARi));
-  set_instruction_allflag(
-      RAM_BL, 3, micro(RAM) | micro(RAMo) | micro(Bi) | micro(IPp));
+  set_instruction_allflag(RAM_BL, 3, micro(RAM) | micro(RAMo) | micro(Bi) | micro(IPp));
   set_instruction_allflag(RAM_BL, 4, micro(SCr));
   set_instruction_allflag(RAM_A, 2, micro(IPo) | micro(MARi));
-  set_instruction_allflag(RAM_A,
-                          3,
-                          micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Ai)
-                              | micro(IPp));
+  set_instruction_allflag(
+      RAM_A, 3, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Ai) | micro(IPp));
   set_instruction_allflag(RAM_A, 4, micro(IPp));
   set_instruction_allflag(RAM_A, 5, micro(SCr));
   set_instruction_allflag(RAM_B, 2, micro(IPo) | micro(MARi));
-  set_instruction_allflag(RAM_B,
-                          3,
-                          micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Bi)
-                              | micro(IPp));
+  set_instruction_allflag(
+      RAM_B, 3, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Bi) | micro(IPp));
   set_instruction_allflag(RAM_B, 4, micro(IPp));
   set_instruction_allflag(RAM_B, 5, micro(SCr));
   set_instruction_allflag(INCSP, 2, micro(SPu));
@@ -399,55 +395,42 @@ void set_control_rom() {
   set_instruction_allflag(DECSP, 2, micro(SPu) | micro(SPm));
   set_instruction_allflag(DECSP, 3, micro(SCr));
   set_instruction_allflag(PUSHA, 2, micro(SPo) | micro(MARi));
-  set_instruction_allflag(PUSHA,
-                          3,
-                          micro(Ao) | micro(RAM) | micro(RAM16) | micro(SPu)
-                              | micro(SPm));
+  set_instruction_allflag(
+      PUSHA, 3, micro(Ao) | micro(RAM) | micro(RAM16) | micro(SPu) | micro(SPm));
   set_instruction_allflag(PUSHA, 4, micro(SCr));
   set_instruction_allflag(POPA, 2, micro(SPu));
   set_instruction_allflag(POPA, 3, micro(SPo) | micro(MARi));
-  set_instruction_allflag(
-      POPA, 4, micro(RAM) | micro(RAM16) | micro(RAMo) | micro(Ai));
+  set_instruction_allflag(POPA, 4, micro(RAM) | micro(RAM16) | micro(RAMo) | micro(Ai));
   set_instruction_allflag(POPA, 5, micro(SCr));
   set_instruction_allflag(PEEKA, 2, micro(SPu));
   set_instruction_allflag(PEEKA, 3, micro(SPo) | micro(MARi));
-  set_instruction_allflag(PEEKA,
-                          4,
-                          micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Ai)
-                              | micro(SPu) | micro(SPm));
+  set_instruction_allflag(
+      PEEKA, 4, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Ai) | micro(SPu) | micro(SPm));
   set_instruction_allflag(PEEKA, 5, micro(SCr));
   set_instruction_allflag(PEEKAR, 2, micro(IPo) | micro(MARi));
-  set_instruction_allflag(
-      PEEKAR, 3, micro(RAM) | micro(RAMo) | micro(Yi) | micro(IPp));
+  set_instruction_allflag(PEEKAR, 3, micro(RAM) | micro(RAMo) | micro(Yi) | micro(IPp));
   set_instruction_allflag(PEEKAR, 4, micro(SPo) | micro(Xi));
   set_instruction_allflag(PEEKAR, 5, micro(ALUo) | micro(MARi));
-  set_instruction_allflag(
-      PEEKAR, 6, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Ai));
+  set_instruction_allflag(PEEKAR, 6, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Ai));
   set_instruction_allflag(PEEKAR, 7, micro(SCr));
   set_instruction_allflag(PUSHAR, 2, micro(IPo) | micro(MARi));
-  set_instruction_allflag(
-      PUSHAR, 3, micro(RAM) | micro(RAMo) | micro(Yi) | micro(IPp));
+  set_instruction_allflag(PUSHAR, 3, micro(RAM) | micro(RAMo) | micro(Yi) | micro(IPp));
   set_instruction_allflag(PUSHAR, 4, micro(SPo) | micro(Xi));
   set_instruction_allflag(PUSHAR, 5, micro(ALUo) | micro(MARi));
   set_instruction_allflag(PUSHAR, 6, micro(Ao) | micro(RAM) | micro(RAM16));
   set_instruction_allflag(PUSHAR, 7, micro(SCr));
   set_instruction_allflag(PUSHB, 2, micro(SPo) | micro(MARi));
-  set_instruction_allflag(PUSHB,
-                          3,
-                          micro(Bo) | micro(RAM) | micro(RAM16) | micro(SPu)
-                              | micro(SPm));
+  set_instruction_allflag(
+      PUSHB, 3, micro(Bo) | micro(RAM) | micro(RAM16) | micro(SPu) | micro(SPm));
   set_instruction_allflag(PUSHB, 4, micro(SCr));
   set_instruction_allflag(POPB, 2, micro(SPu));
   set_instruction_allflag(POPB, 3, micro(SPo) | micro(MARi));
-  set_instruction_allflag(
-      POPB, 4, micro(RAM) | micro(RAM16) | micro(RAMo) | micro(Bi));
+  set_instruction_allflag(POPB, 4, micro(RAM) | micro(RAM16) | micro(RAMo) | micro(Bi));
   set_instruction_allflag(POPB, 5, micro(SCr));
   set_instruction_allflag(PEEKB, 2, micro(SPu));
   set_instruction_allflag(PEEKB, 3, micro(SPo) | micro(MARi));
-  set_instruction_allflag(PEEKB,
-                          4,
-                          micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Bi)
-                              | micro(SPu) | micro(SPm));
+  set_instruction_allflag(
+      PEEKB, 4, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Bi) | micro(SPu) | micro(SPm));
   set_instruction_allflag(PEEKB, 5, micro(SCr));
   set_instruction_allflag(SUM, 2, micro(Ao) | micro(Xi));
   set_instruction_allflag(SUM, 3, micro(Bo) | micro(Yi));
@@ -455,8 +438,7 @@ void set_control_rom() {
   set_instruction_allflag(SUM, 5, micro(SCr));
   set_instruction_allflag(SUB, 2, micro(Ao) | micro(Xi));
   set_instruction_allflag(SUB, 3, micro(Bo) | micro(Yi));
-  set_instruction_allflag(
-      SUB, 4, micro(ALUo) | micro(Ci) | micro(_SUB) | micro(Ai));
+  set_instruction_allflag(SUB, 4, micro(ALUo) | micro(Ci) | micro(_SUB) | micro(Ai));
   set_instruction_allflag(SUB, 5, micro(SCr));
   set_instruction_allflag(SHL, 2, micro(Ao) | micro(Xi));
   set_instruction_allflag(SHL, 3, micro(Ao) | micro(Yi));
@@ -474,84 +456,58 @@ void set_control_rom() {
   set_instruction_allflag(CMPB, 4, micro(ALUo));
   set_instruction_allflag(CMPB, 5, micro(SCr));
   set_instruction_allflag(JMP, 2, micro(IPo) | micro(MARi));
-  set_instruction_allflag(
-      JMP, 3, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(IPi));
+  set_instruction_allflag(JMP, 3, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(IPi));
   set_instruction_allflag(JMP, 4, micro(SCr));
   set_instruction_allflag(JMPR, 2, micro(IPo) | micro(MARi) | micro(Yi));
-  set_instruction_allflag(
-      JMPR, 3, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
+  set_instruction_allflag(JMPR, 3, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
   set_instruction_allflag(JMPR, 4, micro(ALUo) | micro(IPi));
   set_instruction_allflag(JMPR, 5, micro(SCr));
   set_instruction_allflag(JMPRZ, 2, micro(IPp));
   set_instruction_allflag(JMPRZ, 3, micro(IPp));
   set_instruction_allflag(JMPRZ, 4, micro(SCr));
+  set_instruction_flags(JMPRZ, 2, 0b001, false, micro(IPo) | micro(MARi) | micro(Yi));
   set_instruction_flags(
-      JMPRZ, 2, 0b001, false, micro(IPo) | micro(MARi) | micro(Yi));
-  set_instruction_flags(JMPRZ,
-                        3,
-                        0b001,
-                        false,
-                        micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
+      JMPRZ, 3, 0b001, false, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
   set_instruction_flags(JMPRZ, 4, 0b001, false, micro(ALUo) | micro(IPi));
   set_instruction_flags(JMPRZ, 5, 0b001, false, micro(SCr));
   set_instruction_allflag(JMPRN, 2, micro(IPp));
   set_instruction_allflag(JMPRN, 3, micro(IPp));
   set_instruction_allflag(JMPRN, 4, micro(SCr));
+  set_instruction_flags(JMPRN, 2, 0b010, false, micro(IPo) | micro(MARi) | micro(Yi));
   set_instruction_flags(
-      JMPRN, 2, 0b010, false, micro(IPo) | micro(MARi) | micro(Yi));
-  set_instruction_flags(JMPRN,
-                        3,
-                        0b010,
-                        false,
-                        micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
+      JMPRN, 3, 0b010, false, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
   set_instruction_flags(JMPRN, 4, 0b010, false, micro(ALUo) | micro(IPi));
   set_instruction_flags(JMPRN, 5, 0b010, false, micro(SCr));
   set_instruction_allflag(JMPRC, 2, micro(IPp));
   set_instruction_allflag(JMPRC, 3, micro(IPp));
   set_instruction_allflag(JMPRC, 4, micro(SCr));
+  set_instruction_flags(JMPRC, 2, 0b100, false, micro(IPo) | micro(MARi) | micro(Yi));
   set_instruction_flags(
-      JMPRC, 2, 0b100, false, micro(IPo) | micro(MARi) | micro(Yi));
-  set_instruction_flags(JMPRC,
-                        3,
-                        0b100,
-                        false,
-                        micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
+      JMPRC, 3, 0b100, false, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
   set_instruction_flags(JMPRC, 4, 0b100, false, micro(ALUo) | micro(IPi));
   set_instruction_flags(JMPRC, 5, 0b100, false, micro(SCr));
   set_instruction_allflag(JMPRNZ, 2, micro(IPp));
   set_instruction_allflag(JMPRNZ, 3, micro(IPp));
   set_instruction_allflag(JMPRNZ, 4, micro(SCr));
+  set_instruction_flags(JMPRNZ, 2, 0b001, true, micro(IPo) | micro(MARi) | micro(Yi));
   set_instruction_flags(
-      JMPRNZ, 2, 0b001, true, micro(IPo) | micro(MARi) | micro(Yi));
-  set_instruction_flags(JMPRNZ,
-                        3,
-                        0b001,
-                        true,
-                        micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
+      JMPRNZ, 3, 0b001, true, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
   set_instruction_flags(JMPRNZ, 4, 0b001, true, micro(ALUo) | micro(IPi));
   set_instruction_flags(JMPRNZ, 5, 0b001, true, micro(SCr));
   set_instruction_allflag(JMPRNN, 2, micro(IPp));
   set_instruction_allflag(JMPRNN, 3, micro(IPp));
   set_instruction_allflag(JMPRNN, 4, micro(SCr));
+  set_instruction_flags(JMPRNN, 2, 0b010, true, micro(IPo) | micro(MARi) | micro(Yi));
   set_instruction_flags(
-      JMPRNN, 2, 0b010, true, micro(IPo) | micro(MARi) | micro(Yi));
-  set_instruction_flags(JMPRNN,
-                        3,
-                        0b010,
-                        true,
-                        micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
+      JMPRNN, 3, 0b010, true, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
   set_instruction_flags(JMPRNN, 4, 0b010, true, micro(ALUo) | micro(IPi));
   set_instruction_flags(JMPRNN, 5, 0b010, true, micro(SCr));
   set_instruction_allflag(JMPRNC, 2, micro(IPp));
   set_instruction_allflag(JMPRNC, 3, micro(IPp));
   set_instruction_allflag(JMPRNC, 4, micro(SCr));
+  set_instruction_flags(JMPRNC, 2, 0b100, true, micro(IPo) | micro(MARi) | micro(Yi));
   set_instruction_flags(
-      JMPRNC, 2, 0b100, true, micro(IPo) | micro(MARi) | micro(Yi));
-  set_instruction_flags(JMPRNC,
-                        3,
-                        0b100,
-                        true,
-                        micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
+      JMPRNC, 3, 0b100, true, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
   set_instruction_flags(JMPRNC, 4, 0b100, true, micro(ALUo) | micro(IPi));
   set_instruction_flags(JMPRNC, 5, 0b100, true, micro(SCr));
   set_instruction_allflag(JMPA, 2, micro(Ao) | micro(IPi));
@@ -572,8 +528,7 @@ void set_control_rom() {
   set_instruction_allflag(rB_AL, 3, micro(RAM) | micro(RAMo) | micro(Ai));
   set_instruction_allflag(rB_AL, 4, micro(SCr));
   set_instruction_allflag(rB_A, 2, micro(Bo) | micro(MARi));
-  set_instruction_allflag(
-      rB_A, 3, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Ai));
+  set_instruction_allflag(rB_A, 3, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Ai));
   set_instruction_allflag(rB_A, 4, micro(SCr));
   set_instruction_allflag(A_SP, 2, micro(Ao) | micro(SPi));
   set_instruction_allflag(A_SP, 3, micro(SCr));
@@ -584,8 +539,7 @@ void set_control_rom() {
   set_instruction_allflag(SEC_A, 2, micro(SECo) | micro(Ai));
   set_instruction_allflag(SEC_A, 3, micro(SCr));
   set_instruction_allflag(RAM_NDX, 2, micro(IPo) | micro(MARi));
-  set_instruction_allflag(
-      RAM_NDX, 3, micro(RAM) | micro(RAMo) | micro(NDXi) | micro(IPp));
+  set_instruction_allflag(RAM_NDX, 3, micro(RAM) | micro(RAMo) | micro(NDXi) | micro(IPp));
   set_instruction_allflag(RAM_NDX, 4, micro(SCr));
   set_instruction_allflag(INCNDX, 2, micro(NDXo) | micro(Yi));
   set_instruction_allflag(INCNDX, 3, micro(Xi));
@@ -600,28 +554,21 @@ void set_control_rom() {
   set_instruction_allflag(MEM_AH, 2, micro(MEMo) | micro(AHi));
   set_instruction_allflag(MEM_AH, 3, micro(SCr));
   set_instruction_allflag(CALL, 2, micro(SPo) | micro(MARi));
-  set_instruction_allflag(CALL,
-                          3,
-                          micro(IPo) | micro(RAM) | micro(RAM16) | micro(SPu)
-                              | micro(SPm));
-  set_instruction_allflag(CALL, 4, micro(IPo) | micro(MARi));
   set_instruction_allflag(
-      CALL, 5, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(IPi));
+      CALL, 3, micro(IPo) | micro(RAM) | micro(RAM16) | micro(SPu) | micro(SPm));
+  set_instruction_allflag(CALL, 4, micro(IPo) | micro(MARi));
+  set_instruction_allflag(CALL, 5, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(IPi));
   set_instruction_allflag(CALL, 6, micro(SCr));
   set_instruction_allflag(CALLR, 2, micro(SPo) | micro(MARi));
-  set_instruction_allflag(CALLR,
-                          3,
-                          micro(IPo) | micro(RAM) | micro(RAM16) | micro(SPu)
-                              | micro(SPm));
-  set_instruction_allflag(CALLR, 4, micro(IPo) | micro(MARi) | micro(Yi));
   set_instruction_allflag(
-      CALLR, 5, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
+      CALLR, 3, micro(IPo) | micro(RAM) | micro(RAM16) | micro(SPu) | micro(SPm));
+  set_instruction_allflag(CALLR, 4, micro(IPo) | micro(MARi) | micro(Yi));
+  set_instruction_allflag(CALLR, 5, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Xi));
   set_instruction_allflag(CALLR, 6, micro(ALUo) | micro(IPi));
   set_instruction_allflag(CALLR, 7, micro(SCr));
   set_instruction_allflag(RET, 2, micro(SPu));
   set_instruction_allflag(RET, 3, micro(SPo) | micro(MARi));
-  set_instruction_allflag(
-      RET, 4, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(IPi));
+  set_instruction_allflag(RET, 4, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(IPi));
   set_instruction_allflag(RET, 5, micro(IPp));
   set_instruction_allflag(RET, 6, micro(IPp));
   set_instruction_allflag(RET, 7, micro(SCr));
@@ -635,17 +582,13 @@ void set_control_rom() {
 int main(int argc, char **argv) {
   int step_mode = 0;
   int real_time_mode = 0;
+  char *input = "";
 
   struct argparse_option options[] = {
       OPT_GROUP("Options"),
       OPT_HELP(),
-      OPT_BOOLEAN('s',
-                  "step",
-                  &step_mode,
-                  "enable step mode after the cpu is HLTed",
-                  NULL,
-                  0,
-                  0),
+      OPT_STRING('i', "input", &input, "input string (only one)", NULL, 0, 0),
+      OPT_BOOLEAN('s', "step", &step_mode, "enable step mode after the cpu is HLTed", NULL, 0, 0),
       OPT_BOOLEAN('r',
                   "realtime",
                   &real_time_mode,
@@ -667,10 +610,10 @@ int main(int argc, char **argv) {
 
   cpu_t cpu = {0};
   cpu_init(&cpu);
+
+  load_input_string(&cpu, input);
+
   bool running = true;
-
-  load_input_string(&cpu, "shutdown\n");
-
   int ticks = 0;
   while (running) {
     tick(&cpu, &running);
@@ -683,12 +626,22 @@ int main(int argc, char **argv) {
          (float)ticks / 1E3,
          (float)ticks * 1E3 / 4E6,
          (float)ticks * 1E3 / 10E6);
+
   if (step_mode) {
     char input[100] = {0};
     cpu.SC = 0;
     do {
       if (strcmp(input, "end\n") == 0) {
         break;
+      } else if (strcmp(input, "next\n") == 0) {
+        running = true;
+        while (running) {
+          tick(&cpu, &running);
+          ++ticks;
+          if (real_time_mode) {
+            sleep(1.0 / 4.0E6);
+          }
+        }
       }
       // printf("\e[1;1H\e[2J");
       printf("STEP MODE (enter `end` to quit)\n");

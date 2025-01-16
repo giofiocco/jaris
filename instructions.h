@@ -12,7 +12,7 @@
 typedef enum {
   NOP = 0,
   INCA, DECA,
-  INCB,
+  INCB, DECB,
   RAM_AL, RAM_BL, RAM_A, RAM_B,
   INCSP, DECSP,
   PUSHA, POPA, PEEKA, PEEKAR, PUSHAR, 

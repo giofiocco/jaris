@@ -4,19 +4,70 @@ Jaris is a 16bit computer
 
 ## Table of contents
 
-1. [Assembler](#assembler)
-2. [File Specifications](#file-specifications)
+1. [Architecture](#architecture)
+2. [Assembler](#assembler)
+3. [File Specifications](#file-specifications)
    - [EXE](#exe-file)
    - [OBJ](#obj-file)
    - [BIN](#bin-file)
-   - [SO](#so-file)
-3. [File System](#file-system)
+
+- [SO](#so-file)
+
+4. [File System](#file-system)
    - [Dir Sector](#directory-sector)
    - [File Sector](#file-sector)
-4. [RAM Layout](#ram-layout)
+5. [RAM Layout](#ram-layout)
    - [OS struct](#os-struct)
    - [Process struct](#process-struct)
    - [FILE struct](#file-struct)
+
+## Architecture
+
+IMAGE
+
+- A: 16 bit register which can be load 16 bit number or the low 8 bit of the bus in its high 8 bit.
+- B: 16 bit general purpose register.
+- IP: instruction pointer.
+- X and Y: write only registers, used by the ALU.
+- ALU: arithmetic & logic unit that can perform addition, subtraction and shift right operations.
+- FR: flag register
+- SC: step counter
+- IR: instruction register
+- SP: stack pointer
+- MAR: memory address register
+
+### Micro Instruction
+
+- IPi: IP input
+- IPo: IP output
+- IPp: IP plus, increment the IP
+- Ai: A input, 16 bit input
+- AHi: A high input, 8 bit input on the high half
+- Ao
+- MARi
+- Bi
+- Bo
+- RAM: enables the RAM (example: `RAM | RAMo` to output 8bit, `RAM | RAM16` to input 16bit)
+- RAMo: sets the RAM to output, otherwise is on input
+- RAM16: sets the RAM to 16bit, otherwise is on 8bit
+- Xi
+- Yi
+- ALUo: ALU output (example: `ALUo` to sum, `ALU | _SUB` to sub, `ALU | _SHR` to `>>`)
+- \_SUB: perform subtraction, otherwise addition
+- \_SHR: perform right shift
+- Ci: carry input to 1
+- SPi
+- SPo
+- SPu: SP update, increase or decrease the SP (based on SPm)
+- SPm: SP minus, if set decreases SP on SPu, otherwise increases
+- IRi
+- SCr: SC reset
+- SECi
+- SECo
+- NDXi
+- NDXo
+- MEMi
+- MEMo
 
 ## Assembler
 

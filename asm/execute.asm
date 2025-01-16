@@ -47,8 +47,7 @@ copy_code:
   POPA DECA DECA JMPRNZ $copy_code
   -- ^ ram ram_start argv
 
-  INCSP
-  RAM_A file CALL read_u16 
+  INCSP RAM_A file CALL read_u16
 reloc:
   PUSHA
   -- ^ count ram_start argv

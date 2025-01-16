@@ -5,8 +5,8 @@
 { next_index 0x01 }
 { max_index 0x03 }
 { data_start 0x04 }
-{ ptr_to_stdlib_ptr 0xF800 }
 { page_size 0x0800 }
+{ ptr_to_stdlib_ptr 0xF800 }
 
 RAM_A 0xFEFE A_SP -- 0xFF00 - 2
 RAM_AL 0x00 A_SEC 

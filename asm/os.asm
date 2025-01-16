@@ -28,4 +28,4 @@ _start:
   RAM_B 0x0000
   HLT
 
-path: "shutdown" 0x00
+path: "sh" 0x00
