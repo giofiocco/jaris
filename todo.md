@@ -6,7 +6,6 @@ bss section
 
 # Sim
 
-- better option for input
 - print ram line command
 - step mode add commands
   - `read 0010` to read from ram
@@ -23,7 +22,3 @@ bss section
 # Inspect
 
 - read from the stdin
-
-# Execute
-
-- files with more then one sector?

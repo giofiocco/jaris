@@ -8,7 +8,7 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "argparse/argparse.h"
+#define KEY_FIFO_COUNT 1024
 
 #define SV_IMPLEMENTATION
 #include "instructions.h"
@@ -61,7 +61,7 @@ typedef struct {
   uint8_t RAM[1 << 16];
   uint8_t MEM[1 << 20];
 
-  uint8_t KEY_FIFO[1000];
+  uint8_t KEY_FIFO[KEY_FIFO_COUNT];
 
   uint16_t ATTRIBUTE_RAM[1 << 14];
   uint8_t PATTERN_RAM[1 << 14];
@@ -579,34 +579,78 @@ void set_control_rom() {
   set_instruction_allflag(HLT, 2, micro(_HLT));
 }
 
+void help(int exitcode) {
+  printf("Usage: sim [options]\n\n"
+         "Options:\n"
+         " -i | --input <string>   input <string> to computer [max %d char]\n"
+         " -s | --step             enable step mode after the cpu is HLTed\n"
+         " -t | --real-time        sleeps each tick to simulate a 4MHz clock\n"
+         " -h | --help             print this page and exit\n",
+         KEY_FIFO_COUNT);
+  exit(exitcode);
+}
+
 int main(int argc, char **argv) {
+  (void)argc;
+
   int step_mode = 0;
   int real_time_mode = 0;
-  char *input = "";
+  char input[KEY_FIFO_COUNT] = {0};
+  int inputi = 0;
 
-  struct argparse_option options[] = {
-      OPT_GROUP("Options"),
-      OPT_HELP(),
-      OPT_STRING('i', "input", &input, "input string (only one)", NULL, 0, 0),
-      OPT_BOOLEAN('s', "step", &step_mode, "enable step mode after the cpu is HLTed", NULL, 0, 0),
-      OPT_BOOLEAN('r',
-                  "realtime",
-                  &real_time_mode,
-                  "sleeps each tick to simulate a 4MHz clock",
-                  NULL,
-                  0,
-                  0),
-      OPT_END(),
-  };
-  struct argparse argparse;
-  argparse_init(&argparse,
-                options,
-                (const char *const[]){
-                    "sim [options]",
-                    NULL,
-                },
-                0);
-  argparse_parse(&argparse, argc, (const char **)argv);
+  ++argv;
+  char *arg = *argv;
+  while (*argv) {
+    arg = *argv;
+    if (arg[0] == '-') {
+      switch (arg[1]) {
+        case 's':
+          step_mode = 1;
+          break;
+        case 'h':
+          help(0);
+          break;
+        case 't':
+          real_time_mode = 1;
+          break;
+        case 'i':
+        {
+          ++argv;
+          if (*argv == NULL) {
+            printf("ERROR: -i expects a string\n");
+            help(1);
+          }
+          int len = strlen(*argv);
+          if (len + inputi > KEY_FIFO_COUNT) {
+            printf("ERROR: input buffer full\n");
+            exit(1);
+          }
+          strcpy(input + inputi, *argv);
+          inputi += len;
+        } break;
+        case '-':
+          if (strcmp(arg + 2, "help") == 0) {
+            help(0);
+          } else if (strcmp(arg + 2, "step") == 0) {
+            step_mode = 1;
+          } else if (strcmp(arg + 2, "real-time") == 0) {
+            real_time_mode = 1;
+          } else if (strcmp(arg + 2, "input") == 0) {
+            arg[1] = 'i';
+            arg[2] = 0;
+            continue;
+          }
+          __attribute__((fallthrough));
+        default:
+          printf("unknown arg '%s'\n", arg);
+          help(1);
+      }
+    } else {
+      printf("unknown arg '%s'\n", arg);
+      help(1);
+    }
+    ++argv;
+  }
 
   cpu_t cpu = {0};
   cpu_init(&cpu);
