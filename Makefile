@@ -1,17 +1,17 @@
-TARGETS=assembler linker encodemem sim inspect decodemem makemddocs
+TARGETS=assembler linker encodemem sim inspect decodemem
 CFLAGS=-Wall -Wextra -Werror -std=c99
 
 STDLIB_FILES=mul div solve_path open_file read_file execute exit put_char print get_char get_delim
 PROGRAMS=shutdown ls sh
 MEM_FILES=__bootloader __os __stdlib $(PROGRAMS)
+STDLIB_DOCS=stdlib_docs.md
 
-all: $(TARGETS) docs.md
+all: $(TARGETS) $(STDLIB_DOCS)
 
 .PHONY: clean
 
-docs.md: makemddocs $(patsubst %,asm/%.asm,$(STDLIB_FILES))
-	echo TODO docs.md
-	#./makemddocs $(patsubst %,asm/%.asm,$(STDLIB_FILES)) > docs.md
+$(STDLIB_DOCS): makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES))
+	./makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES)) > $@
 
 mem.bin: $(patsubst %,mem/%,$(MEM_FILES)) encodemem | mem
 	./encodemem
@@ -22,7 +22,7 @@ asm/build:
 mem:
 	mkdir -p $@
 
-asm/build/%.o: asm/%.asm assembler | asm/build 
+asm/build/%.o: asm/%.asm assembler | asm/build
 	./assembler -o $@ $<
 
 mem/__bootloader: asm/build/bootloader.o linker | mem
@@ -62,9 +62,6 @@ encodemem: encodemem.c
 decodemem: decodemem.c
 	cc $(CFLAGS) -o $@ $<
 
-makemddocs: makemddocs.c $(ARG_PARSER_LIB) 
-	cc $(CFLAGS) -o $@ $(filter %.c, $^) 
-
 inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
@@ -72,4 +69,4 @@ sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) mem.bin
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
 clean:
-	rm -r $(TARGETS) mem.bin asm/build
+	rm -r $(TARGETS) mem.bin asm/build $(STDLIB_DOCS)

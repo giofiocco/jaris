@@ -8,4 +8,4 @@ encodemem
 inspect
 sim
 decodemem
-makemddocs
+stdlib_docs.md
