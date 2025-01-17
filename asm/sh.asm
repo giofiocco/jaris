@@ -10,8 +10,11 @@ EXTERN exit
 
 input: db 128
 not_found_string: "command not found" 0x0A 0x00
+prompt: "$ " 0x00
 
 _start:
+  RAM_A prompt CALL print
+
   RAM_A input PUSHA
 echo:
   -- ^ inputi
