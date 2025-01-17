@@ -113,7 +113,7 @@ void cpu_dump_ram_range(cpu_t *cpu, uint16_t from, uint16_t to) {
   assert(from <= to);
 
   printf("RAM:\n");
-  for (int i = from - from % 2; i < to + to % 2; i += 2) {
+  for (int i = from - from % 2; i < to + 1 - to % 2; i += 2) {
     printf("\t%04X   %02X %02X %d\n", i, cpu->RAM[i], cpu->RAM[i + 1], cpu_read16(cpu, i));
   }
 }
@@ -582,12 +582,49 @@ void set_control_rom() {
 void help(int exitcode) {
   printf("Usage: sim [options]\n\n"
          "Options:\n"
-         " -i | --input <string>   input <string> to computer [max %d char]\n"
-         " -s | --step             enable step mode after the cpu is HLTed\n"
-         " -t | --real-time        sleeps each tick to simulate a 4MHz clock\n"
-         " -h | --help             print this page and exit\n",
+         " -i | --input <string>            input <string> to computer [max %d char]\n"
+         " -r | --ram-range <start>:<end>   print ram from <start> to <end> when HLTed (example "
+         "2:0xFA)\n"
+         " -s | --step                      enable step mode after the cpu is HLTed\n"
+         " -t | --real-time                 sleeps each tick to simulate a 4MHz clock\n"
+         " -h | --help                      print this page and exit\n",
          KEY_FIFO_COUNT);
   exit(exitcode);
+}
+
+void parse_range(char *range, int *start_out, int *end_out) {
+  assert(range);
+  assert(start_out);
+  assert(end_out);
+
+  char *c = strchr(range, ':');
+  if (!c) {
+    printf("ERROR: range expects a ':'\n");
+    help(1);
+  }
+  if (c - range == 0) {
+    printf("ERROR: range expects a start number\n");
+    help(1);
+  }
+  if (*(c + 1) == 0) {
+    printf("ERROR: range expects an end number\n");
+    help(1);
+  }
+  *c = 0;
+  if (range[0] == '0' && (range[1] == 'x' || range[1] == 'X')) {
+    *start_out = strtol(range + 2, NULL, 16);
+  } else {
+    *start_out = atoi(range);
+  }
+  if (c[1] == '0' && (c[2] == 'x' || c[2] == 'X')) {
+    *end_out = strtol(c + 3, NULL, 16);
+  } else {
+    *end_out = atoi(c + 1);
+  }
+  if (*start_out > *end_out) {
+    printf("ERROR: range start bigger than end\n");
+    exit(1);
+  }
 }
 
 int main(int argc, char **argv) {
@@ -597,6 +634,8 @@ int main(int argc, char **argv) {
   int real_time_mode = 0;
   char input[KEY_FIFO_COUNT] = {0};
   int inputi = 0;
+  int ram_range_start = 0;
+  int ram_range_end = 0;
 
   ++argv;
   char *arg = *argv;
@@ -617,7 +656,7 @@ int main(int argc, char **argv) {
         {
           ++argv;
           if (*argv == NULL) {
-            printf("ERROR: -i expects a string\n");
+            printf("ERROR: --input expects a string\n");
             help(1);
           }
           int len = strlen(*argv);
@@ -628,6 +667,14 @@ int main(int argc, char **argv) {
           strcpy(input + inputi, *argv);
           inputi += len;
         } break;
+        case 'r':
+          ++argv;
+          if (*argv == NULL) {
+            printf("ERROR: --ram-range expects a range\n");
+            help(1);
+          }
+          parse_range(*argv, &ram_range_start, &ram_range_end);
+          break;
         case '-':
           if (strcmp(arg + 2, "help") == 0) {
             help(0);
@@ -637,6 +684,10 @@ int main(int argc, char **argv) {
             real_time_mode = 1;
           } else if (strcmp(arg + 2, "input") == 0) {
             arg[1] = 'i';
+            arg[2] = 0;
+            continue;
+          } else if (strcmp(arg + 2, "ram-range") == 0) {
+            arg[1] = 'r';
             arg[2] = 0;
             continue;
           }
@@ -687,7 +738,6 @@ int main(int argc, char **argv) {
           }
         }
       }
-      // printf("\e[1;1H\e[2J");
       printf("STEP MODE (enter `end` to quit)\n");
       cpu_dump(&cpu);
 
@@ -699,9 +749,10 @@ int main(int argc, char **argv) {
     } while (fgets(input, 100, stdin));
   }
 
-  // printf("\e[1;1H\e[2J");
   cpu_dump(&cpu);
-  cpu_dump_ram_range(&cpu, 0x0800, 0x0820);
+  if (ram_range_end != ram_range_start) {
+    cpu_dump_ram_range(&cpu, ram_range_start, ram_range_end);
+  }
 
   cpu_dump_stdout(&cpu);
 

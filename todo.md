@@ -6,7 +6,6 @@ bss section
 
 # Sim
 
-- print ram line command
 - step mode add commands
   - `read 0010` to read from ram
   - `next` to run till the next `HLT`
