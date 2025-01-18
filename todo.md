@@ -1,5 +1,9 @@
 bss section
 
+# sh
+
+- pass argv
+
 # Linker
 
 - option to select the stdlib location
@@ -21,3 +25,12 @@ bss section
 # Inspect
 
 - read from the stdin
+
+# Assemble
+
+- error when trying:
+
+```
+argv: arg 0x0000
+arg: "asdf" 0x00
+```

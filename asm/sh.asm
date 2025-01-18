@@ -7,6 +7,7 @@ EXTERN print
 EXTERN print_with_len
 EXTERN execute
 EXTERN exit
+EXTERN str_find_char
 
 input: db 128
 not_found_string: "command not found" 0x0A 0x00
@@ -29,15 +30,21 @@ echo:
 
 execute_program:
   -- ^ inputi
-  POPB RAM_AL 0x00 AL_rB -- *inputi = 0
+  INCSP
+  RAM_A input RAM_BL " " CALL str_find_char
+  PUSHA
+  -- ^ argv
+  A_B RAM_AL 0x00 AL_rB -- *inputi = 0
   RAM_A input CALL solve_path
   CMPB JMPRN $not_found
 
-  RAM_A input CALL execute
+  RAM_A input POPB CALL execute
 
   JMPR $_start
 
 not_found:
+  -- ^ argv
+  INCSP
   RAM_A input CALL print
 
   RAM_A not_found_string CALL print
