@@ -11,7 +11,7 @@ GLOBAL solve_path
 -- "..": parent dir
 -- ".": cwd
 -- ERRORS:
--- [0, 0xFFFF] if entry not found 
+-- [0, 0xFFFF] if entry not found
 -- [0, 0xFFFE] if in "a/b" "a" is not a dir sec
 solve_path:
   PUSHA PUSHA
@@ -22,7 +22,6 @@ check_entry:
   -- ^ pathi path
   PEEKB rB_AL CMPA JMPRZ $path_end
   A_B RAM_AL "/" SUB JMPRZ $sub_dir
-  -- MEM_A INCNDX CMPA JMPRZ $not_found
   MEM_A INCNDX CMPA JMPRZ $neq2
   SUB JMPRNZ $neq
 
@@ -35,6 +34,7 @@ neq:
 neq2:
   INCNDX INCNDX -- skip the ptr
   INCSP PEEKA PUSHA -- pathi = path
+  MEM_A CMPA JMPRZ $next_dir
   JMPR $check_entry
 
 sub_dir:
@@ -56,8 +56,15 @@ path_end:
   MEM_A INCNDX MEM_AH -- ptr
   INCSP INCSP RET
 
+next_dir:
+  -- ^ pathi path
+  RAM_NDX next_dir_index MEM_A INCNDX MEM_AH
+  INCA JMPRZ $not_found
+  DECA A_SEC
+  RAM_NDX entry_start
+  JMPR $check_entry
+
 not_found:
-  -- TODO: search next dir sec 
   -- ^ pathi path
   RAM_AL 0x00
   RAM_B 0xFFFF

@@ -137,10 +137,7 @@ token_t token_next(tokenizer_t *tokenizer) {
     case '$':
       assert(table[(int)*tokenizer->buffer]);
       tokenizer->loc.len = 1;
-      token = (token_t){table[(int)*tokenizer->buffer],
-                        {tokenizer->buffer, 1},
-                        tokenizer->loc,
-                        {}};
+      token = (token_t){table[(int)*tokenizer->buffer], {tokenizer->buffer, 1}, tokenizer->loc, {}};
       ++tokenizer->buffer;
       ++tokenizer->loc.col;
       break;
@@ -181,8 +178,7 @@ token_t token_next(tokenizer_t *tokenizer) {
                           {.inst = inst}};
         tokenizer->loc.col += len;
       } else if (*tokenizer->buffer == '0'
-                 && (*(tokenizer->buffer + 1) == 'x'
-                     || *(tokenizer->buffer + 1) == 'X')) {
+                 && (*(tokenizer->buffer + 1) == 'x' || *(tokenizer->buffer + 1) == 'X')) {
         char *start = tokenizer->buffer;
         int len = 0;
         tokenizer->buffer += 2;
@@ -209,8 +205,7 @@ token_t token_next(tokenizer_t *tokenizer) {
           ++tokenizer->buffer;
         }
         tokenizer->loc.len = len;
-        token = (token_t){
-            T_INT, {start, len}, tokenizer->loc, {.num = atoi(start)}};
+        token = (token_t){T_INT, {start, len}, tokenizer->loc, {.num = atoi(start)}};
         tokenizer->loc.col += len;
       } else if (*tokenizer->buffer == '-' && *(tokenizer->buffer + 1) == '-') {
         while (*tokenizer->buffer != '\n') {
@@ -256,8 +251,7 @@ token_t preprocessor_token_next(preprocessor_t *pre) {
   if (token.kind == T_MACROO) {
     token_t name = token_next(pre->tok);
     if (name.kind != T_SYM) {
-      eprintfloc(
-          name.loc, "expected SYM, found %s", token_kind_to_string(name.kind));
+      eprintfloc(name.loc, "expected SYM, found %s", token_kind_to_string(name.kind));
     }
     macro_t *macro = preprocessor_find_macro(pre, name.image);
     if (macro != NULL) {
@@ -329,11 +323,9 @@ bytecode_t compile(preprocessor_t *pre) {
         {
           token_t arg = preprocessor_token_next(pre);
           if (arg.kind == T_HEX) {
-            bytecode =
-                (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.as.num}};
+            bytecode = (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.as.num}};
           } else if (arg.kind == T_STRING && arg.image.len == 3) {
-            bytecode = (bytecode_t){
-                BINSTHEX, token.as.inst, {.num = arg.image.start[1]}};
+            bytecode = (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.image.start[1]}};
           } else {
             eprintfloc(arg.loc,
                        "expected HEX or STRING with len 1, found %s",
@@ -344,19 +336,14 @@ bytecode_t compile(preprocessor_t *pre) {
         {
           token_t arg = preprocessor_token_next(pre);
           if (arg.kind == T_HEX2) {
-            bytecode =
-                (bytecode_t){BINSTHEX2, token.as.inst, {.num = arg.as.num}};
+            bytecode = (bytecode_t){BINSTHEX2, token.as.inst, {.num = arg.as.num}};
           } else if (arg.kind == T_SYM) {
             bytecode = bytecode_with_sv(BINSTLABEL, token.as.inst, arg.image);
           } else if (arg.kind == T_STRING && arg.image.len == 2 + 2) {
             bytecode = (bytecode_t){
-                BINSTHEX2,
-                token.as.inst,
-                {.num = arg.image.start[1] | (arg.image.start[2] << 8)}};
+                BINSTHEX2, token.as.inst, {.num = arg.image.start[1] | (arg.image.start[2] << 8)}};
           } else {
-            eprintfloc(arg.loc,
-                       "expected HEX2, found %s",
-                       token_kind_to_string(arg.kind));
+            eprintfloc(arg.loc, "expected HEX2, found %s", token_kind_to_string(arg.kind));
           }
         } break;
         case INST_LABEL_ARG:
@@ -376,8 +363,7 @@ bytecode_t compile(preprocessor_t *pre) {
     case T_EXTERN:
     {
       token_t arg = preprocessor_token_expect(pre, T_SYM);
-      bytecode = bytecode_with_sv(
-          token.kind == T_GLOBAL ? BGLOBAL : BEXTERN, 0, arg.image);
+      bytecode = bytecode_with_sv(token.kind == T_GLOBAL ? BGLOBAL : BEXTERN, 0, arg.image);
     } break;
     case T_ALIGN:
       bytecode = (bytecode_t){BALIGN, 0, {}};
@@ -389,12 +375,10 @@ bytecode_t compile(preprocessor_t *pre) {
     } break;
     case T_HEX:
     case T_HEX2:
-      bytecode = (bytecode_t){
-          token.kind == T_HEX ? BHEX : BHEX2, 0, {.num = token.as.num}};
+      bytecode = (bytecode_t){token.kind == T_HEX ? BHEX : BHEX2, 0, {.num = token.as.num}};
       break;
     case T_STRING:
-      bytecode = bytecode_with_sv(
-          BSTRING, 0, (sv_t){token.image.start + 1, token.image.len - 2});
+      bytecode = bytecode_with_sv(BSTRING, 0, (sv_t){token.image.start + 1, token.image.len - 2});
       break;
     case T_NONE:
       return (bytecode_t){BNONE, 0, {}};
@@ -403,17 +387,13 @@ bytecode_t compile(preprocessor_t *pre) {
     case T_COLON:
     case T_REL:
     case T_INT:
-      eprintfloc(
-          token.loc, "invalid token: %s", token_kind_to_string(token.kind));
+      eprintfloc(token.loc, "invalid token: %s", token_kind_to_string(token.kind));
   }
 
   return bytecode;
 }
 
-obj_t assemble(char *buffer,
-               char *filename,
-               assemble_debug_flag_t flag,
-               int debug_info) {
+obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag, int debug_info) {
   assert(buffer);
 
   tokenizer_t tokenizer;

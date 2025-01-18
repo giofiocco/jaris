@@ -331,16 +331,16 @@ void load_input_string(cpu_t *cpu, char *string) {
         break;
       case '\\':
         ++ string;
-      if (*string == 'n') {
-        assert(i + 5 < 1000);
-        cpu->KEY_FIFO[i++] = 0xe0;
-        cpu->KEY_FIFO[i++] = 0x5a;
-        cpu->KEY_FIFO[i++] = 0xe0;
-        cpu->KEY_FIFO[i++] = 0xf0;
-        cpu->KEY_FIFO[i++] = 0x5a;
+        if (*string == 'n') {
+          assert(i + 5 < 1000);
+          cpu->KEY_FIFO[i++] = 0xe0;
+          cpu->KEY_FIFO[i++] = 0x5a;
+          cpu->KEY_FIFO[i++] = 0xe0;
+          cpu->KEY_FIFO[i++] = 0xf0;
+          cpu->KEY_FIFO[i++] = 0x5a;
         } else {
-        printf("load_input_string not implemented for char: '\\%c'\n", *string);
-        exit(1);
+          printf("load_input_string not implemented for char: '\\%c'\n", *string);
+          exit(1);
         }
       break;
       default:

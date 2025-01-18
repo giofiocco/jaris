@@ -10,10 +10,11 @@ EXTERN exit
 
 input: db 128
 not_found_string: "command not found" 0x0A 0x00
-prompt: "$ " 0x00
 
 _start:
-  RAM_A prompt CALL print
+  -- prompt
+  RAM_AL "$" CALL put_char
+  RAM_AL " " CALL put_char
 
   RAM_A input PUSHA
 echo:
@@ -28,7 +29,7 @@ echo:
 
 execute_program:
   -- ^ inputi
-  POPB INCB RAM_AL 0x00 AL_rB -- *inputi = 0
+  POPB RAM_AL 0x00 AL_rB -- *inputi = 0
   RAM_A input CALL solve_path
   CMPB JMPRN $not_found
 
@@ -37,6 +38,8 @@ execute_program:
   JMPR $_start
 
 not_found:
+  RAM_A input CALL print
+
   RAM_A not_found_string CALL print
   JMPR $_start
 
