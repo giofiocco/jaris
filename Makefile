@@ -2,7 +2,7 @@ TARGETS=assembler linker encodemem sim inspect decodemem
 CFLAGS=-Wall -Wextra -Werror -std=c99
 
 STDLIB_FILES=mul div solve_path open_file read_file execute exit put_char print get_char get_delim string
-PROGRAMS=shutdown ls sh cd
+PROGRAMS=shutdown ls sh cd cat
 MEM_FILES=__bootloader __os __stdlib $(PROGRAMS)
 STDLIB_DOCS=stdlib_docs.md
 
@@ -35,13 +35,7 @@ mem/__os: asm/build/os.o mem/__stdlib linker | mem
 mem/__stdlib: $(patsubst %,asm/build/%.o,$(STDLIB_FILES)) linker | mem 
 	./linker --so --nostdlib -o $@ $(filter %.o, $^) 
 
-mem/shutdown: asm/build/shutdown.o mem/__stdlib linker | mem
-	./linker -o $@ $<
-mem/ls: asm/build/ls.o mem/__stdlib linker | mem
-	./linker -o $@ $<
-mem/sh: asm/build/sh.o mem/__stdlib linker | mem
-	./linker -o $@ $<
-mem/cd: asm/build/cd.o mem/__stdlib linker | mem
+mem/%: asm/build/%.o mem/__stdlib linker | mem
 	./linker -o $@ $<
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h

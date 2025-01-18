@@ -28,6 +28,7 @@ bss section
 
 # Assemble
 
+- debug symbols
 - error when trying:
 
 ```

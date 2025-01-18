@@ -9,11 +9,13 @@ EXTERN execute
 EXTERN exit
 EXTERN str_find_char
 
+  { current_process 0xF802 }
+  { cwd_offset 0x02 }
+
 input: db 128
-not_found_string: "command not found" 0x0A 0x00
+not_found_string: ": command not found" 0x0A 0x00
 
 _start:
-  -- prompt
   RAM_AL "$" CALL put_char
   RAM_AL " " CALL put_char
 
@@ -23,30 +25,31 @@ echo:
   CALL get_char
   CMPA JMPRZ $quit
   PUSHA CALL put_char
-  POPB RAM_AL 0x0A SUB JMPRZ $execute_program
+  POPB RAM_AL 0x0A SUB JMPRZ $enter
   B_A
   POPB AL_rB INCB PUSHB
   JMPR $echo
 
-execute_program:
+enter:
   -- ^ inputi
-  INCSP
+  POPB RAM_AL 0x00 AL_rB -- *inputi = 0
   RAM_A input RAM_BL " " CALL str_find_char
+  CMPA JMPRZ $no_args
+  A_B RAM_AL 0x00 AL_rB B_A -- separate command name and args
+  INCA
+no_args:
   PUSHA
-  -- ^ argv
-  A_B RAM_AL 0x00 AL_rB -- *inputi = 0
+  -- ^ args
+
   RAM_A input CALL solve_path
   CMPB JMPRN $not_found
-
   RAM_A input POPB CALL execute
-
   JMPR $_start
 
 not_found:
-  -- ^ argv
+  -- ^ args
   INCSP
   RAM_A input CALL print
-
   RAM_A not_found_string CALL print
   JMPR $_start
 
