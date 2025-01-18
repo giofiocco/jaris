@@ -62,6 +62,7 @@ typedef struct {
   uint8_t MEM[1 << 20];
 
   uint8_t KEY_FIFO[KEY_FIFO_COUNT];
+  int key_fifo_i;
 
   uint16_t ATTRIBUTE_RAM[1 << 14];
   uint8_t PATTERN_RAM[1 << 14];
@@ -229,7 +230,8 @@ void tick(cpu_t *cpu, bool *running) {
   if (mc & (1 << KEYo)) {
     // if (!cpu->KEY_FIFO[0]) { cpu->KEY_FIFO[0] = getchar(); }
     bus = cpu->KEY_FIFO[0];
-    memcpy(cpu->KEY_FIFO, cpu->KEY_FIFO + 1, sizeof(cpu->KEY_FIFO) - sizeof(cpu->KEY_FIFO[0]));
+    memcpy(cpu->KEY_FIFO, cpu->KEY_FIFO + 1, cpu->key_fifo_i);
+    cpu->key_fifo_i--;
   }
   if (mc & (1 << IPi)) {
     cpu->IP = bus;
@@ -286,69 +288,108 @@ void tick(cpu_t *cpu, bool *running) {
   cpu->SC = (cpu->SC + 1) % 16;
 }
 
+// based on https://wiki.osdev.org/PS/2_Keyboard scan code set 1
+static char scancodeset[256] = {
+    0,
+    0 /*escape*/,
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '0',
+    '-',
+    '=',
+    0 /*backspace*/,
+    '\t',
+    'q',
+    'w',
+    'e',
+    'r',
+    't',
+    'y',
+    'u',
+    'i',
+    'o',
+    'p',
+    '[',
+    ']',
+    '\n',
+    0 /*left ctrl*/,
+    'a',
+    's',
+    'd',
+    'f',
+    'g',
+    'h',
+    'j',
+    'k',
+    'l',
+    ';',
+    '\'',
+    '`',
+    0 /*left shift*/,
+    0 /*backslash*/,
+    'z',
+    'x',
+    'c',
+    'v',
+    'b',
+    'n',
+    'm',
+    ',',
+    '.',
+    '/',
+    0 /*right shift*/,
+    0 /*keypad * */,
+    0 /*left alt*/,
+    ' ',
+};
+
+uint8_t find_scan_code(char c) {
+  uint8_t code = 0;
+  for (int i = 0; i < 256; i++) {
+    if (scancodeset[i] == c) {
+      code = i;
+      break;
+    }
+  }
+  if (code == 0) {
+    printf("no scancode for '%c'\n", c);
+    exit(1);
+  }
+  return code;
+}
+
 void load_input_string(cpu_t *cpu, char *string) {
   assert(cpu);
   assert(string);
 
-  uint8_t table[256] = {0};
-  uint8_t letters[] = {0x1c, 0x32, 0x21, 0x23, 0x24, 0x2b, 0x34, 0x33, 0x43,
-                       0x3b, 0x42, 0x4b, 0x3a, 0x31, 0x44, 0x4d, 0x15, 0x2d,
-                       0x1b, 0x2c, 0x3c, 0x2a, 0x1d, 0x22, 0x35, 0x1a};
-  memcpy(table + (int)'a', letters, sizeof(letters));
-  memcpy(table + (int)'A', letters, sizeof(letters));
-  uint8_t digits[] = {0x45, 0x16, 0x1e, 0x26, 0x25, 0x2e, 0x36, 0x3d, 0x3e, 0x46, 0x79};
-  memcpy(table + (int)'0', digits, sizeof(digits));
-
-  table[' '] = 0x29;
-  table['-'] = 0x7b;
-
-  int i = 0;
-  while (*string) {
-    // clang-format off
-    switch (*string) {
-      case 'a': case 'b': case 'c': case 'd': case 'e': case 'f': case 'g': case 'h': case 'i': case 'j': case 'k': case 'l': case 'm': case 'n': case 'o': case 'p': case 'q': case 'r': case 's': case 't': case 'u': case 'v': case 'w': case 'x': case 'y': case 'z': case '0': case '1': case '2': case '3': case '4': case '5': case '6': case '7': case '8': case '9': case ' ': case '-':
-        assert(i + 3 < 1000);
-        cpu->KEY_FIFO[i++] = table[(int)*string];
-        cpu->KEY_FIFO[i++] = 0xf0;
-        cpu->KEY_FIFO[i++] = table[(int)*string];
-        break;
-      case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': case 'G': case 'H': case 'I': case 'J': case 'K': case 'L': case 'M': case 'N': case 'O': case 'P': case 'Q': case 'R': case 'S': case 'T': case 'U': case 'V': case 'W': case 'X': case 'Y': case 'Z':
-        assert(i + 6 < 1000);
-        cpu->KEY_FIFO[i++] = 0x12;
-        cpu->KEY_FIFO[i++] = table[(int)*string];
-        cpu->KEY_FIFO[i++] = 0xf0;
-        cpu->KEY_FIFO[i++] = table[(int)*string];
-        cpu->KEY_FIFO[i++] = 0xf0;
-        cpu->KEY_FIFO[i++] = 0x12;
-        break;
-      case '\n':
-        assert(i + 5 < 1000);
-        cpu->KEY_FIFO[i++] = 0xe0;
-        cpu->KEY_FIFO[i++] = 0x5a;
-        cpu->KEY_FIFO[i++] = 0xe0;
-        cpu->KEY_FIFO[i++] = 0xf0;
-        cpu->KEY_FIFO[i++] = 0x5a;
-        break;
-      case '\\':
-        ++ string;
-        if (*string == 'n') {
-          assert(i + 5 < 1000);
-          cpu->KEY_FIFO[i++] = 0xe0;
-          cpu->KEY_FIFO[i++] = 0x5a;
-          cpu->KEY_FIFO[i++] = 0xe0;
-          cpu->KEY_FIFO[i++] = 0xf0;
-          cpu->KEY_FIFO[i++] = 0x5a;
-        } else {
-          printf("load_input_string not implemented for char: '\\%c'\n", *string);
-          exit(1);
-        }
-      break;
-      default:
-        printf("load_input_string not implemented for char: '%c'\n", *string);
-        exit(1);
+  for (; *string; ++string) {
+    if ('A' <= *string && *string <= 'Z') {
+      uint8_t code = find_scan_code(*string);
+      assert(code < 0x80);
+      assert(cpu->key_fifo_i + 4 < 1000);
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x2A; // left shift pressed
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = code;
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x2A + 0x80; // left shift released
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = code + 0x80;
+    } else if (*string == '\\' && *(string + 1) == 'n') {
+      ++string;
+      assert(cpu->key_fifo_i + 2 < 1000);
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x1C;
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x1C + 0x80;
+    } else {
+      uint8_t code = find_scan_code(*string);
+      assert(code < 0x80);
+      assert(cpu->key_fifo_i + 2 < 1000);
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = code;
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = code + 0x80;
     }
-    // clang-format on
-    ++string;
   }
 }
 

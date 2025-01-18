@@ -2,7 +2,7 @@ bss section
 
 # sh
 
-- pass argv
+- print exitcode
 
 # Linker
 

@@ -7,8 +7,7 @@ EXTERN exit
   { entry_start 0x0C }
 
 _start:
-  RAM_B current_process rB_A RAM_BL cwd_offset SUM A_B rB_A -- cwd
-  A_SEC
+  RAM_B current_process rB_A RAM_BL cwd_offset SUM A_B rB_A A_SEC
   RAM_NDX entry_start
 
 entry:
