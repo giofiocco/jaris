@@ -766,28 +766,54 @@ int main(int argc, char **argv) {
   if (step_mode) {
     char input[100] = {0};
     cpu.SC = 0;
-    do {
-      if (strcmp(input, "end\n") == 0) {
+    printf("STEP MODE\n");
+    cpu_dump(&cpu);
+    printf("> ");
+    while (fgets(input, 100, stdin)) {
+      cpu_dump(&cpu);
+
+      microcode_t mc = 0;
+      if (strcmp(input, "end\n") == 0 || strcmp(input, "quit\n") == 0
+          || strcmp(input, "exit\n") == 0) {
         break;
+      } else if (strcmp(input, "help\n") == 0 || strcmp(input, "?\n") == 0) {
+        printf("commands:\n"
+               "  quit | end | exit    quit step mode\n"
+               "  help | ?             print commands avaiable\n"
+               "  stdout               print the stdout\n"
+               "  skip                 skip to the RET inst\n"
+               "  next                 run to the next HLT\n");
+      } else if (strcmp(input, "stdout\n") == 0) {
+        cpu_dump_stdout(&cpu);
+        printf("> ");
+        continue;
+      } else if (strcmp(input, "skip\n") == 0) {
+        running = true;
+        while (running) {
+          tick(&cpu, &running);
+          mc = control_rom[cpu.IR | (cpu.SC << 6) | (cpu.FR << (6 + 4))];
+          if (cpu.IR == RET && (mc & (1 << SCr))) {
+            break;
+          }
+        }
       } else if (strcmp(input, "next\n") == 0) {
         running = true;
         while (running) {
           tick(&cpu, &running);
-          ++ticks;
-          if (real_time_mode) {
-            sleep(1.0 / 4.0E6);
-          }
         }
+        cpu.SC = 0;
+        printf("> ");
+        continue;
       }
-      printf("STEP MODE (enter `end` to quit)\n");
-      cpu_dump(&cpu);
 
-      microcode_t mc = 0;
+      running = true;
       do {
         tick(&cpu, &running);
         mc = control_rom[cpu.IR | (cpu.SC << 6) | (cpu.FR << (6 + 4))];
-      } while (!(mc & (1 << SCr)));
-    } while (fgets(input, 100, stdin));
+      } while (running && !(mc & (1 << SCr)));
+
+      printf("> ");
+    };
   }
 
   cpu_dump(&cpu);
