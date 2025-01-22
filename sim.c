@@ -682,7 +682,26 @@ int main(int argc, char **argv) {
   char *arg = *argv;
   while (*argv) {
     arg = *argv;
-    if (arg[0] == '-') {
+    if (arg[0] == '-' && arg[1] == '-') {
+      if (strcmp(arg + 2, "help") == 0) {
+        help(0);
+      } else if (strcmp(arg + 2, "step") == 0) {
+        step_mode = 1;
+      } else if (strcmp(arg + 2, "real-time") == 0) {
+        real_time_mode = 1;
+      } else if (strcmp(arg + 2, "input") == 0) {
+        arg[1] = 'i';
+        arg[2] = 0;
+        continue;
+      } else if (strcmp(arg + 2, "ram-range") == 0) {
+        arg[1] = 'r';
+        arg[2] = 0;
+        continue;
+      } else {
+        printf("unknown arg '%s'\n", arg);
+        help(1);
+      }
+    } else if (arg[0] == '-' && arg[2] == 0) {
       switch (arg[1]) {
         case 's':
           step_mode = 1;
@@ -716,23 +735,6 @@ int main(int argc, char **argv) {
           }
           parse_range(*argv, &ram_range_start, &ram_range_end);
           break;
-        case '-':
-          if (strcmp(arg + 2, "help") == 0) {
-            help(0);
-          } else if (strcmp(arg + 2, "step") == 0) {
-            step_mode = 1;
-          } else if (strcmp(arg + 2, "real-time") == 0) {
-            real_time_mode = 1;
-          } else if (strcmp(arg + 2, "input") == 0) {
-            arg[1] = 'i';
-            arg[2] = 0;
-            continue;
-          } else if (strcmp(arg + 2, "ram-range") == 0) {
-            arg[1] = 'r';
-            arg[2] = 0;
-            continue;
-          }
-          __attribute__((fallthrough));
         default:
           printf("unknown arg '%s'\n", arg);
           help(1);
@@ -789,21 +791,19 @@ int main(int argc, char **argv) {
         continue;
       } else if (strcmp(input, "skip\n") == 0) {
         running = true;
-        while (running) {
+        do {
+          printf("-\n");
           tick(&cpu, &running);
-          mc = control_rom[cpu.IR | (cpu.SC << 6) | (cpu.FR << (6 + 4))];
-          if (cpu.IR == RET && (mc & (1 << SCr))) {
+          if (cpu.IR == RET) {
             break;
           }
-        }
+        } while (running);
       } else if (strcmp(input, "next\n") == 0) {
         running = true;
         while (running) {
           tick(&cpu, &running);
         }
         cpu.SC = 0;
-        printf("> ");
-        continue;
       }
 
       running = true;
