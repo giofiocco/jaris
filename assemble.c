@@ -410,40 +410,17 @@ obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
   preprocessor_t pre = {0};
   pre.tok = &tokenizer;
 
-  obj_state_t objs = {0};
+  obj_t obj = {0};
 
   bytecode_t bc = {0};
   while ((bc = compile(&pre)).kind != BNONE) {
     if (flag & DEBUG_BYTECODES) {
       bytecode_dump(bc);
     }
-    obj_compile_bytecode(&objs, bc);
+    obj_compile_bytecode(&obj, bc);
   }
 
-  if (flag & DEBUG_OBJ_STATE) {
-    printf("SYMBOLS: %d\n", objs.symbol_num);
-    for (int i = 0; i < objs.symbol_num; ++i) {
-      symbol_t *s = &objs.symbols[i];
-      printf("\t%s: %04X\n", s->image, s->pos);
-      if (s->relreloc_num != 0) {
-        printf("\t\tRELRELOCS:");
-        for (int j = 0; j < s->relreloc_num; ++j) {
-          printf(" %04X", s->relrelocs[j]);
-        }
-        printf("\n");
-      }
-      if (s->reloc_num) {
-        printf("\t\tRELOCS:");
-        for (int j = 0; j < s->reloc_num; ++j) {
-          printf(" %04X", s->relocs[j]);
-        }
-        printf("\n");
-      }
-    }
-    obj_dump(&objs.obj);
-  }
+  obj_check(&obj);
 
-  obj_state_check_obj(&objs);
-
-  return objs.obj;
+  return obj;
 }

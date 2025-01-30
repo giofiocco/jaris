@@ -36,6 +36,15 @@ typedef struct {
 } dynamic_entry_t;
 
 typedef struct {
+  char image[LABEL_MAX_LEN];
+  uint16_t pos;
+  uint16_t relocs[RELOC_COUNT];
+  uint8_t reloc_num;
+  uint16_t relrelocs[RELOC_COUNT];
+  uint8_t relreloc_num;
+} symbol_t;
+
+typedef struct {
   uint16_t global_num;
   global_entry_t globals[GLOBAL_COUNT];
   uint16_t extern_num;
@@ -44,6 +53,8 @@ typedef struct {
   reloc_entry_t reloc_table[RELOC_COUNT];
   uint16_t code_size;
   uint8_t code[1 << 16];
+  symbol_t symbols[SYMBOL_COUNT];
+  uint16_t symbol_num;
 } obj_t;
 
 typedef struct {
@@ -70,21 +81,6 @@ typedef struct {
 } label_t;
 
 typedef struct {
-  char image[LABEL_MAX_LEN];
-  uint16_t pos;
-  uint16_t relocs[RELOC_COUNT];
-  int reloc_num;
-  uint16_t relrelocs[RELOC_COUNT];
-  int relreloc_num;
-} symbol_t;
-
-typedef struct {
-  obj_t obj;
-  symbol_t symbols[SYMBOL_COUNT];
-  int symbol_num;
-} obj_state_t;
-
-typedef struct {
   exe_t exe;
   uint16_t global_num;
   global_entry_t globals[GLOBAL_COUNT];
@@ -97,16 +93,13 @@ typedef struct {
 
 void extern_entry_add_pos(extern_entry_t *e, uint16_t pos);
 
+void symbol_dump(symbol_t *symbol);
+
 void obj_dump(obj_t *obj);
-
-void obj_state_add_symbol(obj_state_t *objs, char *name, uint16_t pos);
-symbol_t *obj_state_find_symbol(obj_state_t *objs, char *name);
-uint16_t obj_state_find_symbol_pos(obj_state_t *objs, char *name);
-void obj_state_add_reloc(obj_state_t *objs, char *name, uint16_t pos);
-void obj_state_add_relreloc(obj_state_t *objs, char *name, uint16_t pos);
-void obj_state_check_obj(obj_state_t *objs);
-void obj_compile_bytecode(obj_state_t *objs, bytecode_t bc);
-
+void obj_add_symbol(obj_t *obj, char *name, uint16_t pos);
+symbol_t *obj_find_symbol(obj_t *obj, char *name);
+uint16_t obj_find_symbol_pos(obj_t *obj, char *name);
+void obj_add_symbol_reloc(obj_t *obj, char *name, uint16_t where);
 void obj_add_reloc(obj_t *obj, uint16_t where, uint16_t what);
 void obj_add_global(obj_t *obj, char *image);
 void obj_add_extern(obj_t *obj, char *image);
@@ -114,6 +107,8 @@ extern_entry_t *obj_find_extern(obj_t *obj, char *image);
 void obj_add_instruction(obj_t *obj, instruction_t inst);
 void obj_add_hex(obj_t *obj, uint8_t num);
 void obj_add_hex2(obj_t *obj, uint16_t num);
+void obj_compile_bytecode(obj_t *obj, bytecode_t bc);
+void obj_check(obj_t *obj);
 
 obj_t obj_decode_file(char *filename);
 void obj_encode_file(obj_t *obj, char *filename);
