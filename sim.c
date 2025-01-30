@@ -11,6 +11,7 @@
 #define KEY_FIFO_COUNT 1024
 
 #define SV_IMPLEMENTATION
+#include "files.h"
 #include "instructions.h"
 
 // clang-format off
@@ -64,19 +65,16 @@ typedef struct {
   uint8_t KEY_FIFO[KEY_FIFO_COUNT];
   int key_fifo_i;
 
-  uint16_t ATTRIBUTE_RAM[1 << 14];
-  uint8_t PATTERN_RAM[1 << 14];
-  uint8_t PALETTE_RAM[1 << 8];
+  // uint16_t ATTRIBUTE_RAM[1 << 14];
+  // uint8_t PATTERN_RAM[1 << 14];
+  // uint8_t PALETTE_RAM[1 << 8];
   // RenderTexture2D screen;
 } cpu_t;
 
-void set_control_rom();
-void cpu_init(cpu_t *cpu) {
+void cpu_init(cpu_t *cpu, char *mem_path) {
   assert(cpu);
 
-  set_control_rom();
-
-  FILE *file = fopen("mem.bin", "rb");
+  FILE *file = fopen(mem_path, "rb");
   if (!file) {
     fprintf(stderr, "ERROR: cannot open file: 'mem.bin': %s\n", strerror(errno));
     exit(1);
@@ -92,6 +90,13 @@ uint16_t cpu_read16(cpu_t *cpu, uint16_t at) {
   assert(cpu);
   assert(at % 2 == 0);
   return cpu->RAM[at] | (cpu->RAM[at + 1] << 8);
+}
+
+void cpu_write16(cpu_t *cpu, uint16_t at, uint16_t what) {
+  assert(cpu);
+  assert(at % 2 == 0);
+  cpu->RAM[at] = what & 0xFF;
+  cpu->RAM[at + 1] = (what >> 8) & 0xFF;
 }
 
 void cpu_dump(cpu_t *cpu) {
@@ -620,14 +625,203 @@ void set_control_rom() {
   set_instruction_allflag(HLT, 2, micro(_HLT));
 }
 
+void exe_reloc(exe_t *exe, uint16_t start_pos, uint16_t stdlib_pos) {
+  assert(exe);
+
+  assert(exe->dynamic_num == 1);
+  assert(exe->dynamics_table[0].file_name[0] == 1);
+  assert(exe->dynamics_table[0].file_name[1] == 0);
+
+  for (int i = 0; i < exe->reloc_num; ++i) {
+    reloc_entry_t entry = exe->reloc_table[i];
+    entry.what += start_pos;
+    exe->code[entry.where] = entry.what & 0xFF;
+    exe->code[entry.where + 1] = (entry.what >> 8) & 0xFF;
+  }
+
+  for (int i = 0; i < exe->dynamics_table[0].reloc_num; ++i) {
+    reloc_entry_t entry = exe->dynamics_table[0].reloc_table[i];
+    entry.what += stdlib_pos;
+    exe->code[entry.where] = entry.what & 0xFF;
+    exe->code[entry.where + 1] = (entry.what >> 8) & 0xFF;
+  }
+}
+
+typedef struct {
+  cpu_t cpu;
+  int16_t test_ram[1 << 16]; // negative if undef
+} test_t;
+
+void test_init(test_t *test) {
+  assert(test);
+  *test = (test_t){0};
+  cpu_init(&test->cpu, "mem.bin");
+  memset(test->test_ram, -1, (1 << 16) * sizeof(test->test_ram[0]));
+}
+
+void test_check(test_t *test) {
+  assert(test);
+  int fail = 0;
+  for (int i = 0; i < 1 << 16; ++i) {
+    if (test->test_ram[i] >= 0) {
+      if (test->test_ram[i] != test->cpu.RAM[i]) {
+        if (!fail) {
+          printf("ERROR:\n");
+        }
+        fail = 1;
+        printf("  at 0x%04X %05d expected %02X,   found %02X\n",
+               i,
+               i,
+               test->test_ram[i],
+               test->cpu.RAM[i]);
+        if (i % 2 == 0) {
+          printf("                  expected %04X, found %04X\n",
+                 test->test_ram[i] | (test->test_ram[i + 1] << 8),
+                 cpu_read16(&test->cpu, i));
+        }
+      }
+    }
+  }
+  if (fail) {
+    exit(1);
+  }
+}
+
+void test_set_range(test_t *test, int ram_start, int count, uint8_t *data) {
+  assert(test);
+  assert(data);
+  assert(count);
+  for (int i = 0; i < count; ++i) {
+    test->test_ram[i + ram_start] = data[i];
+  }
+}
+void test_unset_range(test_t *test, int ram_start, int count) {
+  assert(test);
+  assert(count);
+  memset(test->test_ram + ram_start, -1, count * sizeof(test->test_ram[0]));
+}
+
+void test_set_u16(test_t *test, uint16_t at, uint16_t num) {
+  assert(test);
+  assert(at % 2 == 0);
+  test->test_ram[at] = num & 0xFF;
+  test->test_ram[at + 1] = (num >> 8) & 0xFF;
+}
+
+void test() {
+  test_t test_ = {0};
+  test_t *test = &test_;
+  test_init(test);
+  cpu_t *cpu = &test->cpu;
+
+  printf("TEST:\n");
+  printf("Run bootloader\n");
+
+  bool running = true;
+  while (running && !(cpu->IR == JMPA && cpu->A == 0)) {
+    tick(cpu, &running);
+  }
+  assert(running);
+
+  printf("Check if os is loaded\n");
+
+  exe_t os = exe_decode_file("mem/__os");
+  exe_reloc(&os, 0, os.code_size);
+
+  test_set_range(test, 0, os.code_size, os.code);
+  test_check(test);
+
+  printf("Check if stdlib is loaded\n");
+
+  so_t stdlib = so_decode_file("mem/__stdlib");
+  for (int i = 0; i < stdlib.reloc_num; ++i) {
+    reloc_entry_t entry = stdlib.reloc_table[i];
+    entry.what += os.code_size;
+    stdlib.code[entry.where] = entry.what & 0xFF;
+    stdlib.code[entry.where + 1] = (entry.what >> 8) & 0xFF;
+  }
+
+  uint16_t execute_ptr = 0;
+  uint16_t open_file_ptr = 0;
+  for (int i = 0; i < stdlib.global_num; ++i) {
+    if (strcmp(stdlib.globals[i].name, "execute") == 0) {
+      execute_ptr = stdlib.globals[i].pos + os.code_size;
+    } else if (strcmp(stdlib.globals[i].name, "open_file") == 0) {
+      open_file_ptr = stdlib.globals[i].pos + os.code_size;
+    }
+  }
+  assert(execute_ptr != 0);
+  assert(open_file_ptr != 0);
+
+  test_set_range(test, os.code_size, stdlib.code_size, stdlib.code);
+  test_check(test);
+
+  printf("Run os till CALL execute sh\n");
+
+  while (running && !(cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_ptr)) {
+    tick(cpu, &running);
+  }
+  assert(running);
+
+  assert(cpu->RAM[cpu->A] == 's');
+  assert(cpu->RAM[cpu->A + 1] == 'h');
+  assert(cpu->RAM[cpu->A + 2] == 0);
+
+  printf("Check os struct, process and stdout\n");
+
+  test_set_u16(test, 0xF800, os.code_size);
+  test_set_u16(test, 0xF802, 0xF820);
+  test_set_u16(test, 0xF804, 0x8000);
+  test_set_u16(test, 0xF806, 0x8000);
+  test_set_u16(test, 0xF808, 0);
+  test_set_u16(test, 0xF820, 0xFFFF);
+  test_set_u16(test, 0xF822, 1);
+  test_set_u16(test, 0xF824, 0xFFFE);
+  uint16_t stdout_ptr = cpu_read16(cpu, 0xF80A);
+  assert(stdout_ptr % 2 == 0);
+  test_set_u16(test, stdout_ptr, stdout_ptr + 4);
+  test_set_u16(test, stdout_ptr + 2, stdout_ptr + 256);
+  test_unset_range(test, stdout_ptr + 4, 256 - 4);
+  test_check(test);
+
+  test_unset_range(test, 0xF824, 2);
+
+  printf("Run execute sh\n");
+
+  while (running && cpu->IR != JMPA) {
+    tick(cpu, &running);
+  }
+  assert(running);
+
+  printf("Check if sh is loaded and processes\n");
+
+  exe_t sh = exe_decode_file("mem/sh");
+  exe_reloc(&sh, 2048, os.code_size);
+
+  test_set_range(test, 2048, sh.code_size, sh.code);
+
+  test_set_u16(test, 0xF802, 0xF830);
+  test_set_u16(test, 0xF804, 0xC000);
+  test_set_u16(test, 0xF806, 0xC000);
+  test_set_u16(test, 0xF830, 0xF820);
+  test_set_u16(test, 0xF832, 1);
+  test_set_u16(test, 0xF834, 2048 * 2 - 2);
+  test_check(test);
+
+  printf("End\n");
+}
+
 void help(int exitcode) {
   printf("Usage: sim [options]\n\n"
          "Options:\n"
          " -i | --input <string>            input <string> to computer [max %d char]\n"
          " -r | --ram-range <start>:<end>   print ram from <start> to <end> when HLTed (example "
          "2:0xFA)\n"
+         "    | --stdout                    print the stdout when HLTed\n"
+         "    | --test                      run test and exit\n"
          " -s | --step                      enable step mode after the cpu is HLTed\n"
          " -t | --real-time                 sleeps each tick to simulate a 4MHz clock\n"
+         "      --mem <mem-path>            set the binary file for MEM [default mem.bin]\n"
          " -h | --help                      print this page and exit\n",
          KEY_FIFO_COUNT);
   exit(exitcode);
@@ -671,12 +865,16 @@ void parse_range(char *range, int *start_out, int *end_out) {
 int main(int argc, char **argv) {
   (void)argc;
 
+  set_control_rom();
+
   int step_mode = 0;
   int real_time_mode = 0;
   char input[KEY_FIFO_COUNT] = {0};
   int inputi = 0;
   int ram_range_start = 0;
   int ram_range_end = 0;
+  char *mem_path = "mem.bin";
+  int print_stdout = 0;
 
   ++argv;
   char *arg = *argv;
@@ -697,6 +895,18 @@ int main(int argc, char **argv) {
         arg[1] = 'r';
         arg[2] = 0;
         continue;
+      } else if (strcmp(arg + 2, "mem") == 0) {
+        ++argv;
+        if (*argv == NULL) {
+          printf("ERROR: --mem expects a string\n");
+          help(1);
+        }
+        mem_path = *argv;
+      } else if (strcmp(arg + 2, "stdout") == 0) {
+        print_stdout = 1;
+      } else if (strcmp(arg + 2, "test") == 0) {
+        test();
+        exit(0);
       } else {
         printf("unknown arg '%s'\n", arg);
         help(1);
@@ -740,14 +950,14 @@ int main(int argc, char **argv) {
           help(1);
       }
     } else {
-      printf("unknown arg '%s'\n", arg);
+      printf("ERROR: unknown arg '%s'\n", arg);
       help(1);
     }
     ++argv;
   }
 
   cpu_t cpu = {0};
-  cpu_init(&cpu);
+  cpu_init(&cpu, mem_path);
 
   load_input_string(&cpu, input);
 
@@ -821,7 +1031,9 @@ int main(int argc, char **argv) {
     cpu_dump_ram_range(&cpu, ram_range_start, ram_range_end);
   }
 
-  cpu_dump_stdout(&cpu);
+  if (print_stdout) {
+    cpu_dump_stdout(&cpu);
+  }
 
   return 0;
 }

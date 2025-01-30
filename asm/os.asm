@@ -4,8 +4,6 @@ EXTERN execute
 stdout: db 256
 stdout_end:
 
-ALIGN file: db 4
-
 _start:
   -- ptr to stdlib set by the bootloader
   RAM_B 0xF802 RAM_A 0xF820 A_rB -- ptr to current process struct 
@@ -17,7 +15,6 @@ _start:
   RAM_B 0xF820 RAM_A 0xFFFF A_rB -- ptr to parent process  
   RAM_B 0xF822 RAM_A 0x0001 A_rB -- cwd sec 
   RAM_B 0xF824 RAM_A 0xFFFE A_rB -- SP 
-  RAM_B 0xF826 RAM_A 0x0001 A_rB
   -- stdout struct
   RAM_B stdout RAM_AL 0x04 SUM RAM_B stdout A_rB -- stdout->next_char_ptr
   RAM_A stdout INCA INCA A_B RAM_A stdout_end A_rB -- stdout->end_ptr

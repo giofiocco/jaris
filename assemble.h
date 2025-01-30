@@ -9,6 +9,6 @@ typedef enum {
   DEBUG_OBJ_STATE = 1 << 2,
 } assemble_debug_flag_t;
 
-obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag, int debug_info);
+obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag);
 
-#endif  // ASSEMBLE_H__
+#endif // ASSEMBLE_H__

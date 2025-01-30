@@ -1,0 +1,220 @@
+.TL
+Jaris Documentation
+.AU
+Giovanni Fiocco
+.\".AB [no]
+.\"abstract
+.\".AE
+
+all MI are and-ed with clock
+
+.NH 1
+Module's diagram
+.PP
+
+.SM
+.PS
+boxht=0.3
+boxwid=0.6
+moveht=0.3
+movewid=0.2
+arrowwid=0.03
+
+IP: box "IP"; move
+A: box "A"; move
+B: box "B"; move
+SP: box "SP"; move
+X: box "X"; move;
+ALU: box "+/-/>>"; move
+Y: box "Y"; move
+IR: box "IR"; move
+
+move to ALU; move up; FR: box "FR"
+move to Y; move up; SC: box "SC"
+move; CROM: box "CROM"
+move to IP; move up; move; CLK: box "CLK"
+move to A; move up; move; box dashed "BOOT"
+
+move to 1st box.w; down; move 1; right
+MAR: box "MAR"; move
+RAM: box "RAM"; move
+SEC: box "SEC"; move
+NDX: box "NDX"; move
+MEM: box "MEM"; move
+KEY: box "KEY"; move
+box dashed "GPU"; move
+box dashed "SPI"; move
+
+BUS: line right from IP.w-(0,0.5) to IR.e-(0,0.5)
+
+arrow <-> from (IP.x, BUS.y) to IP.s
+arrow <-> from (A.x, BUS.y) to A.s
+arrow <-> from (B.x, BUS.y) to B.s
+arrow <-> from (SP.x, BUS.y) to SP.s
+arrow from (X.x, BUS.y) to X.s
+arrow from (Y.x, BUS.y) to Y.s
+arrow from X.e to ALU.w;
+arrow from Y.w to ALU.e;
+arrow from ALU.n to FR.s;
+arrow from (IR.x, BUS.y) to IR.s
+arrow from (MAR.x, BUS.y) to MAR.n
+arrow <-> from (RAM.x, BUS.y) to RAM.n
+arrow <-> from (SEC.x, BUS.y) to SEC.n
+arrow <-> from (NDX.x, BUS.y) to NDX.n
+arrow <-> from (MEM.x, BUS.y) to MEM.n
+arrow <- from (KEY.x, BUS.y) to KEY.n
+
+arrow from FR.n to CROM.w;
+arrow from SC.n to CROM.s;
+arrow from IR.n to CROM.e;
+.PE
+
+.SH
+Components:
+.PP
+
+.TS
+tab(@) allbox nospaces center;
+cbcbcbcbcb
+ccccc.
+Code @ Name @ Count @ Tension [V] @ Description 
+IS61LV256AL @ RAM @ 2 @ 3.3 @ 15bit addr SRAM, a.t. 10 ns
+@ Transciver @ 2 @ @ DIR=0 A->B
+@ latch @ 20 ish
+@ not @ 2 gates
+@ nor @ 1 gate
+@ nand @ 3 gates
+.TE
+
+.NH 2
+RAM module
+.PP
+
+.SM
+.PS
+RAMH: box "RAMH"
+line from RAMH.s down 0.7 then right
+TH: box "<H>" with .w at last line .end
+line from RAMH.s down 1.2 then right
+TL: box "<L>" with .w at last line .end
+line from TH.e right
+BUSH: line from last line.e + (0, -1) to last line.e + (0, 2)
+BUSL: line up 3 with .c at last line.c + (0.2, 0)
+RAML: box "RAML" at (TH.x, RAMH.y)
+line from RAML.s down 0.3 then right BUSL.x-RAML.x
+line from TL.e right BUSL.x-TL.e.x
+"A" at TH.e + (0.1, 0.1); "B" at TH.w + (-0.1, 0.1)
+"A" at TL.e + (0.1, 0.1); "B" at TL.w + (-0.1, 0.1)
+"I/O" at RAMH.s + (0.1, -0.1)
+"I/O" at RAML.s + (0.1, -0.1)
+
+arrow <- from RAMH.n up 0.5
+MAR: box "MAR" with .s at last arrow.end
+arrow from MAR.s down 0.2 then right RAML.x-MAR.x then down 0.3
+arrow <- "16bit" "" from MAR.e right BUSL.x-MAR.e.x; circle radius 0.03 fill 1 at (BUSH.x, MAR.y)
+"A" at RAMH.n + (0.1, 0.1)
+"A" at RAML.n + (0.1, 0.1)
+"bit 0-14" at MAR.s + (0.2, -0.1)
+.PE
+
+.TS
+tab(@) allbox;
+ccbcb
+ccc.
+@ RAML @ RAMH
+#CE @ RAM nand not MAR15 @ RAM16 nor RAM15
+#WE @ RAMo @ RAMo
+#OE @ not RAMo @ not RAMo
+.TE
+
+.TS
+tab(@) allbox;
+ccbcb
+ccc.
+@ <L> @ <H>
+#G  @ RAM nand MAR15 @ RAM nand RAM16
+DIR @ RAMo @ RAMo
+.TE
+
+.TS
+tab(@) allbox;
+ccb
+cc.
+@ MAR
+LE  @ MARi
+#OE @ 0
+.TE
+
+.NH 2
+MEM module
+.PP
+
+.SM
+.PS
+define buffer { [
+S: line up $1
+line from S.start to S.c + ($1, 0)
+line from S.end to S.c + ($1, 0)
+] }
+
+MEM: box "MEM"
+line from MEM.s down 0.3 then right
+BUS: line from last line .end + (0, -0.2) to last line .end + (0, 2.4)
+
+arrow <- from MEM.n - (0.1, 0) up 1.2 then left 0.1
+SEC: box "SEC"
+arrow <- from SEC.n up 0.2 then right BUS.x-SEC.x
+line from SEC.e right 0.2
+buffer(0.2) with .w at last line .end
+line from last [].e right BUS.x-last[].e.x
+
+arrow <- from MEM.n + (0.1, 0) up 0.5 then left 0.3
+NDX: box "NDX"
+arrow <- from NDX.n up 0.2 then right BUS.x-NDX.x
+line from NDX.e right 0.4
+buffer(0.2) with .w at last line .end
+line from last [].e right BUS.x-last [].e.x
+
+"A" at MEM.n + (0, 0.1)
+.PE
+
+.TS
+tab(@) allbox;
+ccbcb
+ccc.
+@ SEC @ NDX
+LE  @ SECi @ NDXi
+#OE @ 0 @ 0
+buff #OE @ SECo @ NDXo
+.TE
+
+.TS
+tab(@) allbox;
+ccb
+cc.
+@ MEM
+A0-7 @ NDX0-7
+A8-18 @ SEC0-10
+#CE @ not MEM
+#WE @ MEMo
+#OE @ not MEMo
+.TE
+
+.NH 2
+ALU module
+.PP
+
+.SM
+.PS
+X: box "X"
+arrow from X.s down 0.2 then right
+ADDER: box "+" with .w at last arrow .end - (0, 0.05)
+arrow <- from ADDER.w - (0, 0.05) left then down 0.2
+box "16 xor"
+arrow <- down 0.2
+Y: box "Y"
+line from ADDER.e right 0.3
+buffer(0.2)
+line right 0.3
+line from last line.e + (0, -1.2) to last line.e + (0, 0.6)
+.PE

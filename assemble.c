@@ -393,7 +393,7 @@ bytecode_t compile(preprocessor_t *pre) {
   return bytecode;
 }
 
-obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag, int debug_info) {
+obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
   assert(buffer);
 
   tokenizer_t tokenizer;
@@ -420,7 +420,7 @@ obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag, int deb
     obj_compile_bytecode(&objs, bc);
   }
 
-  if (debug_info || (flag & DEBUG_OBJ_STATE)) {
+  if (flag & DEBUG_OBJ_STATE) {
     printf("SYMBOLS: %d\n", objs.symbol_num);
     for (int i = 0; i < objs.symbol_num; ++i) {
       symbol_t *s = &objs.symbols[i];

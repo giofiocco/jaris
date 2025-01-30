@@ -138,4 +138,4 @@ so_t so_decode_file(char *filename);
 void so_encode_file(exe_state_t *exes, char *filename);
 uint16_t so_find_global(so_t *so, char *name);
 
-#endif  // FILES_H__
+#endif // FILES_H__

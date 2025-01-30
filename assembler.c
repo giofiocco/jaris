@@ -14,22 +14,22 @@ int main(int argc, char **argv) {
   int debug_info = 0;
 
   struct argparse_option options[] = {
-    OPT_GROUP("Options"),
-    OPT_HELP(),
-    OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
-    OPT_BOOLEAN('g', "debug", &debug_info, "include debug info", NULL, 0, 0),
-    OPT_BIT(0, "dtok", &debug, "tokenizer debug info", NULL, DEBUG_TOKENIZER, 0),
-    OPT_BIT(0, "dbyt", &debug, "bytecodes debug info", NULL, DEBUG_BYTECODES, 0),
-    OPT_BIT(0, "dobj", &debug, "obj state debug info", NULL, DEBUG_OBJ_STATE, 0),
-    OPT_END(),
+      OPT_GROUP("Options"),
+      OPT_HELP(),
+      OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
+      OPT_BOOLEAN('g', "debug", &debug_info, "include debug info", NULL, 0, 0),
+      OPT_BIT(0, "dtok", &debug, "tokenizer debug info", NULL, DEBUG_TOKENIZER, 0),
+      OPT_BIT(0, "dbyt", &debug, "bytecodes debug info", NULL, DEBUG_BYTECODES, 0),
+      OPT_BIT(0, "dobj", &debug, "obj state debug info", NULL, DEBUG_OBJ_STATE, 0),
+      OPT_END(),
   };
 
   struct argparse argparse;
   argparse_init(&argparse,
                 options,
                 (const char *const[]){
-                  "assembler [options] file",
-                  NULL,
+                    "assembler [options] file",
+                    NULL,
                 },
                 0);
   argc = argparse_parse(&argparse, argc, (const char **)argv);
@@ -54,7 +54,7 @@ int main(int argc, char **argv) {
   buffer[size] = 0;
   assert(fclose(file) == 0);
 
-  obj_t obj = assemble(buffer, filename, debug, debug_info);
+  obj_t obj = assemble(buffer, filename, debug);
 
   int output_to_free = output == NULL;
   if (output == NULL) {

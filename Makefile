@@ -1,4 +1,4 @@
-TARGETS=assembler linker encodemem sim inspect decodemem
+TARGETS=assembler linker encodemem sim inspect decodemem docs.pdf
 CFLAGS=-Wall -Wextra -Werror -std=c99
 
 STDLIB_FILES=mul div solve_path open_file read_file execute exit put_char print get_char get_delim string
@@ -14,7 +14,7 @@ $(STDLIB_DOCS): makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES))
 	./makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES)) > $@
 
 mem.bin: $(patsubst %,mem/%,$(MEM_FILES)) encodemem | mem
-	./encodemem
+	./encodemem -d mem -o mem.bin
 
 asm/build:
 	mkdir -p $@
@@ -44,7 +44,7 @@ ERRORS_LIB=errors.c errors.h
 FILES_DEP=files.c files.h $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
 INSTRUCTIONS_DEP=instructions.c instructions.h $(SV_LIB)
 ASSEMBLE_DEP=assemble.c assemble.h $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
-SIM_DEP=instructions.c instructions.h
+SIM_DEP=instructions.c instructions.h $(FILES_DEP)
 
 assembler: assembler.c $(ASSEMBLE_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB) 
 	cc $(CFLAGS) -o $@ $(filter %.c, $^) 
@@ -52,7 +52,7 @@ assembler: assembler.c $(ASSEMBLE_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 linker: linker.c link.c $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ARG_PARSER_LIB) 
 	cc $(CFLAGS) -o $@ $(filter %.c, $^) 
 
-encodemem: encodemem.c
+encodemem: encodemem.c $(ARG_PARSER_LIB)
 	cc $(CFLAGS) -D_DEFAULT_SOURCE -o $@ $(filter %.c, $^)
 
 decodemem: decodemem.c
@@ -63,6 +63,9 @@ inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 
 sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) mem.bin 
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
+
+docs.pdf: docs.roff
+	groff -p -t -ms $^ -Tpdf > $@
 
 clean:
 	rm -r $(TARGETS) mem.bin asm/build $(STDLIB_DOCS)

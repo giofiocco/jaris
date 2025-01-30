@@ -1,5 +1,7 @@
 bss section
 
+build formatter for myasm code
+
 # sh
 
 - print exitcode
@@ -29,6 +31,7 @@ bss section
 # Assemble
 
 - debug symbols
+- bytecode BLABEL
 - error when trying:
 
 ```

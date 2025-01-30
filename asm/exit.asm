@@ -10,9 +10,9 @@ exit:
   PUSHA
   -- index = (current_process - process_table_start) / 16
   RAM_B current_process_ptr rB_A
-  A_B RAM_A process_table_start SUB 
-  SHR SHR SHR SHR 
-  RAM_B 0x8000 PUSHB 
+  A_B RAM_A process_table_start SUB
+  SHR SHR SHR SHR
+  RAM_B 0x8000 PUSHB
 compute_mask:
   -- ^ mask exit_code [index, _]
   A_B POPA SHR PUSHA B_A DECA JMPRNZ $compute_mask

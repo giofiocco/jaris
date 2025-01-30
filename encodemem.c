@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "argparse/argparse.h"
+
 #define TODO assert(0 && "TO IMPLEMENT")
 
 #define SECTOR_COUNT 2048
@@ -96,7 +98,8 @@ uint16_t encode_dir(char *path, uint16_t parent, uint16_t head) {
   }
   struct dirent *d;
   while ((d = readdir(dir))) {
-    if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0 || strcmp(d->d_name, "__bootloader") == 0) {
+    if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0
+        || strcmp(d->d_name, "__bootloader") == 0) {
       continue;
     }
 
@@ -109,7 +112,7 @@ uint16_t encode_dir(char *path, uint16_t parent, uint16_t head) {
     sprintf(full_path, "%s/%s", path, d->d_name);
 
     if (sector + name_len + 1 + 3 - sector_start > SECTOR_SIZE) {
-      TODO;  // subsector
+      TODO; // subsector
     }
 
     uint16_t ptr = 0;
@@ -124,9 +127,9 @@ uint16_t encode_dir(char *path, uint16_t parent, uint16_t head) {
 
       ptr = encode_file(file, 0);
 
-      if (strcmp(full_path, "mem/__os") == 0) {
+      if (strcmp(d->d_name, "__os") == 0) {
         os_sec = ptr;
-      } else if (strcmp(full_path, "mem/__stdlib") == 0) {
+      } else if (strcmp(d->d_name, "__stdlib") == 0) {
         stdlib_sec = ptr;
       }
 
@@ -176,11 +179,46 @@ void encode_bootloader(char *filename) {
   assert(fclose(file) == 0);
 }
 
-int main() {
-  encode_dir("mem", 0xFFFF, 0xFFFF);
-  encode_bootloader("mem/__bootloader");
+int main(int argc, char **argv) {
+  char *dir_path = NULL;
+  char *output_path = NULL;
 
-  FILE *file = fopen("mem.bin", "wb");
+  struct argparse_option options[] = {
+      OPT_GROUP("Options"),
+      OPT_HELP(),
+      OPT_STRING('d', "dir", &dir_path, "path of dir to encode", NULL, 0, 0),
+      OPT_STRING('o', "output", &output_path, "path of output file", NULL, 0, 0),
+      OPT_END(),
+  };
+
+  struct argparse argparse;
+  argparse_init(&argparse,
+                options,
+                (const char *const[]){
+                    "encodemem [options] file",
+                    NULL,
+                },
+                0);
+  argc = argparse_parse(&argparse, argc, (const char **)argv);
+
+  if (!dir_path) {
+    fprintf(stderr, "ERROR: expected directory path\n");
+    argparse_usage(&argparse);
+    exit(1);
+  }
+  if (!output_path) {
+    fprintf(stderr, "ERROR: expected output path\n");
+    argparse_usage(&argparse);
+    exit(1);
+  }
+
+  encode_dir(dir_path, 0xFFFF, 0xFFFF);
+
+  char bootloader_path[1024] = {0};
+  snprintf(bootloader_path, 1024, "%s/__bootloader", dir_path);
+  encode_bootloader(bootloader_path);
+
+  FILE *file = fopen(output_path, "wb");
   assert(file);
   assert(fwrite(SECTORS, 1, sizeof(SECTORS), file) == sizeof(SECTORS));
   assert(fclose(file) == 0);
