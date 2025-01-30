@@ -111,7 +111,7 @@ void obj_compile_bytecode(obj_t *obj, bytecode_t bc);
 void obj_check(obj_t *obj);
 
 obj_t obj_decode_file(char *filename);
-void obj_encode_file(obj_t *obj, char *filename);
+void obj_encode_file(obj_t *obj, char *filename, int debug_info);
 
 void exe_dump(exe_t *exe);
 

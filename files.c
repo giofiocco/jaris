@@ -10,7 +10,6 @@
 
 void extern_entry_add_pos(extern_entry_t *e, uint16_t pos) {
   assert(e);
-
   assert(e->pos_num + 1 < EXTERN_COUNT);
   e->pos[e->pos_num++] = pos;
 }
@@ -321,7 +320,7 @@ obj_t obj_decode_file(char *filename) {
     eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
   }
 
-  char magic_number[3] = {0};
+  char magic_number[4] = {0};
   assert(fread(magic_number, 1, 3, file) == 3);
   if (strcmp(magic_number, "OBJ") != 0) {
     eprintf("%s: expected magic number to be 'OBJ': found '%s'", filename, magic_number);
@@ -346,9 +345,14 @@ obj_t obj_decode_file(char *filename) {
     assert(fread(&len, 1, 1, file) == 1);
     assert(fread(obj.externs[obj.extern_num].name, 1, len, file) == len);
     assert(fread(&obj.externs[obj.extern_num].pos_num, 1, 1, file) == 1);
-    for (int i = 0; i < obj.externs[obj.extern_num].pos_num; ++i) {
-      assert(fread(&obj.externs[obj.extern_num].pos[i], 2, 1, file) == 1);
-    }
+    // TODO: single read
+    // for (int i = 0; i < obj.externs[obj.extern_num].pos_num; ++i) {
+    //   assert(fread(&obj.externs[obj.extern_num].pos[i], 2, 1, file) == 1);
+    // }
+
+    assert(fread(obj.externs[obj.extern_num].pos, 2, obj.externs[obj.extern_num].pos_num, file)
+           == obj.externs[obj.extern_num].pos_num);
+
     extern_table_size -= 1 + len + 1 + 2 * obj.externs[obj.extern_num].pos_num;
     ++obj.extern_num;
   }
@@ -363,12 +367,31 @@ obj_t obj_decode_file(char *filename) {
   assert(fread(&obj.code_size, 2, 1, file) == 1);
   assert(fread(&obj.code, 1, obj.code_size, file) == obj.code_size);
 
+  char debug_magic_number[6] = {0};
+  if (fread(debug_magic_number, 1, 5, file) == 5) {
+    assert(strcmp(debug_magic_number, "DEBUG") == 0);
+
+    assert(fread(&obj.symbol_num, 1, 1, file) == 1);
+    for (int i = 0; i < obj.symbol_num; ++i) {
+      size_t len = 0;
+      assert(fread(&len, 1, 1, file) == 1);
+      assert(fread(obj.symbols[i].image, 1, len, file) == len);
+      assert(fread(&obj.symbols[i].pos, 2, 1, file) == 1);
+      assert(fread(&obj.symbols[i].reloc_num, 1, 1, file) == 1);
+      assert(fread(obj.symbols[i].relocs, 2, obj.symbols[i].reloc_num, file)
+             == obj.symbols[i].reloc_num);
+      assert(fread(&obj.symbols[i].relreloc_num, 1, 1, file) == 1);
+      assert(fread(obj.symbols[i].relrelocs, 2, obj.symbols[i].relreloc_num, file)
+             == obj.symbols[i].relreloc_num);
+    }
+  }
+
   assert(fclose(file) == 0);
 
   return obj;
 }
 
-void obj_encode_file(obj_t *obj, char *filename) {
+void obj_encode_file(obj_t *obj, char *filename, int debug_info) {
   assert(obj);
   assert(filename);
 
@@ -420,6 +443,26 @@ void obj_encode_file(obj_t *obj, char *filename) {
 
   assert(fwrite(&obj->code_size, 2, 1, file) == 1);
   assert(fwrite(&obj->code, 1, obj->code_size, file) == obj->code_size);
+
+  if (debug_info) {
+    assert(fwrite("DEBUG", 1, 5, file) == 5);
+
+    assert(fwrite(&obj->symbol_num, 1, 1, file) == 1);
+    for (int i = 0; i < obj->symbol_num; ++i) {
+      uint8_t len = strlen(obj->symbols[i].image);
+      assert(fwrite(&len, 1, 1, file) == 1);
+      assert(fwrite(obj->symbols[i].image, 1, len, file) == len);
+      assert(fwrite(&obj->symbols[i].pos, 2, 1, file) == 1);
+      assert(fwrite(&obj->symbols[i].reloc_num, 1, 1, file) == 1);
+      for (int j = 0; j < obj->symbols[i].reloc_num; ++j) {
+        assert(fwrite(&obj->symbols[i].relocs[j], 2, 1, file) == 1);
+      }
+      assert(fwrite(&obj->symbols[i].relreloc_num, 1, 1, file) == 1);
+      for (int j = 0; j < obj->symbols[i].relreloc_num; ++j) {
+        assert(fwrite(&obj->symbols[i].relrelocs[j], 2, 1, file) == 1);
+      }
+    }
+  }
 
   assert(fclose(file) == 0);
 }

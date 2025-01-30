@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
     snprintf(output, len + 3, SV_FMT ".o", SV_UNPACK(name));
   }
 
-  obj_encode_file(&obj, output);
+  obj_encode_file(&obj, output, debug_info);
 
   if (output_to_free) {
     free(output);

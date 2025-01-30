@@ -10,9 +10,7 @@ Jaris is a 16bit computer
    - [EXE](#exe-file)
    - [OBJ](#obj-file)
    - [BIN](#bin-file)
-
-- [SO](#so-file)
-
+   - [SO](#so-file)
 4. [File System](#file-system)
    - [Dir Sector](#directory-sector)
    - [File Sector](#file-sector)
@@ -140,10 +138,27 @@ The ending `Dynamic Linking Table Entry` is 0x00.
 | 1        | globals table size            |
 |          | globals table                 |
 
-### Debug info
+### Debug Info
 
-| size [B] | description |
-| :------- | :---------- |
+Attach at the end of OBJ or EXE files
+
+| size [B] | description               |
+| :------- | :------------------------ |
+| 5        | 'DEBUG'                   |
+| 1        | symbols table entry count |
+|          | symbols table             |
+
+#### Symbols Table Entry
+
+| size [B] | description    |
+| :------- | :------------- |
+| 1        | symbol size    |
+|          | symbol         |
+| 2        | address        |
+| 1        | reloc count    |
+| 2\*#     | relocs         |
+| 1        | relreloc count |
+| 2\*#     | relrelocs      |
 
 #### Globals Table Entry
 
