@@ -5,13 +5,11 @@
 
 #include "instructions.h"
 
-#define GLOBAL_COUNT       256
-#define EXTERN_COUNT       256
-#define RELOC_COUNT        1024
-#define DYNAMIC_COUNT      16
-#define LABEL_COUNT        256
-#define INTERN_RELOC_COUNT 256
-#define SYMBOL_COUNT       256
+#define GLOBAL_COUNT  64
+#define EXTERN_COUNT  64
+#define RELOC_COUNT   128
+#define DYNAMIC_COUNT 16
+#define SYMBOL_COUNT  64
 
 typedef struct {
   uint16_t where;
@@ -45,25 +43,27 @@ typedef struct {
 } symbol_t;
 
 typedef struct {
-  uint16_t global_num;
-  global_entry_t globals[GLOBAL_COUNT];
-  uint16_t extern_num;
-  extern_entry_t externs[EXTERN_COUNT];
-  uint16_t reloc_num;
-  reloc_entry_t reloc_table[RELOC_COUNT];
   uint16_t code_size;
   uint8_t code[1 << 16];
+  uint16_t reloc_num;
+  reloc_entry_t relocs[RELOC_COUNT];
+  uint8_t global_count;
+  uint16_t globals[GLOBAL_COUNT];
+  uint8_t extern_count;
+  uint16_t externs[EXTERN_COUNT];
+  uint16_t symbol_count;
   symbol_t symbols[SYMBOL_COUNT];
-  uint16_t symbol_num;
 } obj_t;
 
 typedef struct {
   uint16_t code_size;
   uint8_t code[1 << 16];
   uint16_t reloc_num;
-  reloc_entry_t reloc_table[RELOC_COUNT];
+  reloc_entry_t reloc[RELOC_COUNT];
   int dynamic_num;
   dynamic_entry_t dynamics_table[DYNAMIC_COUNT];
+  symbol_t symbols[SYMBOL_COUNT];
+  uint16_t symbol_num;
 } exe_t;
 
 typedef struct {
@@ -76,11 +76,6 @@ typedef struct {
 } so_t;
 
 typedef struct {
-  char image[LABEL_MAX_LEN];
-  uint16_t pos;
-} label_t;
-
-typedef struct {
   exe_t exe;
   uint16_t global_num;
   global_entry_t globals[GLOBAL_COUNT];
@@ -91,27 +86,19 @@ typedef struct {
   char *so_names[DYNAMIC_COUNT];
 } exe_state_t;
 
-void extern_entry_add_pos(extern_entry_t *e, uint16_t pos);
-
-void symbol_dump(symbol_t *symbol);
-
 void obj_dump(obj_t *obj);
-void obj_add_symbol(obj_t *obj, char *name, uint16_t pos);
+uint16_t obj_add_symbol(obj_t *obj, char *name, uint16_t pos);
 symbol_t *obj_find_symbol(obj_t *obj, char *name);
 uint16_t obj_find_symbol_pos(obj_t *obj, char *name);
 void obj_add_symbol_reloc(obj_t *obj, char *name, uint16_t where);
-void obj_add_reloc(obj_t *obj, uint16_t where, uint16_t what);
-void obj_add_global(obj_t *obj, char *image);
-void obj_add_extern(obj_t *obj, char *image);
-extern_entry_t *obj_find_extern(obj_t *obj, char *image);
 void obj_add_instruction(obj_t *obj, instruction_t inst);
 void obj_add_hex(obj_t *obj, uint8_t num);
 void obj_add_hex2(obj_t *obj, uint16_t num);
 void obj_compile_bytecode(obj_t *obj, bytecode_t bc);
-void obj_check(obj_t *obj);
+void obj_check(obj_t *obj, int debug_info);
 
 obj_t obj_decode_file(char *filename);
-void obj_encode_file(obj_t *obj, char *filename, int debug_info);
+void obj_encode_file(obj_t *obj, char *filename);
 
 void exe_dump(exe_t *exe);
 

@@ -108,17 +108,21 @@ The ending `Dynamic Linking Table Entry` is 0x00.
 
 ### OBJ file
 
-| size [B] | description                   |
-| :------- | :---------------------------- |
-| 3        | 'OBJ'                         |
-| 1        | globals table size            |
-|          | globals table                 |
-| 1        | externs table size            |
-|          | externs table                 |
-| 2        | number of reloc table entries |
-| 4\*#     | reloc table                   |
-| 2        | code size                     |
-|          | code                          |
+| size [B] | description           |
+| :------- | :-------------------- |
+| 3        | 'OBJ'                 |
+| 2        | code size             |
+|          | code                  |
+| 2        | relocs count          |
+| 4\*#     | reloc entries         |
+| 1        | globals count         |
+| 2\*#     | global symbol indices |
+| 1        | externs count         |
+| 2\*#     | extern symbol indices |
+| 2        | symbols count         |
+|          | symbol entries        |
+
+Debug info: all symbols in symbols, all relreloc info
 
 ### Bin file
 

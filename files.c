@@ -4,38 +4,14 @@
 #include <string.h>
 
 #include "files.h"
+#include "instructions.h"
 #include "mystb/errors.h"
 
 #define TODO assert(0 && "TO IMPLEMENT")
 
-void extern_entry_add_pos(extern_entry_t *e, uint16_t pos) {
-  assert(e);
-  assert(e->pos_num + 1 < EXTERN_COUNT);
-  e->pos[e->pos_num++] = pos;
-}
-
 void obj_dump(obj_t *obj) {
   assert(obj);
 
-  printf("GLOBALS: %d\n", obj->global_num);
-  for (int i = 0; i < obj->global_num; ++i) {
-    printf("\t%s %04X\n", obj->globals[i].name, obj->globals[i].pos);
-  }
-  printf("EXTERNS: %d\n", obj->extern_num);
-  for (int i = 0; i < obj->extern_num; ++i) {
-    printf("\t%s [", obj->externs[i].name);
-    for (int j = 0; j < obj->externs[i].pos_num; ++j) {
-      if (j != 0) {
-        printf(", ");
-      }
-      printf("%04X", obj->externs[i].pos[j]);
-    }
-    printf("]\n");
-  }
-  printf("RELOC: %d\n", obj->reloc_num);
-  for (int i = 0; i < obj->reloc_num; ++i) {
-    printf("\t%04X %04X\n", obj->reloc_table[i].where, obj->reloc_table[i].what);
-  }
   printf("CODE: %d\n", obj->code_size);
   printf("\t");
   for (int i = 0; i < obj->code_size; ++i) {
@@ -45,8 +21,18 @@ void obj_dump(obj_t *obj) {
     printf("%02X", obj->code[i]);
   }
   printf("\n");
-  printf("SYMBOLS: %d\n", obj->symbol_num);
-  for (int i = 0; i < obj->symbol_num; ++i) {
+  printf("GLOBALS:");
+  for (int i = 0; i < obj->global_count; ++i) {
+    printf(" %d", obj->globals[i]);
+  }
+  printf("\n");
+  printf("EXTERNS:");
+  for (int i = 0; i < obj->extern_count; ++i) {
+    printf(" %d", obj->externs[i]);
+  }
+  printf("\n");
+  printf("SYMBOLS: %d\n", obj->symbol_count);
+  for (int i = 0; i < obj->symbol_count; ++i) {
     symbol_t *s = &obj->symbols[i];
     printf("\t%s: %04X\n", s->image, s->pos);
     if (s->reloc_num > 0) {
@@ -65,37 +51,40 @@ void obj_dump(obj_t *obj) {
         if (j != 0) {
           printf(", ");
         }
-        printf(" %04X", s->relrelocs[j]);
+        printf("%04X", s->relrelocs[j]);
       }
       printf("]\n");
     }
   }
 }
 
-void obj_add_symbol(obj_t *obj, char *name, uint16_t pos) {
+uint16_t obj_add_symbol(obj_t *obj, char *name, uint16_t pos) {
   assert(obj);
   assert(name);
 
-  symbol_t *s = obj_find_symbol(obj, name);
-  if (s) {
-    if (s->pos != 0xFFFF) {
+  for (int i = 0; i < obj->symbol_count; ++i) {
+    if (strcmp(obj->symbols[i].image, name) != 0) {
+      continue;
+    }
+    if (obj->symbols[i].pos != 0xFFFF) {
       eprintf("label redifinition: %s", name);
     }
-    s->pos = pos;
-    return;
+    obj->symbols[i].pos = pos;
+    return i;
   }
 
-  assert(obj->symbol_num + 1 < SYMBOL_COUNT);
-  strcpy(obj->symbols[obj->symbol_num].image, name);
-  obj->symbols[obj->symbol_num].pos = pos;
-  ++obj->symbol_num;
+  assert(obj->symbol_count + 1 < SYMBOL_COUNT);
+  strncpy(obj->symbols[obj->symbol_count].image, name, LABEL_MAX_LEN);
+  obj->symbols[obj->symbol_count].pos = pos;
+  ++obj->symbol_count;
+  return obj->symbol_count - 1;
 }
 
 symbol_t *obj_find_symbol(obj_t *obj, char *name) {
   assert(obj);
   assert(name);
 
-  for (int i = 0; i < obj->symbol_num; ++i) {
+  for (int i = 0; i < obj->symbol_count; ++i) {
     if (strcmp(name, obj->symbols[i].image) == 0) {
       return &obj->symbols[i];
     }
@@ -118,7 +107,7 @@ void obj_add_symbol_reloc(obj_t *obj, char *name, uint16_t pos) {
   symbol_t *s = obj_find_symbol(obj, name);
   if (s == NULL) {
     obj_add_symbol(obj, name, 0xFFFF);
-    s = &obj->symbols[obj->symbol_num - 1];
+    s = &obj->symbols[obj->symbol_count - 1];
   }
   assert(s->reloc_num + 1 < RELOC_COUNT);
   s->relocs[s->reloc_num++] = pos;
@@ -131,50 +120,59 @@ void obj_add_symbol_relreloc(obj_t *obj, char *name, uint16_t pos) {
   symbol_t *s = obj_find_symbol(obj, name);
   if (s == NULL) {
     obj_add_symbol(obj, name, 0xFFFF);
-    s = &obj->symbols[obj->symbol_num - 1];
+    s = &obj->symbols[obj->symbol_count - 1];
   }
   assert(s->relreloc_num + 1 < RELOC_COUNT);
   s->relrelocs[s->relreloc_num++] = pos;
 }
 
-void obj_check(obj_t *obj) {
+void obj_check(obj_t *obj, int debug_info) {
   assert(obj);
 
-  symbol_t *s = NULL;
-  extern_entry_t *e = NULL;
-  for (int i = 0; i < obj->symbol_num; ++i) {
-    s = &obj->symbols[i];
-    e = NULL;
-
-    if (s->pos == 0xFFFF) {
-      e = obj_find_extern(obj, s->image);
-      if (e == NULL) {
-        eprintf("label undef: %s", s->image);
-      }
-      assert(s->relreloc_num == 0);
+  for (int i = 0; i < obj->extern_count; ++i) {
+    assert(obj->symbols[obj->externs[i]].pos == 0xFFFF);
+    assert(obj->symbols[obj->externs[i]].relreloc_num == 0);
+  }
+  for (int i = 0; i < obj->global_count; ++i) {
+    if (obj->symbols[obj->globals[i]].pos == 0xFFFF) {
+      eprintf("label unset: %s", obj->symbols[obj->globals[i]].image);
     }
-
+  }
+  for (int i = 0; i < obj->symbol_count; ++i) {
+    symbol_t *s = &obj->symbols[i];
     for (int j = 0; j < s->relreloc_num; ++j) {
       uint16_t num = s->pos - s->relrelocs[j];
       obj->code[s->relrelocs[j]] = num & 0xFF;
-      obj->code[s->relrelocs[j] + 1] = num >> 8;
+      obj->code[s->relrelocs[j] + 1] = (num >> 8) & 0xFF;
     }
-
     for (int j = 0; j < s->reloc_num; ++j) {
-      if (e) {
-        extern_entry_add_pos(e, s->relocs[j]);
-      } else {
-        obj_add_reloc(obj, s->relocs[j], s->pos);
-      }
+      obj->relocs[obj->reloc_num++] = (reloc_entry_t){s->relocs[j], s->pos};
+      obj->code[s->relocs[j]] = s->pos & 0xFF;
+      obj->code[s->relocs[j] + 1] = (s->pos >> 8) & 0xFF;
     }
   }
 
-  for (int i = 0; i < obj->global_num; ++i) {
-    uint16_t pos = obj_find_symbol_pos(obj, obj->globals[i].name);
-    if (pos == 0xFFFF) {
-      eprintf("label unset: %s", obj->globals[i].name);
+  if (!debug_info) {
+    obj_t new = {0};
+    new.code_size = obj->code_size;
+    memcpy(new.code, obj->code, obj->code_size * sizeof(uint8_t));
+    new.reloc_num = obj->reloc_num;
+    memcpy(new.relocs, obj->relocs, obj->reloc_num * sizeof(reloc_entry_t));
+    new.global_count = obj->global_count;
+    new.extern_count = obj->extern_count;
+
+    for (int i = 0; i < obj->global_count; ++i) {
+      new.globals[i] = new.symbol_count;
+      symbol_t *s = &new.symbols[new.reloc_num++];
+      memcpy(s, &obj->symbols[obj->globals[i]], sizeof(symbol_t));
+      memset(s->relrelocs, 0, s->relreloc_num * sizeof(uint16_t));
+      s->relreloc_num = 0;
     }
-    obj->globals[i].pos = pos;
+    for (int i = 0; i < obj->extern_count; ++i) {
+      new.externs[i] = new.symbol_count;
+      memcpy(&new.symbols[new.symbol_count++], &obj->symbols[obj->externs[i]], sizeof(symbol_t));
+    }
+    *obj = new;
   }
 }
 
@@ -232,11 +230,17 @@ void obj_compile_bytecode(obj_t *obj, bytecode_t bc) {
       obj_add_symbol(obj, bc.arg.string, obj->code_size);
       break;
     case BGLOBAL:
-      obj_add_global(obj, bc.arg.string);
-      break;
+    {
+      uint16_t i = obj_add_symbol(obj, bc.arg.string, 0xFFFF);
+      assert(obj->global_count + 1 < GLOBAL_COUNT);
+      obj->globals[obj->global_count++] = i;
+    } break;
     case BEXTERN:
-      obj_add_extern(obj, bc.arg.string);
-      break;
+    {
+      uint16_t i = obj_add_symbol(obj, bc.arg.string, 0xFFFF);
+      assert(obj->extern_count + 1 < EXTERN_COUNT);
+      obj->externs[obj->extern_count++] = i;
+    } break;
     case BALIGN:
       if (obj->code_size % 2 == 1) {
         ++obj->code_size;
@@ -246,49 +250,6 @@ void obj_compile_bytecode(obj_t *obj, bytecode_t bc) {
       obj->code_size += bc.arg.num;
       break;
   }
-}
-
-void obj_add_reloc(obj_t *obj, uint16_t where, uint16_t what) {
-  assert(obj);
-
-  assert(obj->reloc_num + 1 < RELOC_COUNT);
-  obj->reloc_table[obj->reloc_num++] = (reloc_entry_t){where, what};
-  obj->code[where] = what & 0xFF;
-  obj->code[where + 1] = (what >> 8) & 0xFF;
-}
-
-void obj_add_global(obj_t *obj, char *image) {
-  assert(obj);
-  assert(image);
-
-  assert(obj->global_num + 1 < GLOBAL_COUNT);
-  global_entry_t entry = {0};
-  strcpy(entry.name, image);
-  entry.pos = 0xFFFF;
-  obj->globals[obj->global_num++] = entry;
-}
-
-void obj_add_extern(obj_t *obj, char *image) {
-  assert(obj);
-  assert(image);
-
-  assert(obj->extern_num + 1 < EXTERN_COUNT);
-  extern_entry_t entry = {0};
-  strcpy(entry.name, image);
-  obj->externs[obj->extern_num++] = entry;
-}
-
-extern_entry_t *obj_find_extern(obj_t *obj, char *image) {
-  assert(obj);
-  assert(image);
-
-  for (int i = 0; i < obj->extern_num; ++i) {
-    if (strcmp(image, obj->externs[i].name) == 0) {
-      return &obj->externs[i];
-    }
-  }
-
-  return NULL;
 }
 
 void obj_add_instruction(obj_t *obj, instruction_t inst) {
@@ -326,64 +287,24 @@ obj_t obj_decode_file(char *filename) {
     eprintf("%s: expected magic number to be 'OBJ': found '%s'", filename, magic_number);
   }
 
-  int global_table_size = 0;
-  assert(fread(&global_table_size, 1, 1, file) == 1);
-  while (global_table_size > 0) {
-    size_t len = 0;
-    assert(fread(&len, 1, 1, file) == 1);
-    assert(fread(obj.globals[obj.global_num].name, 1, len, file) == len);
-    assert(fread(&obj.globals[obj.global_num].pos, 2, 1, file) == 1);
-    ++obj.global_num;
-    global_table_size -= 1 + len + 2;
-  }
-  assert(global_table_size == 0);
-
-  int extern_table_size = 0;
-  assert(fread(&extern_table_size, 1, 1, file) == 1);
-  while (extern_table_size > 0) {
-    size_t len = 0;
-    assert(fread(&len, 1, 1, file) == 1);
-    assert(fread(obj.externs[obj.extern_num].name, 1, len, file) == len);
-    assert(fread(&obj.externs[obj.extern_num].pos_num, 1, 1, file) == 1);
-    // TODO: single read
-    // for (int i = 0; i < obj.externs[obj.extern_num].pos_num; ++i) {
-    //   assert(fread(&obj.externs[obj.extern_num].pos[i], 2, 1, file) == 1);
-    // }
-
-    assert(fread(obj.externs[obj.extern_num].pos, 2, obj.externs[obj.extern_num].pos_num, file)
-           == obj.externs[obj.extern_num].pos_num);
-
-    extern_table_size -= 1 + len + 1 + 2 * obj.externs[obj.extern_num].pos_num;
-    ++obj.extern_num;
-  }
-  assert(extern_table_size == 0);
-
-  assert(fread(&obj.reloc_num, 2, 1, file) == 1);
-  for (int i = 0; i < obj.reloc_num; ++i) {
-    assert(fread(&obj.reloc_table[i].where, 2, 1, file) == 1);
-    assert(fread(&obj.reloc_table[i].what, 2, 1, file) == 1);
-  }
-
   assert(fread(&obj.code_size, 2, 1, file) == 1);
-  assert(fread(&obj.code, 1, obj.code_size, file) == obj.code_size);
-
-  char debug_magic_number[6] = {0};
-  if (fread(debug_magic_number, 1, 5, file) == 5) {
-    assert(strcmp(debug_magic_number, "DEBUG") == 0);
-
-    assert(fread(&obj.symbol_num, 1, 1, file) == 1);
-    for (int i = 0; i < obj.symbol_num; ++i) {
-      size_t len = 0;
-      assert(fread(&len, 1, 1, file) == 1);
-      assert(fread(obj.symbols[i].image, 1, len, file) == len);
-      assert(fread(&obj.symbols[i].pos, 2, 1, file) == 1);
-      assert(fread(&obj.symbols[i].reloc_num, 1, 1, file) == 1);
-      assert(fread(obj.symbols[i].relocs, 2, obj.symbols[i].reloc_num, file)
-             == obj.symbols[i].reloc_num);
-      assert(fread(&obj.symbols[i].relreloc_num, 1, 1, file) == 1);
-      assert(fread(obj.symbols[i].relrelocs, 2, obj.symbols[i].relreloc_num, file)
-             == obj.symbols[i].relreloc_num);
-    }
+  assert(fread(obj.code, 1, obj.code_size, file) == obj.code_size);
+  assert(fread(&obj.global_count, 1, 1, file) == 1);
+  assert(fread(obj.globals, 2, obj.global_count, file) == obj.global_count);
+  assert(fread(&obj.extern_count, 1, 1, file) == 1);
+  assert(fread(obj.externs, 2, obj.extern_count, file) == obj.extern_count);
+  assert(fread(&obj.symbol_count, 2, 1, file) == 1);
+  for (int i = 0; i < obj.symbol_count; ++i) {
+    symbol_t *s = &obj.symbols[i];
+    size_t len = 0;
+    assert(fread(&len, 1, 1, file) == 1);
+    assert(len > 0);
+    assert(fread(s->image, 1, len, file) == len);
+    assert(fread(&s->pos, 2, 1, file) == 1);
+    assert(fread(&s->reloc_num, 1, 1, file) == 1);
+    assert(fread(s->relocs, 2, s->reloc_num, file) == s->reloc_num);
+    assert(fread(&s->relreloc_num, 1, 1, file) == 1);
+    assert(fread(s->relrelocs, 2, s->relreloc_num, file) == s->relreloc_num);
   }
 
   assert(fclose(file) == 0);
@@ -391,7 +312,7 @@ obj_t obj_decode_file(char *filename) {
   return obj;
 }
 
-void obj_encode_file(obj_t *obj, char *filename, int debug_info) {
+void obj_encode_file(obj_t *obj, char *filename) {
   assert(obj);
   assert(filename);
 
@@ -402,66 +323,24 @@ void obj_encode_file(obj_t *obj, char *filename, int debug_info) {
 
   assert(fwrite("OBJ", 1, 3, file) == 3);
 
-  int global_table_size = 0;
-  assert(fwrite(&global_table_size, 1, 1, file) == 1);
-  for (int i = 0; i < obj->global_num; ++i) {
-    size_t len = strlen(obj->globals[i].name);
-    assert(fwrite(&len, 1, 1, file) == 1);
-    assert(fwrite(obj->globals[i].name, 1, len, file) == len);
-    assert(fwrite(&obj->globals[i].pos, 2, 1, file) == 1);
-    global_table_size += 1 + len + 2;
-  }
-  int ret = ftell(file);
-  assert(fseek(file, 3, SEEK_SET) == 0);
-  assert(fwrite(&global_table_size, 1, 1, file) == 1);
-  assert(fseek(file, ret, SEEK_SET) == 0);
-
-  int extern_table_size_pos = ftell(file);
-  int extern_table_size = 0;
-  assert(fwrite(&extern_table_size, 1, 1, file) == 1);
-  for (int i = 0; i < obj->extern_num; ++i) {
-    uint8_t len = strlen(obj->externs[i].name);
-    uint8_t num = obj->externs[i].pos_num;
-    assert(fwrite(&len, 1, 1, file) == 1);
-    assert(fwrite(obj->externs[i].name, 1, len, file) == len);
-    assert(fwrite(&num, 1, 1, file) == 1);
-    for (int j = 0; j < num; ++j) {
-      assert(fwrite(&obj->externs[i].pos[j], 2, 1, file) == 1);
-    }
-    extern_table_size += 1 + len + 1 + 2 * num;
-  }
-  ret = ftell(file);
-  assert(fseek(file, extern_table_size_pos, SEEK_SET) == 0);
-  assert(fwrite(&extern_table_size, 1, 1, file) == 1);
-  assert(fseek(file, ret, SEEK_SET) == 0);
-
-  assert(fwrite(&obj->reloc_num, 2, 1, file) == 1);
-  for (int i = 0; i < obj->reloc_num; ++i) {
-    assert(fwrite(&obj->reloc_table[i].where, 2, 1, file) == 1);
-    assert(fwrite(&obj->reloc_table[i].what, 2, 1, file) == 1);
-  }
-
   assert(fwrite(&obj->code_size, 2, 1, file) == 1);
   assert(fwrite(&obj->code, 1, obj->code_size, file) == obj->code_size);
-
-  if (debug_info) {
-    assert(fwrite("DEBUG", 1, 5, file) == 5);
-
-    assert(fwrite(&obj->symbol_num, 1, 1, file) == 1);
-    for (int i = 0; i < obj->symbol_num; ++i) {
-      uint8_t len = strlen(obj->symbols[i].image);
-      assert(fwrite(&len, 1, 1, file) == 1);
-      assert(fwrite(obj->symbols[i].image, 1, len, file) == len);
-      assert(fwrite(&obj->symbols[i].pos, 2, 1, file) == 1);
-      assert(fwrite(&obj->symbols[i].reloc_num, 1, 1, file) == 1);
-      for (int j = 0; j < obj->symbols[i].reloc_num; ++j) {
-        assert(fwrite(&obj->symbols[i].relocs[j], 2, 1, file) == 1);
-      }
-      assert(fwrite(&obj->symbols[i].relreloc_num, 1, 1, file) == 1);
-      for (int j = 0; j < obj->symbols[i].relreloc_num; ++j) {
-        assert(fwrite(&obj->symbols[i].relrelocs[j], 2, 1, file) == 1);
-      }
-    }
+  assert(fwrite(&obj->global_count, 1, 1, file) == 1);
+  assert(fwrite(obj->globals, 2, obj->global_count, file) == obj->global_count);
+  assert(fwrite(&obj->extern_count, 1, 1, file) == 1);
+  assert(fwrite(obj->externs, 2, obj->extern_count, file) == obj->extern_count);
+  assert(fwrite(&obj->symbol_count, 2, 1, file) == 1);
+  for (int i = 0; i < obj->symbol_count; ++i) {
+    uint8_t len = strlen(obj->symbols[i].image);
+    assert(fwrite(&len, 1, 1, file) == 1);
+    assert(fwrite(obj->symbols[i].image, 1, len, file) == len);
+    assert(fwrite(&obj->symbols[i].pos, 2, 1, file) == 1);
+    assert(fwrite(&obj->symbols[i].reloc_num, 1, 1, file) == 1);
+    assert(fwrite(obj->symbols[i].relocs, 2, obj->symbols[i].reloc_num, file)
+           == obj->symbols[i].reloc_num);
+    assert(fwrite(&obj->symbols[i].relreloc_num, 1, 1, file) == 1);
+    assert(fwrite(obj->symbols[i].relrelocs, 2, obj->symbols[i].relreloc_num, file)
+           == obj->symbols[i].relreloc_num);
   }
 
   assert(fclose(file) == 0);
@@ -691,6 +570,10 @@ void exe_encode_file(exe_t *exe, char *filename) {
 void bin_encode_file(exe_t *exe, char *filename) {
   assert(exe);
   assert(filename);
+
+  if (exe->reloc_num != 0) {
+    eprintf("cannot encode bin file with relocations\n");
+  }
 
   assert(exe->reloc_num == 0);
 

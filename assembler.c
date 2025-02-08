@@ -20,7 +20,6 @@ int main(int argc, char **argv) {
       OPT_BOOLEAN('g', "debug", &debug_info, "include debug info", NULL, 0, 0),
       OPT_BIT(0, "dtok", &debug, "tokenizer debug info", NULL, DEBUG_TOKENIZER, 0),
       OPT_BIT(0, "dbyt", &debug, "bytecodes debug info", NULL, DEBUG_BYTECODES, 0),
-      OPT_BIT(0, "dobj", &debug, "obj state debug info", NULL, DEBUG_OBJ_STATE, 0),
       OPT_END(),
   };
 
@@ -54,7 +53,7 @@ int main(int argc, char **argv) {
   buffer[size] = 0;
   assert(fclose(file) == 0);
 
-  obj_t obj = assemble(buffer, filename, debug);
+  obj_t obj = assemble(buffer, filename, debug, debug_info);
 
   int output_to_free = output == NULL;
   if (output == NULL) {
@@ -75,7 +74,7 @@ int main(int argc, char **argv) {
     snprintf(output, len + 3, SV_FMT ".o", SV_UNPACK(name));
   }
 
-  obj_encode_file(&obj, output, debug_info);
+  obj_encode_file(&obj, output);
 
   if (output_to_free) {
     free(output);

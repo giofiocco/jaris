@@ -393,7 +393,7 @@ bytecode_t compile(preprocessor_t *pre) {
   return bytecode;
 }
 
-obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
+obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag, int debug_info) {
   assert(buffer);
 
   tokenizer_t tokenizer;
@@ -420,7 +420,7 @@ obj_t assemble(char *buffer, char *filename, assemble_debug_flag_t flag) {
     obj_compile_bytecode(&obj, bc);
   }
 
-  obj_check(&obj);
+  obj_check(&obj, debug_info);
 
   return obj;
 }

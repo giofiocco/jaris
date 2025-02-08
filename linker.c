@@ -16,9 +16,7 @@ int dynamic_file_count = 0;
 int add_dynamic_file(struct argparse *self, const struct argparse_option *option) {
   (void)self;
   assert(option);
-
   dynamic_files[dynamic_file_count++] = (char *)self->argv[0];
-
   return 0;
 }
 
@@ -27,25 +25,28 @@ int main(int argc, char **argv) {
   char *output = "a.out";
   char *dynamic_filename = NULL;
   int no_std_lib_link = 0;
+  int debug_info = 0;
 
   struct argparse_option options[] = {
-    OPT_GROUP("Options"),
-    OPT_HELP(),
-    OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
-    OPT_STRING('l', NULL, &dynamic_filename, "link dynamically with file name", add_dynamic_file, 0, 0),
-    OPT_BOOLEAN(0, "nostdlib", &no_std_lib_link, "not link with std lib", NULL, 0, 0),
-    OPT_BIT(0, "bin", &flags, "output bin file", NULL, LINK_FLAG_BIN, 0),
-    OPT_BIT(0, "so", &flags, "output so file", NULL, LINK_FLAG_SO, 0),
-    OPT_BIT('d', "debug", &flags, "debug info", NULL, LINK_FLAG_EXE_STATE, 0),
-    OPT_END(),
+      OPT_GROUP("Options"),
+      OPT_HELP(),
+      OPT_STRING('o', "output", &output, "output file name", NULL, 0, 0),
+      OPT_BOOLEAN('g', "debug", &debug_info, "include debug info", NULL, 0, 0),
+      OPT_STRING(
+          'l', NULL, &dynamic_filename, "link dynamically with file name", add_dynamic_file, 0, 0),
+      OPT_BOOLEAN(0, "nostdlib", &no_std_lib_link, "not link with std lib", NULL, 0, 0),
+      OPT_BIT(0, "bin", &flags, "output bin file", NULL, LINK_FLAG_BIN, 0),
+      OPT_BIT(0, "so", &flags, "output so file", NULL, LINK_FLAG_SO, 0),
+      OPT_BIT('d', "debug", &flags, "debug info", NULL, LINK_FLAG_EXE_STATE, 0),
+      OPT_END(),
   };
 
   struct argparse argparse;
   argparse_init(&argparse,
                 options,
                 (const char *const[]){
-                  "linker [options] files ...",
-                  NULL,
+                    "linker [options] files ...",
+                    NULL,
                 },
                 0);
   argc = argparse_parse(&argparse, argc, (const char **)argv);

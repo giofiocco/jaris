@@ -1,14 +1,14 @@
 TARGETS=assembler linker encodemem sim inspect decodemem docs.pdf
-CFLAGS=-Wall -Wextra -Werror -std=c99
+CFLAGS=-Wall -Wextra -std=c99 -g
 
 STDLIB_FILES=mul div solve_path open_file read_file execute exit put_char print get_char get_delim string
 PROGRAMS=shutdown ls sh cd cat
 MEM_FILES=__bootloader __os __stdlib $(PROGRAMS)
 STDLIB_DOCS=stdlib_docs.md
 
+.PHONY: all
 all: $(TARGETS) $(STDLIB_DOCS)
 
-.PHONY: clean
 
 $(STDLIB_DOCS): makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES))
 	./makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES)) > $@
@@ -67,5 +67,6 @@ sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) mem.bin
 docs.pdf: docs.roff
 	groff -p -t -ms $^ -Tpdf > $@
 
+.PHONY: clean
 clean:
 	rm -r $(TARGETS) mem.bin asm/build $(STDLIB_DOCS)

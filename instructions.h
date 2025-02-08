@@ -6,7 +6,7 @@
 
 #include "mystb/sv.h"
 
-#define LABEL_MAX_LEN 256
+#define LABEL_MAX_LEN 128
 
 // clang-format off
 typedef enum {

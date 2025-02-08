@@ -1,6 +1,6 @@
 bss section
 
-build formatter for myasm code
+in obj and so gloabals and externs table count and not size
 
 # sh
 
@@ -26,11 +26,12 @@ build formatter for myasm code
 
 # Inspect
 
+- disassemble using debug info
 - read from the stdin
 
 # Assemble
 
-- debug symbols
+- files obj functions in assemble.c
 - bytecode BLABEL
 - error when trying:
 
