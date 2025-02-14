@@ -70,5 +70,5 @@ docs.pdf: docs.roff
 .PHONY: clean
 clean:
 	rm -r $(TARGETS) mem.bin $(STDLIB_DOCS)
-	rm -rf mem/ asm/build/
+	rm -rf asm/build/
 

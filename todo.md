@@ -1,5 +1,7 @@
 bss section
 
+remove all symbols in the final exe without debug_info
+
 test flag in assembler linker etc to test encoding and others
 
 # execute

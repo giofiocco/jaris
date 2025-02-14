@@ -28,13 +28,16 @@ void symbol_list_dump(symbol_t *symbols, uint16_t count) {
   }
 }
 
-void symbols_list_decode(symbol_t *symbols, uint16_t count, FILE *file) {
+void symbols_list_decode(symbol_t *symbols, uint16_t *count, FILE *file) {
   assert(symbols);
+  assert(count);
   assert(file);
 
-  assert(fread(&count, 2, 1, file) == 1);
-  for (int i = 0; i < count; ++i) {
-    symbol_t *s = &symbols[i];
+  uint16_t n = 0;
+  assert(fread(&n, 2, 1, file) == 1);
+  assert(*count + n < SYMBOL_MAX_COUNT);
+  for (int i = 0; i < n; ++i) {
+    symbol_t *s = &symbols[(*count)++];
     size_t len = 0;
     assert(fread(&len, 1, 1, file) == 1);
     assert(len > 0);
@@ -79,12 +82,12 @@ void obj_dump(obj_t *obj) {
   printf("\n");
   printf("GLOBALS:");
   for (int i = 0; i < obj->global_count; ++i) {
-    printf(" %d", obj->globals[i]);
+    printf(" %04X", obj->globals[i]);
   }
   printf("\n");
   printf("EXTERNS:");
   for (int i = 0; i < obj->extern_count; ++i) {
-    printf(" %d", obj->externs[i]);
+    printf(" %04X", obj->externs[i]);
   }
   printf("\n");
   printf("SYMBOLS: %d\n", obj->symbol_count);
@@ -324,7 +327,7 @@ obj_t obj_decode_file(char *filename) {
   assert(fread(obj.globals, 2, obj.global_count, file) == obj.global_count);
   assert(fread(&obj.extern_count, 1, 1, file) == 1);
   assert(fread(obj.externs, 2, obj.extern_count, file) == obj.extern_count);
-  symbols_list_decode(obj.symbols, obj.symbol_count, file);
+  symbols_list_decode(obj.symbols, &obj.symbol_count, file);
 
   assert(fclose(file) == 0);
 
@@ -379,6 +382,8 @@ void exe_dump(exe_t *exe) {
       printf("\t\t%04X %04X\n", exe->dynamics[i].relocs[j].where, exe->dynamics[i].relocs[j].what);
     }
   }
+  printf("SYMBOLS: %d\n", exe->symbol_count);
+  symbol_list_dump(exe->symbols, exe->symbol_count);
 }
 
 void exe_add_symbol_offset(exe_t *exe, symbol_t *from, uint16_t offset) {
@@ -393,6 +398,7 @@ void exe_add_symbol_offset(exe_t *exe, symbol_t *from, uint16_t offset) {
     s->relocs[j] += offset;
   }
   for (int j = 0; j < s->relreloc_count; ++j) {
+
     s->relrelocs[j] += offset;
   }
 }
@@ -601,35 +607,12 @@ void so_dump(so_t *so) {
   printf("\n");
   printf("GLOBALS:");
   for (int i = 0; i < so->global_count; ++i) {
-    printf(" %d", so->globals[i]);
+    printf(" %04X", so->globals[i]);
   }
   printf("\n");
   printf("\n");
   printf("SYMBOLS: %d\n", so->symbol_count);
-  for (int i = 0; i < so->symbol_count; ++i) {
-    symbol_t *s = &so->symbols[i];
-    printf("\t%s: %04X\n", s->image, s->pos);
-    if (s->reloc_count > 0) {
-      printf("\t\tRELOC: [");
-      for (int j = 0; j < s->reloc_count; ++j) {
-        if (j != 0) {
-          printf(", ");
-        }
-        printf("%04X", s->relocs[j]);
-      }
-      printf("]\n");
-    }
-    if (s->relreloc_count > 0) {
-      printf("\t\tRELRELOC: [");
-      for (int j = 0; j < s->relreloc_count; ++j) {
-        if (j != 0) {
-          printf(", ");
-        }
-        printf("%04X", s->relrelocs[j]);
-      }
-      printf("]\n");
-    }
-  }
+  symbol_list_dump(so->symbols, so->symbol_count);
 }
 
 so_t so_decode_file(char *filename) {
@@ -651,7 +634,7 @@ so_t so_decode_file(char *filename) {
   assert(fread(so.code, 1, so.code_size, file) == so.code_size);
   assert(fread(&so.global_count, 1, 1, file) == 1);
   assert(fread(so.globals, 2, so.global_count, file) == so.global_count);
-  symbols_list_decode(so.symbols, so.symbol_count, file);
+  symbols_list_decode(so.symbols, &so.symbol_count, file);
 
   assert(fclose(file) == 0);
 

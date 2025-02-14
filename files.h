@@ -82,7 +82,7 @@ typedef struct {
 } exe_state_t;
 
 void symbol_list_dump(symbol_t *symbols, uint16_t count);
-void symbols_list_decode(symbol_t *symbols, uint16_t count, FILE *file);
+void symbols_list_decode(symbol_t *symbols, uint16_t *count, FILE *file);
 void symbols_list_encode(symbol_t *symbols, uint16_t count, FILE *file);
 
 void obj_dump(obj_t *obj);

@@ -15,7 +15,6 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
   exe_t *exe = &state->exe;
 
   uint16_t offset = state->exe.code_size;
-  int symbols_offset = exe->symbol_count;
 
   memcpy(exe->code + offset, obj->code, obj->code_size);
   exe->code_size += obj->code_size + obj->code_size % 2;
@@ -29,25 +28,29 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
   }
 
   if (debug_info) {
+    int symbols_offset = exe->symbol_count;
     for (int i = 0; i < obj->symbol_count; ++i) {
       exe_add_symbol_offset(exe, &obj->symbols[i], offset);
     }
-  }
-
-  for (int i = 0; i < obj->global_count; ++i) {
-    assert(state->global_count + 1 < GLOBAL_MAX_COUNT);
-    if (!debug_info) {
-      exe_add_symbol_offset(exe, &obj->symbols[obj->globals[i]], offset);
+    for (int i = 0; i < obj->global_count; ++i) {
+      assert(state->global_count + 1 < GLOBAL_MAX_COUNT);
+      state->globals[state->global_count++] = obj->globals[i] + symbols_offset;
     }
-    state->globals[state->global_count++] = obj->globals[i] + symbols_offset;
-  }
-
-  for (int i = 0; i < obj->extern_count; ++i) {
-    assert(state->extern_count + 1 < EXTERN_MAX_COUNT);
-    if (!debug_info) {
-      exe_add_symbol_offset(exe, &obj->symbols[obj->globals[i]], offset);
+    for (int i = 0; i < obj->extern_count; ++i) {
+      assert(state->extern_count + 1 < EXTERN_MAX_COUNT);
+      state->externs[state->extern_count++] = obj->externs[i] + symbols_offset;
     }
-    state->externs[state->extern_count++] = obj->externs[i] + symbols_offset;
+  } else {
+    for (int i = 0; i < obj->global_count; ++i) {
+      assert(state->global_count + 1 < GLOBAL_MAX_COUNT);
+      exe_add_symbol_offset(exe, &obj->symbols[obj->globals[i]], offset);
+      state->globals[state->global_count++] = exe->symbol_count - 1;
+    }
+    for (int i = 0; i < obj->extern_count; ++i) {
+      assert(state->extern_count + 1 < EXTERN_MAX_COUNT);
+      exe_add_symbol_offset(exe, &obj->symbols[obj->externs[i]], offset);
+      state->externs[state->extern_count++] = exe->symbol_count - 1;
+    }
   }
 }
 
