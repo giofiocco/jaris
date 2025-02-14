@@ -628,19 +628,19 @@ void set_control_rom() {
 void exe_reloc(exe_t *exe, uint16_t start_pos, uint16_t stdlib_pos) {
   assert(exe);
 
-  assert(exe->dynamic_num == 1);
-  assert(exe->dynamics_table[0].file_name[0] == 1);
-  assert(exe->dynamics_table[0].file_name[1] == 0);
+  assert(exe->dynamic_count == 1);
+  assert(exe->dynamics[0].file_name[0] == 1);
+  assert(exe->dynamics[0].file_name[1] == 0);
 
-  for (int i = 0; i < exe->reloc_num; ++i) {
-    reloc_entry_t entry = exe->reloc_table[i];
+  for (int i = 0; i < exe->reloc_count; ++i) {
+    reloc_entry_t entry = exe->relocs[i];
     entry.what += start_pos;
     exe->code[entry.where] = entry.what & 0xFF;
     exe->code[entry.where + 1] = (entry.what >> 8) & 0xFF;
   }
 
-  for (int i = 0; i < exe->dynamics_table[0].reloc_num; ++i) {
-    reloc_entry_t entry = exe->dynamics_table[0].reloc_table[i];
+  for (int i = 0; i < exe->dynamics[0].reloc_count; ++i) {
+    reloc_entry_t entry = exe->dynamics[0].relocs[i];
     entry.what += stdlib_pos;
     exe->code[entry.where] = entry.what & 0xFF;
     exe->code[entry.where + 1] = (entry.what >> 8) & 0xFF;
@@ -734,8 +734,8 @@ void test() {
   printf("Check if stdlib is loaded\n");
 
   so_t stdlib = so_decode_file("mem/__stdlib");
-  for (int i = 0; i < stdlib.reloc_num; ++i) {
-    reloc_entry_t entry = stdlib.reloc_table[i];
+  for (int i = 0; i < stdlib.reloc_count; ++i) {
+    reloc_entry_t entry = stdlib.relocs[i];
     entry.what += os.code_size;
     stdlib.code[entry.where] = entry.what & 0xFF;
     stdlib.code[entry.where + 1] = (entry.what >> 8) & 0xFF;
@@ -743,11 +743,11 @@ void test() {
 
   uint16_t execute_ptr = 0;
   uint16_t open_file_ptr = 0;
-  for (int i = 0; i < stdlib.global_num; ++i) {
-    if (strcmp(stdlib.globals[i].name, "execute") == 0) {
-      execute_ptr = stdlib.globals[i].pos + os.code_size;
-    } else if (strcmp(stdlib.globals[i].name, "open_file") == 0) {
-      open_file_ptr = stdlib.globals[i].pos + os.code_size;
+  for (int i = 0; i < stdlib.global_count; ++i) {
+    if (strcmp(stdlib.symbols[stdlib.globals[i]].image, "execute") == 0) {
+      execute_ptr = stdlib.symbols[stdlib.globals[i]].pos + os.code_size;
+    } else if (strcmp(stdlib.symbols[stdlib.globals[i]].image, "open_file") == 0) {
+      open_file_ptr = stdlib.symbols[stdlib.globals[i]].pos + os.code_size;
     }
   }
   assert(execute_ptr != 0);

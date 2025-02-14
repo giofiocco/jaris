@@ -102,9 +102,24 @@ IMAGE
 | 2        | number of reloc table entries |
 | 4\*#     | reloc table                   |
 |          | dynamic linking table         |
+|          | symbols list                  |
 
-The code size is always an even number
+TODO: dynamic table -> count and others
+
+The code size is always an even number.
 The ending `Dynamic Linking Table Entry` is 0x00.
+
+- Dynamic Linking Table Entry:
+
+If the file is the std-lib the file name is 0x01 0x00.
+
+| size [B] | description                 |
+| :------- | :-------------------------- |
+|          | file name (null terminated) |
+| 2        | number of reloc enries      |
+|          | reloc entries               |
+
+The reloc `where` is relative to the `exe` code the reloc `what` is relative to the `so` code.
 
 ### OBJ file
 
@@ -119,10 +134,11 @@ The ending `Dynamic Linking Table Entry` is 0x00.
 | 2\*#     | global symbol indices |
 | 1        | externs count         |
 | 2\*#     | extern symbol indices |
-| 2        | symbols count         |
-|          | symbol entries        |
+|          | symbols list          |
 
-Debug info: all symbols in symbols, all relreloc info
+- Debug info:
+
+Include all symbols in symbols, all relreloc info
 
 ### Bin file
 
@@ -132,54 +148,52 @@ Debug info: all symbols in symbols, all relreloc info
 
 ### SO file
 
-| size [B] | description                   |
-| :------- | :---------------------------- |
-| 2        | 'SO'                          |
-| 2        | code size                     |
-|          | code                          |
-| 2        | number of reloc table entries |
-| 4\*#     | reloc table                   |
-| 1        | globals table size            |
-|          | globals table                 |
+| size [b] | description           |
+| :------- | :-------------------- |
+| 2        | 'SO'                  |
+| 2        | code size             |
+|          | code                  |
+| 2        | relocs count          |
+| 4\*#     | reloc entries         |
+| 1        | globals count         |
+| 2\*#     | global symbol indices |
+|          | symbols list          |
 
-### Debug Info
+- Debug info:
 
-Attach at the end of OBJ or EXE files
+Include all symbols in symbols, all relreloc info
 
-| size [B] | description               |
-| :------- | :------------------------ |
-| 5        | 'DEBUG'                   |
-| 1        | symbols table entry count |
-|          | symbols table             |
+#### Symbols List
 
-#### Symbols Table Entry
+| size [B] | description            |
+| :------- | :--------------------- |
+| 2        | count                  |
+|          | entries                |
+| 1        | filename count         |
+|          | filename entries       |
+| 1        | dynamic filename count |
+|          | filename entries       |
 
-| size [B] | description    |
-| :------- | :------------- |
-| 1        | symbol size    |
-|          | symbol         |
-| 2        | address        |
-| 1        | reloc count    |
-| 2\*#     | relocs         |
-| 1        | relreloc count |
-| 2\*#     | relrelocs      |
+- Symbol entry:
 
-#### Globals Table Entry
+| size [B] | description            |
+| :------- | :--------------------- |
+| 1        | symbol size            |
+|          | symbol                 |
+| 2        | address                |
+| 1        | reloc count            |
+| 2\*#     | relocs                 |
+| 1        | relreloc count         |
+| 2\*#     | relrelocs              |
+| 1        | filename index         |
+| 1        | dynamic filename index |
+
+- Filename entry:
 
 | size [B] | description |
 | :------- | :---------- |
-| 1        | symbol size |
-|          | symbol      |
-| 2        | address     |
-
-#### Externs Table Entry
-
-| size [B] | description              |
-| :------- | :----------------------- |
-| 1        | symbol size              |
-|          | symbol                   |
-| 1        | number of where to subst |
-| 2\*#     | where to substs          |
+| 1        | name size   |
+|          | name        |
 
 #### Reloc Table Entry
 
@@ -187,18 +201,6 @@ Attach at the end of OBJ or EXE files
 | :------- | :------------- |
 | 2        | where to subst |
 | 2        | what to subst  |
-
-#### Dynamic Linking Table Entry
-
-If the file is the std-lib the file name is 0x01 0x00.
-
-| size [B] | description                 |
-| :------- | :-------------------------- |
-|          | file name (null terminated) |
-| 2        | number of reloc enries      |
-|          | reloc entries               |
-
-The reloc `where` is relative to the `exe` code the reloc `what` is relative to the `so` code.
 
 ## File System
 

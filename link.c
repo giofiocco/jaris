@@ -8,89 +8,117 @@
 
 #define TODO assert(0 && "TO IMPLEMENT")
 
-void exe_link_obj(exe_state_t *exes, obj_t *obj) {
-  assert(exes);
+void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
+  assert(state);
   assert(obj);
 
-  uint16_t offset = exes->exe.code_size;
+  exe_t *exe = &state->exe;
 
-  memcpy(exes->exe.code + offset, obj->code, obj->code_size);
-  exes->exe.code_size += obj->code_size;
-  exes->exe.code_size += exes->exe.code_size % 2;
+  uint16_t offset = state->exe.code_size;
+  int symbols_offset = exe->symbol_count;
 
-  for (int i = 0; i < obj->reloc_num; ++i) {
-    exe_add_reloc_offset(&exes->exe, obj->relocs[i], offset);
+  memcpy(exe->code + offset, obj->code, obj->code_size);
+  exe->code_size += obj->code_size + obj->code_size % 2;
+
+  for (int i = 0; i < obj->reloc_count; ++i) {
+    assert(exe->reloc_count + 1 < RELOC_MAX_COUNT);
+    exe->relocs[exe->reloc_count] = obj->relocs[i];
+    exe->relocs[exe->reloc_count].where += offset;
+    exe->relocs[exe->reloc_count].what += offset;
+    ++exe->reloc_count;
   }
 
-  // TODO: redo
+  if (debug_info) {
+    for (int i = 0; i < obj->symbol_count; ++i) {
+      exe_add_symbol_offset(exe, &obj->symbols[i], offset);
+    }
+  }
+
   for (int i = 0; i < obj->global_count; ++i) {
-    symbol_t *s = &obj->symbols[obj->globals[i]];
-    global_entry_t global = {0};
-    strncpy(global.name, s->image, LABEL_MAX_LEN);
-    global.pos = s->pos;
-    exe_state_add_global(exes, global, offset);
+    assert(state->global_count + 1 < GLOBAL_MAX_COUNT);
+    if (!debug_info) {
+      exe_add_symbol_offset(exe, &obj->symbols[obj->globals[i]], offset);
+    }
+    state->globals[state->global_count++] = obj->globals[i] + symbols_offset;
   }
 
-  // TODO: redo
   for (int i = 0; i < obj->extern_count; ++i) {
-    symbol_t *s = &obj->symbols[obj->externs[i]];
-    extern_entry_t _extern = {0};
-    strncpy(_extern.name, s->image, LABEL_MAX_LEN);
-    _extern.pos_num = s->reloc_num;
-    memcpy(_extern.pos, s->relocs, s->reloc_num);
-    exe_state_add_extern(exes, _extern, offset);
+    assert(state->extern_count + 1 < EXTERN_MAX_COUNT);
+    if (!debug_info) {
+      exe_add_symbol_offset(exe, &obj->symbols[obj->globals[i]], offset);
+    }
+    state->externs[state->extern_count++] = obj->externs[i] + symbols_offset;
   }
 }
 
-void exe_link_boilerplate(exe_state_t *exes) {
-  assert(exes);
+void exe_link_so(exe_state_t *state, so_t *so, char *name) {
+  assert(state);
+  assert(so);
+  assert(name);
 
-  obj_t boilerplate = {.code_size = 4,
-                       .code = {NOP, JMP},
-                       .reloc_num = 0,
-                       .relocs = {},
-                       .global_count = 0,
-                       .globals = {},
-                       .extern_count = 1,
-                       .externs = {0},
-                       .symbol_count = 1,
-                       .symbols = {(symbol_t){.image = "_start",
-                                              .pos = 0xFFFF,
-                                              .relocs = {2},
-                                              .reloc_num = 1,
-                                              .relrelocs = {},
-                                              .relreloc_num = 0}}};
+  assert(state->so_count + 1 < DYNAMIC_MAX_COUNT);
+  int index = state->so_count;
+  strncpy(state->so_names[index], name, FILE_NAME_MAX_LEN);
+  state->so_global_counts[index] = so->global_count;
+  for (int i = 0; i < so->global_count; ++i) {
+    strncpy(state->so_gloabals_images[index][i], so->symbols[so->globals[i]].image, LABEL_MAX_LEN);
+    state->so_globals_pos[index][i] = so->symbols[so->globals[i]].pos;
+  }
 
-  exe_link_obj(exes, &boilerplate);
+  ++state->so_count;
 }
 
-void exe_state_dump(exe_state_t *exes) {
-  assert(exes);
+void exe_link_boilerplate(exe_state_t *state, int debug_info) {
+  assert(state);
 
-  printf("GLOBALS:\n");
-  for (int i = 0; i < exes->global_num; ++i) {
-    printf("\t%s %04X\n", exes->globals[i].name, exes->globals[i].pos);
+  assert(state->exe.code_size == 0);
+  assert(state->exe.symbol_count == 0);
+  obj_t boilerplate = {
+      .code_size = 4,
+      .code = {NOP, JMP},
+      .reloc_count = 0,
+      .relocs = {},
+      .global_count = 0,
+      .globals = {},
+      .extern_count = 1,
+      .externs = {0},
+      .symbol_count = 1,
+      .symbols =
+          {
+              {.image = "_start",
+               .pos = 0xFFFF,
+               .reloc_count = 1,
+               .relocs = {1},
+               .relreloc_count = 0,
+               .relrelocs = {}},
+          },
+  };
+
+  exe_link_obj(state, &boilerplate, debug_info);
+}
+
+void exe_state_dump(exe_state_t *state) {
+  assert(state);
+
+  printf("EXE:\n");
+  exe_dump(&state->exe);
+  printf("GLOBALS:");
+  for (int i = 0; i < state->global_count; ++i) {
+    printf(" %d", state->globals[i]);
   }
-  printf("EXTERNS:\n");
-  for (int i = 0; i < exes->extern_num; ++i) {
-    printf("\t%s [", exes->externs[i].name);
-    for (int j = 0; j < exes->externs[i].pos_num; ++j) {
-      if (j != 0) {
-        printf(" ");
-      }
-      printf("%04X", exes->externs[i].pos[j]);
+  printf("\n");
+  printf("EXTERNS:");
+  for (int i = 0; i < state->extern_count; ++i) {
+    printf(" %d", state->externs[i]);
+  }
+  printf("\n");
+  printf("SOS: %d\n", state->so_count);
+  for (int i = 0; i < state->so_count; ++i) {
+    printf("\t%s %s:\n",
+           state->so_names[i],
+           strcmp(state->so_names[i], "\x01") == 0 ? "(STDLIB)" : "");
+    for (int j = 0; j < state->so_global_counts[i]; ++j) {
+      printf("\t\t%s %04X\n", state->so_gloabals_images[i][j], state->so_globals_pos[i][j]);
     }
-    printf("]\n");
   }
-  printf("SOS: %d\n", exes->so_num);
-  for (int i = 0; i < exes->so_num; ++i) {
-    printf("%s", exes->so_names[i]);
-    if (strcmp(exes->so_names[0], "\x01") == 0) {
-      printf(" (STDLIB)");
-    }
-    printf(":\n");
-    so_dump(&exes->sos[0]);
-    printf("ENDSO\n");
-  }
-  exe_dump(&exes->exe);
 }

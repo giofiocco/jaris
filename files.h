@@ -5,11 +5,12 @@
 
 #include "instructions.h"
 
-#define GLOBAL_COUNT  64
-#define EXTERN_COUNT  64
-#define RELOC_COUNT   128
-#define DYNAMIC_COUNT 16
-#define SYMBOL_COUNT  64
+#define GLOBAL_MAX_COUNT  64
+#define EXTERN_MAX_COUNT  64
+#define RELOC_MAX_COUNT   128
+#define DYNAMIC_MAX_COUNT 8
+#define SYMBOL_MAX_COUNT  64
+#define FILE_NAME_MAX_LEN 64
 
 typedef struct {
   uint16_t where;
@@ -17,74 +18,72 @@ typedef struct {
 } reloc_entry_t;
 
 typedef struct {
-  char name[LABEL_MAX_LEN];
-  uint16_t pos;
-} global_entry_t;
-
-typedef struct {
-  char name[LABEL_MAX_LEN];
-  uint8_t pos_num;
-  uint16_t pos[256];
-} extern_entry_t;
-
-typedef struct {
-  char file_name[LABEL_MAX_LEN];
-  uint16_t reloc_num;
-  reloc_entry_t reloc_table[RELOC_COUNT];
+  char file_name[FILE_NAME_MAX_LEN];
+  uint16_t reloc_count;
+  reloc_entry_t relocs[RELOC_MAX_COUNT];
 } dynamic_entry_t;
 
+// TODO: image as char*
 typedef struct {
   char image[LABEL_MAX_LEN];
   uint16_t pos;
-  uint16_t relocs[RELOC_COUNT];
-  uint8_t reloc_num;
-  uint16_t relrelocs[RELOC_COUNT];
-  uint8_t relreloc_num;
+  uint16_t relocs[RELOC_MAX_COUNT];
+  uint8_t reloc_count;
+  uint16_t relrelocs[RELOC_MAX_COUNT];
+  uint8_t relreloc_count;
 } symbol_t;
 
 typedef struct {
   uint16_t code_size;
   uint8_t code[1 << 16];
-  uint16_t reloc_num;
-  reloc_entry_t relocs[RELOC_COUNT];
+  uint16_t reloc_count;
+  reloc_entry_t relocs[RELOC_MAX_COUNT];
   uint8_t global_count;
-  uint16_t globals[GLOBAL_COUNT];
+  uint16_t globals[GLOBAL_MAX_COUNT];
   uint8_t extern_count;
-  uint16_t externs[EXTERN_COUNT];
+  uint16_t externs[EXTERN_MAX_COUNT];
   uint16_t symbol_count;
-  symbol_t symbols[SYMBOL_COUNT];
+  symbol_t symbols[SYMBOL_MAX_COUNT];
 } obj_t;
 
 typedef struct {
   uint16_t code_size;
   uint8_t code[1 << 16];
-  uint16_t reloc_num;
-  reloc_entry_t reloc[RELOC_COUNT];
-  int dynamic_num;
-  dynamic_entry_t dynamics_table[DYNAMIC_COUNT];
-  symbol_t symbols[SYMBOL_COUNT];
-  uint16_t symbol_num;
-} exe_t;
-
-typedef struct {
-  uint8_t global_num;
-  global_entry_t globals[GLOBAL_COUNT];
-  uint16_t code_size;
-  uint8_t code[1 << 16];
-  uint16_t reloc_num;
-  reloc_entry_t reloc_table[RELOC_COUNT];
+  uint16_t reloc_count;
+  reloc_entry_t relocs[RELOC_MAX_COUNT];
+  uint8_t global_count;
+  uint16_t globals[GLOBAL_MAX_COUNT];
+  uint16_t symbol_count;
+  symbol_t symbols[SYMBOL_MAX_COUNT];
 } so_t;
 
 typedef struct {
+  uint16_t code_size;
+  uint8_t code[1 << 16];
+  uint16_t reloc_count;
+  reloc_entry_t relocs[RELOC_MAX_COUNT];
+  int dynamic_count;
+  dynamic_entry_t dynamics[DYNAMIC_MAX_COUNT];
+  uint16_t symbol_count;
+  symbol_t symbols[SYMBOL_MAX_COUNT];
+} exe_t;
+
+typedef struct {
   exe_t exe;
-  uint16_t global_num;
-  global_entry_t globals[GLOBAL_COUNT];
-  uint16_t extern_num;
-  extern_entry_t externs[EXTERN_COUNT];
-  int so_num;
-  so_t sos[DYNAMIC_COUNT];
-  char *so_names[DYNAMIC_COUNT];
+  uint8_t global_count;
+  uint16_t globals[GLOBAL_MAX_COUNT];
+  uint8_t extern_count;
+  uint16_t externs[EXTERN_MAX_COUNT];
+  int so_count;
+  char so_names[DYNAMIC_MAX_COUNT][FILE_NAME_MAX_LEN];
+  int so_global_counts[DYNAMIC_MAX_COUNT];
+  char so_gloabals_images[DYNAMIC_MAX_COUNT][GLOBAL_MAX_COUNT][LABEL_MAX_LEN];
+  uint16_t so_globals_pos[DYNAMIC_MAX_COUNT][GLOBAL_MAX_COUNT];
 } exe_state_t;
+
+void symbol_list_dump(symbol_t *symbols, uint16_t count);
+void symbols_list_decode(symbol_t *symbols, uint16_t count, FILE *file);
+void symbols_list_encode(symbol_t *symbols, uint16_t count, FILE *file);
 
 void obj_dump(obj_t *obj);
 uint16_t obj_add_symbol(obj_t *obj, char *name, uint16_t pos);
@@ -101,14 +100,11 @@ obj_t obj_decode_file(char *filename);
 void obj_encode_file(obj_t *obj, char *filename);
 
 void exe_dump(exe_t *exe);
+void exe_add_symbol_offset(exe_t *exe, symbol_t *s, uint16_t offset);
 
-uint16_t exe_state_find_global(exe_state_t *exes, char *name);
-void exe_state_add_global(exe_state_t *exes, global_entry_t global, uint16_t offset);
-void exe_state_add_extern(exe_state_t *exes, extern_entry_t extern_, uint16_t offset);
-void exe_state_check_exe(exe_state_t *exes);
-
-void exe_add_reloc_offset(exe_t *exe, reloc_entry_t reloc, uint16_t offset);
-void exe_add_reloc(exe_t *exe, reloc_entry_t reloc);
+uint16_t exe_state_find_global(exe_state_t *state, char *name);
+uint16_t exe_state_find_so_global(exe_state_t *state, int so_index, char *name);
+void exe_state_check_exe(exe_state_t *state);
 
 exe_t exe_decode_file(char *filename);
 void exe_encode_file(exe_t *exe, char *filename);
@@ -117,7 +113,7 @@ void bin_encode_file(exe_t *exe, char *filename);
 
 void so_dump(so_t *so);
 so_t so_decode_file(char *filename);
-void so_encode_file(exe_state_t *exes, char *filename);
-uint16_t so_find_global(so_t *so, char *name);
+void so_encode_file(so_t *so, char *filename);
+so_t so_from_exe_state(exe_state_t *exes);
 
 #endif // FILES_H__

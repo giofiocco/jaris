@@ -10,13 +10,17 @@
 
 #define STD_LIB_PATH "mem/__stdlib"
 
-char *dynamic_files[DYNAMIC_COUNT] = {0};
-int dynamic_file_count = 0;
+exe_state_t state = {0};
 
 int add_dynamic_file(struct argparse *self, const struct argparse_option *option) {
   (void)self;
   assert(option);
-  dynamic_files[dynamic_file_count++] = (char *)self->argv[0];
+
+  char *filename = (char *)self->argv[0];
+  assert(filename);
+  so_t so = so_decode_file(filename);
+  exe_link_so(&state, &so, filename);
+
   return 0;
 }
 
@@ -56,44 +60,33 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
-  exe_state_t exes = {0};
-
   if (!(flags & LINK_FLAG_BIN) && !(flags & LINK_FLAG_SO)) {
-    exe_link_boilerplate(&exes);
+    exe_link_boilerplate(&state, debug_info);
   }
 
   for (int i = 0; i < argc; ++i) {
     obj_t obj = obj_decode_file(argv[i]);
-    exe_link_obj(&exes, &obj);
+    exe_link_obj(&state, &obj, debug_info);
   }
 
   if (!no_std_lib_link) {
     so_t so = so_decode_file(STD_LIB_PATH);
-    exes.sos[0] = so;
-    exes.so_names[0] = "\x01";
-    exes.so_num = 1;
-  }
-
-  for (int i = 0; i < dynamic_file_count; ++i) {
-    so_t so = so_decode_file(dynamic_files[i]);
-    assert(exes.so_num + 1 < DYNAMIC_COUNT);
-    exes.sos[exes.so_num] = so;
-    exes.so_names[exes.so_num] = dynamic_files[i];
-    ++exes.so_num;
+    exe_link_so(&state, &so, "\0x01");
   }
 
   if (flags & LINK_FLAG_EXE_STATE) {
-    exe_state_dump(&exes);
+    exe_state_dump(&state);
   }
 
-  exe_state_check_exe(&exes);
+  exe_state_check_exe(&state);
 
   if (flags & LINK_FLAG_SO) {
-    so_encode_file(&exes, output);
+    so_t out = so_from_exe_state(&state);
+    so_encode_file(&out, output);
   } else if (flags & LINK_FLAG_BIN) {
-    bin_encode_file(&exes.exe, output);
+    bin_encode_file(&state.exe, output);
   } else {
-    exe_encode_file(&exes.exe, output);
+    exe_encode_file(&state.exe, output);
   }
 
   return 0;

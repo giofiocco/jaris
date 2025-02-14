@@ -1,6 +1,10 @@
 bss section
 
-in obj and so gloabals and externs table count and not size
+test flag in assembler linker etc to test encoding and others
+
+# execute
+
+- absolute path
 
 # sh
 

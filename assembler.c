@@ -6,6 +6,7 @@
 
 #include "argparse/argparse.h"
 #include "assemble.h"
+#include "files.h"
 #include "mystb/errors.h"
 
 int main(int argc, char **argv) {

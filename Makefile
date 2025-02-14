@@ -11,7 +11,7 @@ all: $(TARGETS) $(STDLIB_DOCS)
 
 
 $(STDLIB_DOCS): makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES))
-	./makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES)) > $@
+	perl makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES)) > $@
 
 mem.bin: $(patsubst %,mem/%,$(MEM_FILES)) encodemem | mem
 	./encodemem -d mem -o mem.bin
@@ -41,7 +41,7 @@ mem/%: asm/build/%.o mem/__stdlib linker | mem
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
 SV_LIB=mystb/sv.h
 ERRORS_LIB=errors.c errors.h
-FILES_DEP=files.c files.h $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
+FILES_DEP=files.c files.h $(INSTRUCTIONS_DEP) $(ERRORS_LIB)
 INSTRUCTIONS_DEP=instructions.c instructions.h $(SV_LIB)
 ASSEMBLE_DEP=assemble.c assemble.h $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ERRORS_LIB) 
 SIM_DEP=instructions.c instructions.h $(FILES_DEP)
@@ -61,7 +61,7 @@ decodemem: decodemem.c
 inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
-sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) mem.bin 
+sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) mem.bin
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
 docs.pdf: docs.roff
@@ -69,4 +69,6 @@ docs.pdf: docs.roff
 
 .PHONY: clean
 clean:
-	rm -r $(TARGETS) mem.bin asm/build $(STDLIB_DOCS)
+	rm -r $(TARGETS) mem.bin $(STDLIB_DOCS)
+	rm -rf mem/ asm/build/
+
