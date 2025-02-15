@@ -817,10 +817,10 @@ void help(int exitcode) {
          " -i | --input <string>            input <string> to computer [max %d char]\n"
          " -r | --ram-range <start>:<end>   print ram from <start> to <end> when HLTed (example "
          "2:0xFA)\n"
-         "    | --stdout                    print the stdout when HLTed\n"
-         "    | --test                      run test and exit\n"
+         "      --stdout                    print the stdout when HLTed\n"
+         " -t | --test                      run test and exit\n"
          " -s | --step                      enable step mode after the cpu is HLTed\n"
-         " -t | --real-time                 sleeps each tick to simulate a 4MHz clock\n"
+         "      --real-time                 sleeps each tick to simulate a 4MHz clock\n"
          "      --mem <mem-path>            set the binary file for MEM [default mem.bin]\n"
          " -h | --help                      print this page and exit\n",
          KEY_FIFO_COUNT);
@@ -920,7 +920,8 @@ int main(int argc, char **argv) {
           help(0);
           break;
         case 't':
-          real_time_mode = 1;
+          test();
+          exit(0);
           break;
         case 'i':
         {

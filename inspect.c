@@ -128,20 +128,13 @@ int main(int argc, char **argv) {
 
   struct argparse_option options[] = {
       OPT_GROUP("Options:"),
-      OPT_BOOLEAN('d',
-                  "disassemble",
-                  &disassemble_flag,
-                  "dump disassembled code",
-                  NULL,
-                  0,
-                  0),
+      OPT_BOOLEAN('d', "disassemble", &disassemble_flag, "dump disassembled code", NULL, 0, 0),
       OPT_HELP(),
       OPT_GROUP("Kinds:"),
       OPT_BIT(0, "obj", &kind, "analyse the file as an obj", NULL, KOBJ, 0),
       OPT_BIT(0, "exe", &kind, "analyse the file as an exe", NULL, KEXE, 0),
       OPT_BIT(0, "so", &kind, "analyse the file as a so", NULL, KSO, 0),
-      OPT_BIT(
-          0, "mem", &kind, "analyse the file as a mem.bin file", NULL, KMEM, 0),
+      OPT_BIT(0, "mem", &kind, "analyse the file as a mem.bin file", NULL, KMEM, 0),
       OPT_BIT(0, "bin", &kind, "analyse the file as a bin", NULL, KBIN, 0),
       OPT_END(),
   };
@@ -154,11 +147,10 @@ int main(int argc, char **argv) {
                     NULL,
                 },
                 0);
-  argparse_describe(
-      &argparse,
-      NULL,
-      "if the kind is not specified it's deduced from the file extension\n"
-      "set the file to '-' to use the stdin\n");
+  argparse_describe(&argparse,
+                    NULL,
+                    "if the kind is not specified it's deduced from the file extension\n"
+                    "set the file to '-' to use the stdin\n");
   argc = argparse_parse(&argparse, argc, (const char **)argv);
   if (argc != 1) {
     fprintf(stderr, "ERROR: expected ONE file\n");
@@ -196,7 +188,7 @@ int main(int argc, char **argv) {
         kind = KEXE;
       } else if (strcmp(magic_number, "OBJ") == 0) {
         kind = KOBJ;
-      } else if (strcmp(magic_number, "SO") == 0) {
+      } else if (magic_number[0] == 'S' && magic_number[1] == 'O') {
         kind = KSO;
       } else {
         fprintf(stderr, "ERROR: cannot deduce file kind from '%s'\n", filename);
@@ -258,17 +250,12 @@ void disassemble(uint8_t *code, uint16_t code_size) {
           break;
         case INST_16BITS_ARG:
         case INST_LABEL_ARG:
-          printf("%-*s %04X ",
-                 INSTRUCTION_MAX_LEN,
-                 inst,
-                 code[i + 1] | (code[i + 2] << 8));
+          printf("%-*s %04X ", INSTRUCTION_MAX_LEN, inst, code[i + 1] | (code[i + 2] << 8));
           i += 3;
           break;
         case INST_RELLABEL_ARG:
-          printf("%-*s %d ",
-                 INSTRUCTION_MAX_LEN,
-                 inst,
-                 (int16_t)(code[i + 1] | (code[i + 2] << 8)));
+          printf(
+              "%-*s %d ", INSTRUCTION_MAX_LEN, inst, (int16_t)(code[i + 1] | (code[i + 2] << 8)));
           i += 3;
           break;
       }

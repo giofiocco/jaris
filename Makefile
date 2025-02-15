@@ -23,20 +23,20 @@ mem:
 	mkdir -p $@
 
 asm/build/%.o: asm/%.asm assembler | asm/build
-	./assembler -o $@ $<
+	./assembler -g -o $@ $<
 
 mem/__bootloader: asm/build/bootloader.o linker | mem
 	./linker --bin --nostdlib -o $@ $<
 	wc -c $@ 
 
 mem/__os: asm/build/os.o mem/__stdlib linker | mem
-	./linker -o $@ $<
+	./linker -g -o $@ $<
 
 mem/__stdlib: $(patsubst %,asm/build/%.o,$(STDLIB_FILES)) linker | mem 
-	./linker --so --nostdlib -o $@ $(filter %.o, $^) 
+	./linker -g --so --nostdlib -o $@ $(filter %.o, $^) 
 
 mem/%: asm/build/%.o mem/__stdlib linker | mem
-	./linker -o $@ $<
+	./linker -g -o $@ $<
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
 SV_LIB=mystb/sv.h

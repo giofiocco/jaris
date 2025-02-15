@@ -5,12 +5,13 @@
 
 #include "instructions.h"
 
-#define GLOBAL_MAX_COUNT  64
-#define EXTERN_MAX_COUNT  64
-#define RELOC_MAX_COUNT   128
-#define DYNAMIC_MAX_COUNT 8
-#define SYMBOL_MAX_COUNT  64
-#define FILE_NAME_MAX_LEN 64
+#define GLOBAL_MAX_COUNT       32
+#define EXTERN_MAX_COUNT       32
+#define RELOC_MAX_COUNT        128
+#define INTERN_RELOC_MAX_COUNT 128
+#define DYNAMIC_MAX_COUNT      4
+#define SYMBOL_MAX_COUNT       256
+#define FILE_NAME_MAX_LEN      64
 
 typedef struct {
   uint16_t where;
@@ -19,17 +20,17 @@ typedef struct {
 
 typedef struct {
   char file_name[FILE_NAME_MAX_LEN];
-  uint16_t reloc_count;
-  reloc_entry_t relocs[RELOC_MAX_COUNT];
+  uint8_t reloc_count;
+  reloc_entry_t relocs[INTERN_RELOC_MAX_COUNT];
 } dynamic_entry_t;
 
 // TODO: image as char*
 typedef struct {
   char image[LABEL_MAX_LEN];
   uint16_t pos;
-  uint16_t relocs[RELOC_MAX_COUNT];
+  uint16_t relocs[INTERN_RELOC_MAX_COUNT];
   uint8_t reloc_count;
-  uint16_t relrelocs[RELOC_MAX_COUNT];
+  uint16_t relrelocs[INTERN_RELOC_MAX_COUNT];
   uint8_t relreloc_count;
 } symbol_t;
 

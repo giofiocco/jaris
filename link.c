@@ -91,7 +91,7 @@ void exe_link_boilerplate(exe_state_t *state, int debug_info) {
               {.image = "_start",
                .pos = 0xFFFF,
                .reloc_count = 1,
-               .relocs = {1},
+               .relocs = {2},
                .relreloc_count = 0,
                .relrelocs = {}},
           },
@@ -117,9 +117,11 @@ void exe_state_dump(exe_state_t *state) {
   printf("\n");
   printf("SOS: %d\n", state->so_count);
   for (int i = 0; i < state->so_count; ++i) {
-    printf("\t%s %s:\n",
-           state->so_names[i],
-           strcmp(state->so_names[i], "\x01") == 0 ? "(STDLIB)" : "");
+    if (state->so_names[i][0] == 1) {
+      printf("(STDLIB):\n");
+    } else {
+      printf("%s:\n", state->so_names[i]);
+    }
     for (int j = 0; j < state->so_global_counts[i]; ++j) {
       printf("\t\t%s %04X\n", state->so_gloabals_images[i][j], state->so_globals_pos[i][j]);
     }

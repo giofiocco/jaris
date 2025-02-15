@@ -1,8 +1,19 @@
 bss section
 
+!! BOOTLOADER and EXECUTE new EXE format
+
+maybe check that reloc where is an even number
+
+exe symbols are one for the extern and one for the globals -> merge them
+
 remove all symbols in the final exe without debug_info
 
 test flag in assembler linker etc to test encoding and others
+
+put the exe and exe_state things in link
+and obj things in assemble
+
+merge some asm files together
 
 # execute
 

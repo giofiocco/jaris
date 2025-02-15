@@ -94,30 +94,33 @@ IMAGE
 
 ### EXE file
 
-| size [B] | description                   |
-| :------- | :---------------------------- |
-| 3        | 'EXE'                         |
-| 2        | code size                     |
-|          | code                          |
-| 2        | number of reloc table entries |
-| 4\*#     | reloc table                   |
-|          | dynamic linking table         |
-|          | symbols list                  |
-
-TODO: dynamic table -> count and others
+| size [B] | description             |
+| :------- | :---------------------- |
+| 3        | 'EXE'                   |
+| 2        | code size               |
+|          | code                    |
+| 2        | relocs count            |
+| 4\*#     | reloc entries           |
+| 2        | dynamic linkings count  |
+|          | dynamic linking entries |
+|          | symbols list            |
 
 The code size is always an even number.
-The ending `Dynamic Linking Table Entry` is 0x00.
 
-- Dynamic Linking Table Entry:
+- Debug Info:
+
+Include symbols in the symbols list otherwise it's empty
+
+- Dynamic Linking Entry:
 
 If the file is the std-lib the file name is 0x01 0x00.
 
-| size [B] | description                 |
-| :------- | :-------------------------- |
-|          | file name (null terminated) |
-| 2        | number of reloc enries      |
-|          | reloc entries               |
+| size [B] | description    |
+| :------- | :------------- |
+| 1        | file name size |
+|          | file name      |
+| 1        | relocs count   |
+| 4\*#     | reloc entries  |
 
 The reloc `where` is relative to the `exe` code the reloc `what` is relative to the `so` code.
 
