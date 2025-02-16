@@ -629,8 +629,7 @@ void exe_reloc(exe_t *exe, uint16_t start_pos, uint16_t stdlib_pos) {
   assert(exe);
 
   assert(exe->dynamic_count == 1);
-  assert(exe->dynamics[0].file_name[0] == 1);
-  assert(exe->dynamics[0].file_name[1] == 0);
+  assert(strcmp(exe->dynamics[0].file_name, "\001") == 0);
 
   for (int i = 0; i < exe->reloc_count; ++i) {
     reloc_entry_t entry = exe->relocs[i];
@@ -662,6 +661,37 @@ void test_init(test_t *test) {
 void test_check(test_t *test) {
   assert(test);
   int fail = 0;
+  for (int i = 0; i < 1 << 16; ++i) {
+    if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
+      int j = i;
+      while (
+          j + 1 < 1 << 16
+          && ((test->test_ram[j] >= 0 && test->test_ram[j] != test->cpu.RAM[j])
+              || (test->test_ram[j + 1] >= 0 && test->test_ram[j + 1] != test->cpu.RAM[j + 1]))) {
+        ++j;
+      }
+      if (!fail) {
+        printf("ERROR:\n");
+        fail = 1;
+      }
+      printf("- %04X |", i - i % 2);
+      for (int k = i - i % 2; k < j; k += 2) {
+        printf(" %04X", cpu_read16(&test->cpu, k));
+      }
+      printf("\n+ %04X |", i - i % 2);
+      for (int k = i - i % 2; k < j; k += 2) {
+        printf(" %04X", test->test_ram[k] | (test->test_ram[k + 1] << 8));
+      }
+      printf("\n\n");
+      i = j;
+    }
+  }
+
+  if (fail) {
+    exit(1);
+  }
+  return;
+
   for (int i = 0; i < 1 << 16; ++i) {
     if (test->test_ram[i] >= 0) {
       if (test->test_ram[i] != test->cpu.RAM[i]) {
@@ -695,6 +725,7 @@ void test_set_range(test_t *test, int ram_start, int count, uint8_t *data) {
     test->test_ram[i + ram_start] = data[i];
   }
 }
+
 void test_unset_range(test_t *test, int ram_start, int count) {
   assert(test);
   assert(count);
@@ -715,7 +746,7 @@ void test() {
   cpu_t *cpu = &test->cpu;
 
   printf("TEST:\n");
-  printf("Run bootloader\n");
+  printf("\tRun bootloader\n");
 
   bool running = true;
   while (running && !(cpu->IR == JMPA && cpu->A == 0)) {
@@ -723,7 +754,7 @@ void test() {
   }
   assert(running);
 
-  printf("Check if os is loaded\n");
+  printf("\tCheck if os is loaded\n");
 
   exe_t os = exe_decode_file("mem/__os");
   exe_reloc(&os, 0, os.code_size);
@@ -731,7 +762,7 @@ void test() {
   test_set_range(test, 0, os.code_size, os.code);
   test_check(test);
 
-  printf("Check if stdlib is loaded\n");
+  printf("\tCheck if stdlib is loaded\n");
 
   so_t stdlib = so_decode_file("mem/__stdlib");
   for (int i = 0; i < stdlib.reloc_count; ++i) {
@@ -756,7 +787,7 @@ void test() {
   test_set_range(test, os.code_size, stdlib.code_size, stdlib.code);
   test_check(test);
 
-  printf("Run os till CALL execute sh\n");
+  printf("\tRun os till CALL execute sh\n");
 
   while (running && !(cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_ptr)) {
     tick(cpu, &running);
@@ -767,7 +798,7 @@ void test() {
   assert(cpu->RAM[cpu->A + 1] == 'h');
   assert(cpu->RAM[cpu->A + 2] == 0);
 
-  printf("Check os struct, process and stdout\n");
+  printf("\tCheck os struct, process and stdout\n");
 
   test_set_u16(test, 0xF800, os.code_size);
   test_set_u16(test, 0xF802, 0xF820);
@@ -786,14 +817,14 @@ void test() {
 
   test_unset_range(test, 0xF824, 2);
 
-  printf("Run execute sh\n");
+  printf("\tRun execute sh\n");
 
   while (running && cpu->IR != JMPA) {
     tick(cpu, &running);
   }
   assert(running);
 
-  printf("Check if sh is loaded and processes\n");
+  printf("\tCheck if sh is loaded and processes\n");
 
   exe_t sh = exe_decode_file("mem/sh");
   exe_reloc(&sh, 2048, os.code_size);

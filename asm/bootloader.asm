@@ -33,9 +33,10 @@ copied:
   CALLR $get_16 SHL SHL -- reloc_count * 4
   A_B NDX_A SUM A_NDX -- ndx += reloc_count * 4
 
-  CALLR $get_16 RAM_BL 0x01 SUB JMPRNZ $not_stdlib
-  CALLR $get_16 
-dynamic_reloc: 
+  CALLR $get_16 DECA JMPRNZ $not_stdlib -- dynamic_count
+  CALLR $get_16 RAM_B 0x0101 SUB JMPRNZ $not_stdlib -- file_name len and filename == 0x01 0x01
+  CALLR $get_8
+dynamic_reloc:
   PUSHA 
   -- ^ dynamic_reloc_count os_size stdlib_sec os_sec
   CALLR $get_16 PUSHA
@@ -59,7 +60,7 @@ copy_stdlib:
   -- ^ mar code_size os_size stdlib_sec os_sec
   CALLR $get_16
   POPB A_rB
-  B_A INCA INCA A_B 
+  B_A INCA INCA A_B
   POPA DECA DECA JMPRNZ $copy_stdlib
 
   -- ^ dynamic_reloc_count os_size stdlib_sec os_sec 

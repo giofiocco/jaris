@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
 
   if (!no_std_lib_link) {
     so_t so = so_decode_file(STD_LIB_PATH);
-    exe_link_so(&state, &so, "\01");
+    exe_link_so(&state, &so, "\001");
   }
 
   if (flags & LINK_FLAG_EXE_STATE) {

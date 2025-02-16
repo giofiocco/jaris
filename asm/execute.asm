@@ -20,6 +20,7 @@ ALIGN file: db 4
 -- crash [0xFFFE, _] if file not an exe
 -- crash [0xFFFA, _] if no more space in ram
 -- crash [0xFAFA, _] TODO: dynamic linking with not the stdlib
+-- TODO: error instead of crash
 execute:
   PUSHB PUSHA
 
@@ -55,12 +56,27 @@ reloc:
   POPA DECA JMPRNZ $reloc
   -- ^ ram_start argv
 
+  RAM_A file CALL read_u16
+dynamic_link:
+  PUSHA
+  -- ^ dynamic_count ram_start argv
+  -- TODO: no stdlib
+  RAM_A file CALL read_u16 RAM_B 0x0101 SUB JMPRNZ $not_stdlib
+  RAM_B stdlib_ptr_ptr rB_A PUSHA -- stdlib
   RAM_A file CALL read_u8
-  CMPA JMPRZ $done_dynamic_linking
-  PEEKB CALLR $dynamic_link
-done_dynamic_linking:
-  -- ^ ram_start argv
+dynamic_reloc:
+  PUSHA
+  -- ^ dynamic_reloc_count stdlib_start dynamic_count ram_start argv
+  RAM_A file CALL read_u16 A_B PEEKAR 0x08 SUM PUSHA
+  -- ^ where dynamic_reloc_count stdlib_start dynamic_count ram_start argv
+  RAM_A file CALL read_u16 A_B PEEKAR 0x08 SUM
+  POPB A_rB
+  POPA DECA JMPRNZ $dynamic_reloc
+  -- ^ stdlib_start dynamic_count ram_start argv
+  INCSP
+  POPA DECA JMPRNZ $dynamic_link
 
+  -- ^ ram_start argv
   RAM_A process_table_start PUSHA
   RAM_B process_map_ptr rB_A
   -- TODO: check if no more processes
@@ -145,32 +161,32 @@ no_more_space:
   INCSP INCSP RET
 
 -- [char first_char_of_name, ram_start] -> [_, _]
-dynamic_link:
-  PUSHB PUSHA
-  RAM_A file CALL read_u8
-  A_B POPA B_AH
-
-  A_B RAM_AL 0x01 SUB JMPRNZ $not_stdlib
-
-
-  RAM_B stdlib_ptr_ptr rB_A PUSHA
-  RAM_A file CALL read_u16
-  -- ^ lib_pos ram_start
-  CMPA JMPRZ $done_dynamic_reloc
-dynamic_reloc:
-  PUSHA
-  -- ^ reloc_count lib_pos ram_start
-  RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM PUSHA
-  -- ^ where reloc_count lib_pos ram_start
-  RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM
-  POPB A_rB
-  POPA DECA JMPRNZ $dynamic_reloc
-done_dynamic_reloc:
-  -- ^ lib_pos ram_start
-  INCSP INCSP
-  RET
+--dynamic_link:
+--  PUSHB PUSHA
+--  RAM_A file CALL read_u8
+--  A_B POPA B_AH
+--
+--  A_B RAM_AL 0x01 SUB JMPRNZ $not_stdlib
+--
+--
+--  RAM_B stdlib_ptr_ptr rB_A PUSHA
+--  RAM_A file CALL read_u16
+--  -- ^ lib_pos ram_start
+--  CMPA JMPRZ $done_dynamic_reloc
+--dynamic_reloc:
+--  PUSHA
+--  -- ^ reloc_count lib_pos ram_start
+--  RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM PUSHA
+--  -- ^ where reloc_count lib_pos ram_start
+--  RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM
+--  POPB A_rB
+--  POPA DECA JMPRNZ $dynamic_reloc
+--done_dynamic_reloc:
+--  -- ^ lib_pos ram_start
+--  INCSP INCSP
+--  RET
 
 not_stdlib:
-  -- ^ ram_start [_, first 2 char of name]
+  -- ^ dynamic_count ram_start argv
   RAM_A 0xFAFA
   HLT

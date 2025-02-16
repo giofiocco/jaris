@@ -164,14 +164,13 @@ void obj_add_symbol_relreloc(obj_t *obj, char *name, uint16_t pos) {
 void obj_check(obj_t *obj, int debug_info) {
   assert(obj);
 
+  uint8_t is_extern[obj->symbol_count];
+  memset(is_extern, 0, obj->symbol_count * sizeof(is_extern[0]));
+
   for (int i = 0; i < obj->extern_count; ++i) {
     assert(obj->symbols[obj->externs[i]].pos == 0xFFFF);
     assert(obj->symbols[obj->externs[i]].relreloc_count == 0);
-  }
-  for (int i = 0; i < obj->global_count; ++i) {
-    if (obj->symbols[obj->globals[i]].pos == 0xFFFF) {
-      eprintf("label unset: %s", obj->symbols[obj->globals[i]].image);
-    }
+    is_extern[obj->externs[i]] = 1;
   }
   for (int i = 0; i < obj->symbol_count; ++i) {
     symbol_t *s = &obj->symbols[i];
@@ -180,8 +179,11 @@ void obj_check(obj_t *obj, int debug_info) {
       obj->code[s->relrelocs[j]] = num & 0xFF;
       obj->code[s->relrelocs[j] + 1] = (num >> 8) & 0xFF;
     }
-    if (s->pos == 0xFFFF) {
+    if (is_extern[i]) {
       continue;
+    }
+    if (s->pos == 0xFFFF) {
+      eprintf("label unset: %s", obj->symbols[i].image);
     }
     for (int j = 0; j < s->reloc_count; ++j) {
       assert(obj->reloc_count + 1 < RELOC_MAX_COUNT);
@@ -409,7 +411,9 @@ void exe_add_symbol_offset(exe_t *exe, symbol_t *from, uint16_t offset) {
   assert(exe->symbol_count + 1 < SYMBOL_MAX_COUNT);
   symbol_t *s = &exe->symbols[exe->symbol_count++];
   memcpy(s, from, sizeof(symbol_t));
-  s->pos += offset;
+  if (from->pos != 0xFFFF) {
+    s->pos += offset;
+  }
   for (int j = 0; j < s->reloc_count; ++j) {
     s->relocs[j] += offset;
   }
@@ -459,6 +463,11 @@ void exe_state_check_exe(exe_state_t *state) {
         continue;
       }
       symbol_t *s = &state->exe.symbols[state->externs[j]];
+
+      if (s->pos != 0xFFFF) {
+        done[j] = 1;
+        continue;
+      }
 
       s->pos = exe_state_find_so_global(state, i, s->image);
       if (s->pos == 0xFFFF) {
@@ -567,7 +576,7 @@ void exe_encode_file(exe_t *exe, char *filename) {
   assert(fwrite(&exe->dynamic_count, 2, 1, file) == 1);
   for (int i = 0; i < exe->dynamic_count; ++i) {
     dynamic_entry_t *dt = &exe->dynamics[i];
-    uint8_t len = strlen(dt->file_name) + 1;
+    uint8_t len = strlen(dt->file_name);
     assert(fwrite(&len, 1, 1, file) == 1);
     assert(fwrite(dt->file_name, 1, len, file) == len);
     assert(fwrite(&dt->reloc_count, 1, 1, file) == 1);
