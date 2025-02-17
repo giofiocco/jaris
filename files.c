@@ -465,7 +465,6 @@ void exe_state_check_exe(exe_state_t *state) {
       symbol_t *s = &state->exe.symbols[state->externs[j]];
 
       if (s->pos != 0xFFFF) {
-        done[j] = 1;
         continue;
       }
 

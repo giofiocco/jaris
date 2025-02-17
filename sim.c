@@ -661,54 +661,53 @@ void test_init(test_t *test) {
 void test_check(test_t *test) {
   assert(test);
   int fail = 0;
+
+  // for (int i = 0; i < 1 << 16; ++i) {
+  //   if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
+  //     int j = i;
+  //     while (
+  //         j + 1 < 1 << 16
+  //         && ((test->test_ram[j] >= 0 && test->test_ram[j] != test->cpu.RAM[j])
+  //             || (test->test_ram[j + 1] >= 0 && test->test_ram[j + 1] != test->cpu.RAM[j + 1])))
+  //             {
+  //       ++j;
+  //     }
+  //     if (!fail) {
+  //       printf("ERROR:\n");
+  //       fail = 1;
+  //     }
+  //     printf("- %04X |", i - i % 2);
+  //     for (int k = i - i % 2; k < j; k += 2) {
+  //       printf(" %04X", cpu_read16(&test->cpu, k));
+  //     }
+  //     printf("\n+ %04X |", i - i % 2);
+  //     for (int k = i - i % 2; k < j; k += 2) {
+  //       printf(" %04X", test->test_ram[k] | (test->test_ram[k + 1] << 8));
+  //     }
+  //     printf("\n\n");
+  //     i = j;
+  //   }
+  // }
+  // if (fail) {
+  //   exit(1);
+  // }
+  // return;
+
   for (int i = 0; i < 1 << 16; ++i) {
     if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
-      int j = i;
-      while (
-          j + 1 < 1 << 16
-          && ((test->test_ram[j] >= 0 && test->test_ram[j] != test->cpu.RAM[j])
-              || (test->test_ram[j + 1] >= 0 && test->test_ram[j + 1] != test->cpu.RAM[j + 1]))) {
-        ++j;
-      }
       if (!fail) {
         printf("ERROR:\n");
-        fail = 1;
       }
-      printf("- %04X |", i - i % 2);
-      for (int k = i - i % 2; k < j; k += 2) {
-        printf(" %04X", cpu_read16(&test->cpu, k));
-      }
-      printf("\n+ %04X |", i - i % 2);
-      for (int k = i - i % 2; k < j; k += 2) {
-        printf(" %04X", test->test_ram[k] | (test->test_ram[k + 1] << 8));
-      }
-      printf("\n\n");
-      i = j;
-    }
-  }
-
-  if (fail) {
-    exit(1);
-  }
-  return;
-
-  for (int i = 0; i < 1 << 16; ++i) {
-    if (test->test_ram[i] >= 0) {
-      if (test->test_ram[i] != test->cpu.RAM[i]) {
-        if (!fail) {
-          printf("ERROR:\n");
-        }
-        fail = 1;
-        printf("  at 0x%04X %05d expected %02X,   found %02X\n",
-               i,
-               i,
-               test->test_ram[i],
-               test->cpu.RAM[i]);
-        if (i % 2 == 0) {
-          printf("                  expected %04X, found %04X\n",
-                 test->test_ram[i] | (test->test_ram[i + 1] << 8),
-                 cpu_read16(&test->cpu, i));
-        }
+      fail = 1;
+      printf("  at 0x%04X %05d expected %02X,   found %02X\n",
+             i,
+             i,
+             test->test_ram[i],
+             test->cpu.RAM[i]);
+      if (i % 2 == 0) {
+        printf("                  expected %04X, found %04X\n",
+               test->test_ram[i] | (test->test_ram[i + 1] << 8),
+               cpu_read16(&test->cpu, i));
       }
     }
   }
@@ -739,16 +738,52 @@ void test_set_u16(test_t *test, uint16_t at, uint16_t num) {
   test->test_ram[at + 1] = (num >> 8) & 0xFF;
 }
 
+void test_print_ram_range(test_t *test, uint16_t from, uint16_t to) {
+  assert(test);
+  printf("TEST RAM %d-%d:\n", from, to);
+  int L = 32;
+  from -= from % L;
+  for (int i = from; i < to; i += L) {
+    printf("%04X %05d |", i, i);
+    for (int j = 0; j < L; ++j) {
+      if (j % 8 == 0) {
+        printf(" ");
+      }
+      if (test->test_ram[i + j] >= 0) {
+        printf("%02X", test->test_ram[i + j]);
+      } else {
+        printf("  ");
+      }
+    }
+    printf(" |\n");
+  }
+  printf("%04X %05d |\n", to, to);
+}
+
 void test() {
   test_t test_ = {0};
   test_t *test = &test_;
   test_init(test);
   cpu_t *cpu = &test->cpu;
+  bool running = true;
+
+#define run_untill(cond, max_ticks)     \
+  do {                                  \
+    int ticks = 0;                      \
+    while (running && !(cond)) {        \
+      ++ticks;                          \
+      if (ticks >= (max_ticks)) {       \
+        printf("ERROR: infinite loop"); \
+        exit(1);                        \
+      }                                 \
+      tick(cpu, &running);              \
+    }                                   \
+  } while (0);
 
   printf("TEST:\n");
   printf("\tRun bootloader\n");
 
-  bool running = true;
+  // run_untill(cpu->IR == JMPA && cpu->A == 0, 256000);
   while (running && !(cpu->IR == JMPA && cpu->A == 0)) {
     tick(cpu, &running);
   }
@@ -818,6 +853,7 @@ void test() {
   test_unset_range(test, 0xF824, 2);
 
   printf("\tRun execute sh\n");
+  exit(101);
 
   while (running && cpu->IR != JMPA) {
     tick(cpu, &running);
@@ -838,6 +874,8 @@ void test() {
   test_set_u16(test, 0xF832, 1);
   test_set_u16(test, 0xF834, 2048 * 2 - 2);
   test_check(test);
+
+#undef run_untill
 
   printf("End\n");
 }

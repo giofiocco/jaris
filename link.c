@@ -55,17 +55,18 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
     } else {
       symbol_t *s = &exe->symbols[index];
       assert(s->reloc_count + from->reloc_count < INTERN_RELOC_MAX_COUNT);
-      for (int j = 0; j < s->reloc_count; ++j) {
+      for (int j = 0; j < from->reloc_count; ++j) {
         s->relocs[s->reloc_count++] = from->relocs[j] + offset;
       }
       if (debug_info) {
         assert(s->relreloc_count + from->relreloc_count < INTERN_RELOC_MAX_COUNT);
-        for (int j = 0; j < s->relreloc_count; ++j) {
+        for (int j = 0; j < from->relreloc_count; ++j) {
           s->relrelocs[s->relreloc_count++] = from->relrelocs[j] + offset;
         }
       }
     }
   }
+
   for (int i = 0; i < obj->global_count; ++i) {
     copied[obj->globals[i]] = 1;
     symbol_t *from = &obj->symbols[obj->globals[i]];
@@ -86,12 +87,12 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
       s->pos = from->pos + offset;
 
       assert(s->reloc_count + from->reloc_count < INTERN_RELOC_MAX_COUNT);
-      for (int j = 0; j < s->reloc_count; ++j) {
+      for (int j = 0; j < from->reloc_count; ++j) {
         s->relocs[s->reloc_count++] = from->relocs[j] + offset;
       }
       if (debug_info) {
         assert(s->relreloc_count + from->relreloc_count < INTERN_RELOC_MAX_COUNT);
-        for (int j = 0; j < s->relreloc_count; ++j) {
+        for (int j = 0; j < from->relreloc_count; ++j) {
           s->relrelocs[s->relreloc_count++] = from->relrelocs[j] + offset;
         }
       }
@@ -131,7 +132,7 @@ void exe_link_boilerplate(exe_state_t *state, int debug_info) {
   assert(state->exe.symbol_count == 0);
   obj_t boilerplate = {
       .code_size = 4,
-      .code = {NOP, JMP},
+      .code = {NOP, JMP, 0, 0},
       .reloc_count = 0,
       .relocs = {},
       .global_count = 0,
