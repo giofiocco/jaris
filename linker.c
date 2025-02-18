@@ -16,6 +16,8 @@ int add_dynamic_file(struct argparse *self, const struct argparse_option *option
   (void)self;
   assert(option);
 
+  assert(0 && "TODO");
+
   char *filename = (char *)self->argv[0];
   assert(filename);
   so_t so = so_decode_file(filename);

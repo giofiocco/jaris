@@ -35,10 +35,8 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
 
   for (int i = 0; i < obj->reloc_count; ++i) {
     assert(exe->reloc_count + 1 < RELOC_MAX_COUNT);
-    exe->relocs[exe->reloc_count] = obj->relocs[i];
-    exe->relocs[exe->reloc_count].where += offset;
-    exe->relocs[exe->reloc_count].what += offset;
-    ++exe->reloc_count;
+    exe->relocs[exe->reloc_count++] =
+        (reloc_entry_t){obj->relocs[i].where + offset, obj->relocs[i].what + offset};
   }
 
   uint8_t copied[obj->symbol_count];
@@ -53,6 +51,9 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
       state->externs[state->extern_count++] = exe->symbol_count;
       exe_add_symbol_offset(exe, from, offset);
     } else {
+      assert(state->extern_count + 1 < EXTERN_MAX_COUNT);
+      state->externs[state->extern_count++] = index;
+
       symbol_t *s = &exe->symbols[index];
       assert(s->reloc_count + from->reloc_count < INTERN_RELOC_MAX_COUNT);
       for (int j = 0; j < from->reloc_count; ++j) {

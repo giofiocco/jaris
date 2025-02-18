@@ -662,36 +662,35 @@ void test_check(test_t *test) {
   assert(test);
   int fail = 0;
 
-  // for (int i = 0; i < 1 << 16; ++i) {
-  //   if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
-  //     int j = i;
-  //     while (
-  //         j + 1 < 1 << 16
-  //         && ((test->test_ram[j] >= 0 && test->test_ram[j] != test->cpu.RAM[j])
-  //             || (test->test_ram[j + 1] >= 0 && test->test_ram[j + 1] != test->cpu.RAM[j + 1])))
-  //             {
-  //       ++j;
-  //     }
-  //     if (!fail) {
-  //       printf("ERROR:\n");
-  //       fail = 1;
-  //     }
-  //     printf("- %04X |", i - i % 2);
-  //     for (int k = i - i % 2; k < j; k += 2) {
-  //       printf(" %04X", cpu_read16(&test->cpu, k));
-  //     }
-  //     printf("\n+ %04X |", i - i % 2);
-  //     for (int k = i - i % 2; k < j; k += 2) {
-  //       printf(" %04X", test->test_ram[k] | (test->test_ram[k + 1] << 8));
-  //     }
-  //     printf("\n\n");
-  //     i = j;
-  //   }
-  // }
-  // if (fail) {
-  //   exit(1);
-  // }
-  // return;
+  for (int i = 0; i < 1 << 16; ++i) {
+    if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
+      int j = i;
+      while (
+          j + 1 < 1 << 16
+          && ((test->test_ram[j] >= 0 && test->test_ram[j] != test->cpu.RAM[j])
+              || (test->test_ram[j + 1] >= 0 && test->test_ram[j + 1] != test->cpu.RAM[j + 1]))) {
+        ++j;
+      }
+      if (!fail) {
+        printf("ERROR:\n");
+        fail = 1;
+      }
+      printf("- %04X |", i - i % 2);
+      for (int k = i - i % 2; k < j; k += 2) {
+        printf(" %04X", cpu_read16(&test->cpu, k));
+      }
+      printf("\n+ %04X |", i - i % 2);
+      for (int k = i - i % 2; k < j; k += 2) {
+        printf(" %04X", test->test_ram[k] | (test->test_ram[k + 1] << 8));
+      }
+      printf("\n\n");
+      i = j;
+    }
+  }
+  if (fail) {
+    exit(1);
+  }
+  return;
 
   for (int i = 0; i < 1 << 16; ++i) {
     if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
@@ -725,10 +724,10 @@ void test_set_range(test_t *test, int ram_start, int count, uint8_t *data) {
   }
 }
 
-void test_unset_range(test_t *test, int ram_start, int count) {
+void test_unset_range(test_t *test, int start, int count) {
   assert(test);
   assert(count);
-  memset(test->test_ram + ram_start, -1, count * sizeof(test->test_ram[0]));
+  memset(&test->test_ram[start], -1, count * sizeof(test->test_ram[0]));
 }
 
 void test_set_u16(test_t *test, uint16_t at, uint16_t num) {
@@ -767,23 +766,9 @@ void test() {
   cpu_t *cpu = &test->cpu;
   bool running = true;
 
-#define run_untill(cond, max_ticks)     \
-  do {                                  \
-    int ticks = 0;                      \
-    while (running && !(cond)) {        \
-      ++ticks;                          \
-      if (ticks >= (max_ticks)) {       \
-        printf("ERROR: infinite loop"); \
-        exit(1);                        \
-      }                                 \
-      tick(cpu, &running);              \
-    }                                   \
-  } while (0);
-
   printf("TEST:\n");
   printf("\tRun bootloader\n");
 
-  // run_untill(cpu->IR == JMPA && cpu->A == 0, 256000);
   while (running && !(cpu->IR == JMPA && cpu->A == 0)) {
     tick(cpu, &running);
   }
@@ -822,6 +807,13 @@ void test() {
   test_set_range(test, os.code_size, stdlib.code_size, stdlib.code);
   test_check(test);
 
+  for (int i = 0; i < stdlib.symbol_count; ++i) {
+    if (strcmp(stdlib.symbols[i].image, "file") == 0) {
+      test_unset_range(test, stdlib.symbols[i].pos + os.code_size, 4);
+      break;
+    }
+  }
+
   printf("\tRun os till CALL execute sh\n");
 
   while (running && !(cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_ptr)) {
@@ -853,7 +845,6 @@ void test() {
   test_unset_range(test, 0xF824, 2);
 
   printf("\tRun execute sh\n");
-  exit(101);
 
   while (running && cpu->IR != JMPA) {
     tick(cpu, &running);
@@ -873,9 +864,8 @@ void test() {
   test_set_u16(test, 0xF830, 0xF820);
   test_set_u16(test, 0xF832, 1);
   test_set_u16(test, 0xF834, 2048 * 2 - 2);
-  test_check(test);
 
-#undef run_untill
+  test_check(test);
 
   printf("End\n");
 }

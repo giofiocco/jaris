@@ -1,7 +1,6 @@
 GLOBAL _start
 EXTERN solve_path
 EXTERN get_char
-EXTERN get_delim
 EXTERN put_char
 EXTERN print
 EXTERN print_with_len

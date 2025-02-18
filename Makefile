@@ -1,7 +1,7 @@
 TARGETS=assembler linker encodemem sim inspect decodemem docs.pdf
 CFLAGS=-Wall -Wextra -std=c99 -g
 
-STDLIB_FILES=mul div solve_path open_file read_file execute exit put_char print get_char get_delim string
+STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string
 PROGRAMS=shutdown ls sh cd cat
 MEM_FILES=__bootloader __os __stdlib $(PROGRAMS)
 STDLIB_DOCS=stdlib_docs.md
@@ -22,21 +22,24 @@ asm/build:
 mem:
 	mkdir -p $@
 
+ASSEMBLER_FLAGS=-g
+LINKER_FLAGS=-g
+
 asm/build/%.o: asm/%.asm assembler | asm/build
-	./assembler -g -o $@ $<
+	./assembler $(ASSEMBLER_FLAGS) -o $@ $<
 
 mem/__bootloader: asm/build/bootloader.o linker | mem
-	./linker --bin --nostdlib -o $@ $<
-	wc -c $@ 
+	./linker $(LINKER_FLAGS) --bin --nostdlib -o $@ $<
+	wc -c $@
 
 mem/__os: asm/build/os.o mem/__stdlib linker | mem
-	./linker -g -o $@ $<
+	./linker $(LINKER_FLAGS) -o $@ $<
 
 mem/__stdlib: $(patsubst %,asm/build/%.o,$(STDLIB_FILES)) linker | mem 
-	./linker -g --so --nostdlib -o $@ $(filter %.o, $^) 
+	./linker $(LINKER_FLAGS) --so --nostdlib -o $@ $(filter %.o, $^) 
 
 mem/%: asm/build/%.o mem/__stdlib linker | mem
-	./linker -g -o $@ $<
+	./linker $(LINKER_FLAGS) -o $@ $<
 
 ARG_PARSER_LIB=argparse/argparse.c argparse/argparse.h
 SV_LIB=mystb/sv.h

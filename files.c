@@ -12,19 +12,36 @@
 void symbol_list_dump(symbol_t *symbols, uint16_t count) {
   assert(symbols);
 
+  printf("SYMBOLS: %d\n", count);
   for (int i = 0; i < count; ++i) {
     symbol_t *s = &symbols[i];
-    printf("%s: %04X\n", s->image, s->pos);
-    printf("\tRELOCS:");
-    for (int j = 0; j < s->reloc_count; ++j) {
-      printf(" %04X", s->relocs[j]);
+    printf("%02d) %s: %04X\n", i, s->image, s->pos);
+    if (s->reloc_count + s->relreloc_count > 0) {
+      printf("\t");
+      for (int j = 0; j < s->reloc_count; ++j) {
+        printf("%04X ", s->relocs[j]);
+      }
+      for (int j = 0; j < s->relreloc_count; ++j) {
+        printf("$%04X ", s->relrelocs[j]);
+      }
+      printf("\n");
     }
-    printf("\n");
-    printf("\tRELRELOCS:");
-    for (int j = 0; j < s->relreloc_count; ++j) {
-      printf(" %04X", s->relrelocs[j]);
+    /*
+    if (s->reloc_count) {
+      printf("\tRELOCS:");
+      for (int j = 0; j < s->reloc_count; ++j) {
+        printf(" %04X", s->relocs[j]);
+      }
+      printf("\n");
     }
-    printf("\n");
+    if (s->relreloc_count) {
+      printf("\tRELRELOCS:");
+      for (int j = 0; j < s->relreloc_count; ++j) {
+        printf(" %04X", s->relrelocs[j]);
+      }
+      printf("\n");
+    }
+    */
   }
 }
 
@@ -68,30 +85,39 @@ void symbols_list_encode(symbol_t *symbols, uint16_t count, FILE *file) {
   }
 }
 
+void code_dump(uint8_t *code, uint16_t code_size) {
+  assert(code);
+  printf("CODE: %d", code_size);
+  for (int i = 0; i < code_size; ++i) {
+    printf("%s%02X", i % 32 == 0 ? "\n\t" : " ", code[i]);
+  }
+  printf("\n");
+}
+
+void relocs_dump(reloc_entry_t *relocs, uint16_t reloc_count) {
+  assert(relocs);
+
+  printf("RELOCS: %d\n", reloc_count);
+  for (int i = 0; i < reloc_count; ++i) {
+    printf("\t%04X %04X\n", relocs[i].where, relocs[i].what);
+  }
+}
+
 void obj_dump(obj_t *obj) {
   assert(obj);
 
-  printf("CODE: %d\n", obj->code_size);
-  printf("\t");
-  for (int i = 0; i < obj->code_size; ++i) {
-    printf("%s%02X", i != 0 ? " " : "", obj->code[i]);
-  }
-  printf("\n");
-  printf("RELOC: %d\n", obj->reloc_count);
-  for (int i = 0; i < obj->reloc_count; ++i) {
-    printf("\t%04X %04X\n", obj->relocs[i].where, obj->relocs[i].what);
-  }
+  code_dump(obj->code, obj->code_size);
+  relocs_dump(obj->relocs, obj->reloc_count);
   printf("GLOBALS:");
   for (int i = 0; i < obj->global_count; ++i) {
-    printf(" %04X", obj->globals[i]);
+    printf(" %d", obj->globals[i]);
   }
   printf("\n");
   printf("EXTERNS:");
   for (int i = 0; i < obj->extern_count; ++i) {
-    printf(" %04X", obj->externs[i]);
+    printf(" %d", obj->externs[i]);
   }
   printf("\n");
-  printf("SYMBOLS: %d\n", obj->symbol_count);
   symbol_list_dump(obj->symbols, obj->symbol_count);
 }
 
@@ -375,19 +401,8 @@ void obj_encode_file(obj_t *obj, char *filename) {
 void exe_dump(exe_t *exe) {
   assert(exe);
 
-  printf("CODE: %d\n", exe->code_size);
-  printf("\t");
-  for (int i = 0; i < exe->code_size; ++i) {
-    if (i != 0) {
-      printf(" ");
-    }
-    printf("%02X", exe->code[i]);
-  }
-  printf("\n");
-  printf("RELOC: %d\n", exe->reloc_count);
-  for (int i = 0; i < exe->reloc_count; ++i) {
-    printf("\t%04X %04X\n", exe->relocs[i].where, exe->relocs[i].what);
-  }
+  code_dump(exe->code, exe->code_size);
+  relocs_dump(exe->relocs, exe->reloc_count);
   printf("DYNAMIC LINKING: %d\n", exe->dynamic_count);
   for (int i = 0; i < exe->dynamic_count; ++i) {
     if (exe->dynamics[i].file_name[0] == 1) {
@@ -400,7 +415,6 @@ void exe_dump(exe_t *exe) {
       printf("\t\t%04X %04X\n", exe->dynamics[i].relocs[j].where, exe->dynamics[i].relocs[j].what);
     }
   }
-  printf("SYMBOLS: %d\n", exe->symbol_count);
   symbol_list_dump(exe->symbols, exe->symbol_count);
 }
 
@@ -468,8 +482,8 @@ void exe_state_check_exe(exe_state_t *state) {
         continue;
       }
 
-      s->pos = exe_state_find_so_global(state, i, s->image);
-      if (s->pos == 0xFFFF) {
+      uint16_t pos = exe_state_find_so_global(state, i, s->image);
+      if (pos == 0xFFFF) {
         continue;
       }
       done[j] = 1;
@@ -483,7 +497,7 @@ void exe_state_check_exe(exe_state_t *state) {
 
       for (int k = 0; k < s->reloc_count; ++k) {
         assert(de->reloc_count + 1 < INTERN_RELOC_MAX_COUNT);
-        de->relocs[de->reloc_count++] = (reloc_entry_t){s->relocs[i], s->pos};
+        de->relocs[de->reloc_count++] = (reloc_entry_t){s->relocs[i], pos};
       }
     }
   }
@@ -494,16 +508,36 @@ void exe_state_check_exe(exe_state_t *state) {
     }
     symbol_t *s = &state->exe.symbols[state->externs[i]];
 
-    uint16_t pos = exe_state_find_global(state, s->image);
-    if (pos == 0xFFFF) {
+    s->pos = exe_state_find_global(state, s->image);
+    if (s->pos == 0xFFFF) {
       eprintf("global unset: %s", s->image);
+    }
+  }
+
+  for (int i = 0; i < state->extern_count; ++i) {
+    symbol_t *s = &state->exe.symbols[state->externs[i]];
+    if (s->pos == 0xFFFF) {
+      continue;
     }
 
     for (int j = 0; j < s->reloc_count; ++j) {
       assert(state->exe.reloc_count + 1 < RELOC_MAX_COUNT);
-      state->exe.relocs[state->exe.reloc_count++] = (reloc_entry_t){s->relocs[j], pos};
+      state->exe.relocs[state->exe.reloc_count++] = (reloc_entry_t){s->relocs[j], s->pos};
     }
   }
+
+  /*
+  for (int i = 0; i < state->exe.symbol_count; ++i) {
+    symbol_t *s = &state->exe.symbols[i];
+    if (s->pos == 0xFFFF) {
+      continue;
+    }
+    for (int j = 0; j < s->reloc_count; ++j) {
+      assert(state->exe.reloc_count + 1 < RELOC_MAX_COUNT);
+      state->exe.relocs[state->exe.reloc_count++] = (reloc_entry_t){s->relocs[j], s->pos};
+    }
+  }
+  */
 
   for (int i = 0; i < state->exe.reloc_count; ++i) {
     reloc_entry_t *reloc = &state->exe.relocs[i];
@@ -610,26 +644,13 @@ void bin_encode_file(exe_t *exe, char *filename) {
 void so_dump(so_t *so) {
   assert(so);
 
-  printf("CODE: %d\n", so->code_size);
-  printf("\t");
-  for (int i = 0; i < so->code_size; ++i) {
-    if (i != 0) {
-      printf(" ");
-    }
-    printf("%02X", so->code[i]);
-  }
-  printf("\n");
-  printf("RELOC: %d\n", so->reloc_count);
-  for (int i = 0; i < so->reloc_count; ++i) {
-    printf("\t%04X %04X\n", so->relocs[i].where, so->relocs[i].what);
-  }
+  code_dump(so->code, so->code_size);
+  relocs_dump(so->relocs, so->reloc_count);
   printf("GLOBALS:");
   for (int i = 0; i < so->global_count; ++i) {
-    printf(" %04X", so->globals[i]);
+    printf(" %d", so->globals[i]);
   }
   printf("\n");
-  printf("\n");
-  printf("SYMBOLS: %d\n", so->symbol_count);
   symbol_list_dump(so->symbols, so->symbol_count);
 }
 
