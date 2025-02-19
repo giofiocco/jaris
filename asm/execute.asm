@@ -69,7 +69,7 @@ dynamic_reloc:
   -- ^ dynamic_reloc_count stdlib_start dynamic_count ram_start argv
   RAM_A file CALL read_u16 A_B PEEKAR 0x08 SUM PUSHA
   -- ^ where dynamic_reloc_count stdlib_start dynamic_count ram_start argv
-  RAM_A file CALL read_u16 A_B PEEKAR 0x08 SUM
+  RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM
   POPB A_rB
   POPA DECA JMPRNZ $dynamic_reloc
   -- ^ stdlib_start dynamic_count ram_start argv
