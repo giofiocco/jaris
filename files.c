@@ -497,7 +497,7 @@ void exe_state_check_exe(exe_state_t *state) {
 
       for (int k = 0; k < s->reloc_count; ++k) {
         assert(de->reloc_count + 1 < INTERN_RELOC_MAX_COUNT);
-        de->relocs[de->reloc_count++] = (reloc_entry_t){s->relocs[i], pos};
+        de->relocs[de->reloc_count++] = (reloc_entry_t){s->relocs[k], pos};
       }
     }
   }
