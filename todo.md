@@ -17,9 +17,14 @@ merge some asm files together
 
 - print exitcode
 
+# Assembler
+
+- warn macro unused
+- warn label unused
+- warn if extern not used
+
 # Linker
 
-- warn if extern not used
 - option to select the stdlib location
 
 # Sim
