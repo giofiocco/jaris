@@ -1,5 +1,7 @@
 GLOBAL exit
 
+  { iup_ptr  0xF806 }
+  { iup2_ptr 0xF808 }
   { process_table_start 0xF820 }
   { process_map_ptr 0xF804 }
   { current_process_ptr 0xF802 }
@@ -18,6 +20,25 @@ compute_mask:
   A_B POPA SHR PUSHA B_A DECA JMPRNZ $compute_mask
   -- mask = 0x8000 << index
 
+  -- page = SP / 2048
+  SP_A SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR INCA
+  A_B RAM_AL 0x10 SUB JMPRNN $set_iup2
+  B_A
+  RAM_B 0x8000 PUSHB
+page_mask:
+  -- page_mask process_mask exit_code [page, _]
+  A_B POPA SHR PUSHA B_A DECA JMPRNZ $page_mask
+  RAM_B iup_ptr rB_A A_B POPA SUB RAM_B iup_ptr A_rB -- iup -= page_mask
+  JMPR $page_mask_done
+set_iup2:
+  -- process_mask exit_code [_, page]
+  RAM_B 0x8000 PUSHB
+page_mask2:
+  RAM_A 0xAEDA HLT -- TODO: test
+  -- page_mask process_mask exit_code [page, _]
+  A_B POPA SHR PUSHA B_A DECA JMPRNZ $page_mask2
+  RAM_B iup2_ptr rB_A A_B POPA SUB RAM_B iup2_ptr A_rB -- iup -= page_mask
+page_mask_done:
   -- ^ process_mask exit_code
   RAM_B process_map_ptr rB_A A_B POPA SUB
   RAM_B process_map_ptr A_rB -- *process_map_ptr -= process_mask

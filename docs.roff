@@ -2,11 +2,12 @@
 Jaris Documentation
 .AU
 Giovanni Fiocco
-.\".AB [no]
-.\"abstract
-.\".AE
+\".AB [no]
+\"abstract
+\".AE
 
-all MI are and-ed with clock
+.PP
+All micro instructions are and-ed with clock.
 
 .NH 1
 Module's diagram
@@ -218,3 +219,36 @@ buffer(0.2)
 line right 0.3
 line from last line.e + (0, -1.2) to last line.e + (0, 0.6)
 .PE
+
+.NH 2
+Threads module
+.PP
+
+Instructions:
+.IP \[bu]
+change thread
+.IP \[bu]
+copy A B SP
+.IP \[bu]
+set other IP
+
+.SM
+.PS
+IP1: box "IP1"
+move
+A1: box "A1"
+move
+B1: box "B1"
+move
+SP1: box "SP1"
+move to IP1.sw then down 1; right
+IP2: box "IP2"
+move
+A2: box "A2"
+move
+B2: box "B2"
+move
+SP2: box "SP2"
+.PE
+
+

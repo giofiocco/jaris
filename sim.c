@@ -662,35 +662,35 @@ void test_check(test_t *test) {
   assert(test);
   int fail = 0;
 
-  for (int i = 0; i < 1 << 16; ++i) {
-    if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
-      int j = i;
-      while (
-          j + 1 < 1 << 16
-          && ((test->test_ram[j] >= 0 && test->test_ram[j] != test->cpu.RAM[j])
-              || (test->test_ram[j + 1] >= 0 && test->test_ram[j + 1] != test->cpu.RAM[j + 1]))) {
-        ++j;
-      }
-      if (!fail) {
-        printf("ERROR:\n");
-        fail = 1;
-      }
-      printf("- %04X |", i - i % 2);
-      for (int k = i - i % 2; k < j; k += 2) {
-        printf(" %04X", cpu_read16(&test->cpu, k));
-      }
-      printf("\n+ %04X |", i - i % 2);
-      for (int k = i - i % 2; k < j; k += 2) {
-        printf(" %04X", test->test_ram[k] | (test->test_ram[k + 1] << 8));
-      }
-      printf("\n\n");
-      i = j;
-    }
-  }
-  if (fail) {
-    exit(1);
-  }
-  return;
+  // for (int i = 0; i < 1 << 16; ++i) {
+  //   if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
+  //     int j = i;
+  //     while (
+  //         j + 1 < 1 << 16
+  //         && ((test->test_ram[j] >= 0 && test->test_ram[j] != test->cpu.RAM[j])
+  //             || (test->test_ram[j + 1] >= 0 && test->test_ram[j + 1] != test->cpu.RAM[j + 1]))) {
+  //       ++j;
+  //     }
+  //     if (!fail) {
+  //       printf("ERROR:\n");
+  //       fail = 1;
+  //     }
+  //     printf("- %04X |", i - i % 2);
+  //     for (int k = i - i % 2; k < j; k += 2) {
+  //       printf(" %04X", cpu_read16(&test->cpu, k));
+  //     }
+  //     printf("\n+ %04X |", i - i % 2);
+  //     for (int k = i - i % 2; k < j; k += 2) {
+  //       printf(" %04X", test->test_ram[k] | (test->test_ram[k + 1] << 8));
+  //     }
+  //     printf("\n\n");
+  //     i = j;
+  //   }
+  // }
+  // if (fail) {
+  //   exit(1);
+  // }
+  // return;
 
   for (int i = 0; i < 1 << 16; ++i) {
     if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
@@ -714,6 +714,14 @@ void test_check(test_t *test) {
     exit(1);
   }
 }
+
+#define test_assert(cond__)                     \
+  do {                                          \
+    if (!(cond__)) {                            \
+      printf("ERROR: failed assert: " #cond__); \
+      exit(1);                                  \
+    }                                           \
+  } while (0);
 
 void test_set_range(test_t *test, int ram_start, int count, uint8_t *data) {
   assert(test);
@@ -772,7 +780,7 @@ void test() {
   while (running && !(cpu->IR == JMPA && cpu->A == 0)) {
     tick(cpu, &running);
   }
-  assert(running);
+  test_assert(running);
 
   printf("\tCheck if os is loaded\n");
 
@@ -794,15 +802,19 @@ void test() {
 
   uint16_t execute_ptr = 0;
   uint16_t open_file_ptr = 0;
+  uint16_t exit_ptr = 0;
   for (int i = 0; i < stdlib.global_count; ++i) {
     if (strcmp(stdlib.symbols[stdlib.globals[i]].image, "execute") == 0) {
       execute_ptr = stdlib.symbols[stdlib.globals[i]].pos + os.code_size;
     } else if (strcmp(stdlib.symbols[stdlib.globals[i]].image, "open_file") == 0) {
       open_file_ptr = stdlib.symbols[stdlib.globals[i]].pos + os.code_size;
+    } else if (strcmp(stdlib.symbols[stdlib.globals[i]].image, "exit") == 0) {
+      exit_ptr = stdlib.symbols[stdlib.globals[i]].pos + os.code_size;
     }
   }
   assert(execute_ptr != 0);
   assert(open_file_ptr != 0);
+  assert(exit_ptr != 0);
 
   test_set_range(test, os.code_size, stdlib.code_size, stdlib.code);
   test_check(test);
@@ -816,14 +828,14 @@ void test() {
 
   printf("\tRun os till CALL execute sh\n");
 
-  while (running && !(cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_ptr)) {
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_ptr)) {
     tick(cpu, &running);
   }
-  assert(running);
+  test_assert(running);
 
-  assert(cpu->RAM[cpu->A] == 's');
-  assert(cpu->RAM[cpu->A + 1] == 'h');
-  assert(cpu->RAM[cpu->A + 2] == 0);
+  test_assert(cpu->RAM[cpu->A] == 's');
+  test_assert(cpu->RAM[cpu->A + 1] == 'h');
+  test_assert(cpu->RAM[cpu->A + 2] == 0);
 
   printf("\tCheck os struct, process and stdout\n");
 
@@ -839,7 +851,6 @@ void test() {
   assert(stdout_ptr % 2 == 0);
   test_set_u16(test, stdout_ptr, stdout_ptr + 4);
   test_set_u16(test, stdout_ptr + 2, stdout_ptr + 256);
-  test_unset_range(test, stdout_ptr + 4, 256 - 4);
   test_check(test);
 
   test_unset_range(test, 0xF824, 2);
@@ -849,7 +860,7 @@ void test() {
   while (running && cpu->IR != JMPA) {
     tick(cpu, &running);
   }
-  assert(running);
+  test_assert(running);
 
   printf("\tCheck if sh is loaded and processes\n");
 
@@ -863,8 +874,44 @@ void test() {
   test_set_u16(test, 0xF806, 0xC000);
   test_set_u16(test, 0xF830, 0xF820);
   test_set_u16(test, 0xF832, 1);
-  test_set_u16(test, 0xF834, 2048 * 2 - 2);
+  test_set_u16(test, 0xF834, 0);
+  test_check(test);
+  test_unset_range(test, 0xF834, 2);
 
+  printf("\tInput 'ls'\n");
+
+  uint16_t sh_input = 0;
+  for (int i = 0; i < sh.symbol_count; ++i) {
+    if (strcmp(sh.symbols[i].image, "input") == 0) {
+      sh_input = sh.symbols[i].pos + 2048;
+      break;
+    }
+  }
+  assert(sh_input != 0);
+
+  load_input_string(cpu, "ls\n");
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_ptr)) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+
+  test_set_range(test, sh_input, 2, (uint8_t *)"ls");
+  test_set_u16(test, stdout_ptr, stdout_ptr + 4 + 5);
+  test_set_range(test, stdout_ptr + 4, 5, (uint8_t *)"$ ls\n");
+  test_check(test);
+
+  printf("\tRun ls command till exit\n");
+
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_ptr)) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+  while (running && cpu->RAM[cpu->IP] != RET) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+
+  test_unset_range(test, stdout_ptr, 256); // TODO: stdout
   test_check(test);
 
   printf("End\n");

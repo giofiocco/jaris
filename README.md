@@ -279,6 +279,10 @@ The first process struct is the os-process
 | 2        | cwd sec               |
 | 2        | SP                    |
 
+The SP is 0x0000 and set otherwise when execute another process
+
+TODO: when multithreading redo SP -> RET and SP ?
+
 ### FILE struct
 
 | size [B] | description |

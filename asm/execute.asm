@@ -15,7 +15,7 @@ EXTERN read_u16
 
 ALIGN file: db 4
 
--- [cstr path, cstr argv[] (null terminated list)] -> [_, _]
+-- [cstr path, cstr argv] -> [_, _]
 -- crash [0xFFFF, _] if file not found
 -- crash [0xFFFE, _] if file not an exe
 -- crash [0xFFFA, _] if no more space in ram
@@ -98,16 +98,20 @@ search_process:
   PEEKB rB_A RAM_BL cwd_offset SUM A_B rB_A PUSHA
   PEEKAR 0x04 RAM_BL cwd_offset SUM A_B POPA A_rB -- process_ptr->cwd = process_ptr->parent_process->cwd
 
-  PEEKAR 0x04 RAM_B page_size SUM DECA DECA PUSHA
-  PEEKAR 0x04 RAM_BL SP_offset SUM A_B POPA A_rB -- process_ptr->SP = ram_start + page_size - 2 
+  PEEKAR 0x04 RAM_B page_size SUM DECA DECA
+  A_B PEEKAR 0x06 A_rB -- *(ram_start + page_size - 2) = argv
+  B_A DECA DECA PUSHA
 
-  SP_A RAM_BL 0x06 SUM PUSHA -- sp before return ptr
-  PEEKAR 0x04 A_B rB_A RAM_BL SP_offset SUM A_B POPA A_rB -- process_ptr->parent_process->SP = sp before return ptr
+  -- ^ new_sp process_ptr ram_start argv
+  PEEKAR 0x04 RAM_BL SP_offset SUM A_B RAM_AL 0x00 A_rB -- process_ptr->SP = 0
 
-  -- ^ process_ptr ram_start argv
-  INCSP
-  PEEKAR 0x04 A_B
-  POPA JMPA
+  SP_A RAM_BL 0x08 SUM PUSHA -- sp before return ptr
+  PEEKAR 0x06 A_B rB_A RAM_BL SP_offset SUM A_B POPA A_rB -- process_ptr->parent_process->SP = sp before return ptr
+
+  POPA INCSP POPB -- [new_sp, ram_start]
+  A_SP
+  B_A POPB -- [ram_start, argv]
+  JMPA
 
 not_found:
   RAM_A 0xFFFF
@@ -159,32 +163,6 @@ no_more_space:
   -- ^ _ _
   RAM_A 0xFFFE
   INCSP INCSP RET
-
--- [char first_char_of_name, ram_start] -> [_, _]
---dynamic_link:
---  PUSHB PUSHA
---  RAM_A file CALL read_u8
---  A_B POPA B_AH
---
---  A_B RAM_AL 0x01 SUB JMPRNZ $not_stdlib
---
---
---  RAM_B stdlib_ptr_ptr rB_A PUSHA
---  RAM_A file CALL read_u16
---  -- ^ lib_pos ram_start
---  CMPA JMPRZ $done_dynamic_reloc
---dynamic_reloc:
---  PUSHA
---  -- ^ reloc_count lib_pos ram_start
---  RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM PUSHA
---  -- ^ where reloc_count lib_pos ram_start
---  RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM
---  POPB A_rB
---  POPA DECA JMPRNZ $dynamic_reloc
---done_dynamic_reloc:
---  -- ^ lib_pos ram_start
---  INCSP INCSP
---  RET
 
 not_stdlib:
   -- ^ dynamic_count ram_start argv

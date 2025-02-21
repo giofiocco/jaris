@@ -19,7 +19,7 @@ _start:
   RAM_B stdout RAM_AL 0x04 SUM RAM_B stdout A_rB -- stdout->next_char_ptr
   RAM_A stdout INCA INCA A_B RAM_A stdout_end A_rB -- stdout->end_ptr
 
-  RAM_A path CALL execute
+  RAM_A path RAM_BL 0x00 CALL execute
 
   RAM_B 0x0000
   HLT

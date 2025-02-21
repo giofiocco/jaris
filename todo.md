@@ -56,3 +56,7 @@ merge some asm files together
 argv: arg 0x0000
 arg: "asdf" 0x00
 ```
+
+# execute
+
+- allocate_page not as a function
