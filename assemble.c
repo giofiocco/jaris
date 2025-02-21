@@ -196,7 +196,7 @@ token_t token_next(tokenizer_t *tokenizer) {
                           {start, len + 2},
                           tokenizer->loc,
                           {.num = strtol(start, NULL, 16)}};
-        tokenizer->loc.col += len;
+        tokenizer->loc.col += len + 2;
       } else if (isdigit(*tokenizer->buffer)) {
         char *start = tokenizer->buffer;
         int len = 0;
@@ -340,8 +340,7 @@ bytecode_t compile(preprocessor_t *pre) {
           } else if (arg.kind == T_SYM) {
             bytecode = bytecode_with_sv(BINSTLABEL, token.as.inst, arg.image);
           } else if (arg.kind == T_STRING && arg.image.len == 2 + 2) {
-            bytecode = (bytecode_t){
-                BINSTHEX2, token.as.inst, {.num = arg.image.start[1] | (arg.image.start[2] << 8)}};
+            bytecode = (bytecode_t){BINSTHEX2, token.as.inst, {.num = arg.image.start[1] | (arg.image.start[2] << 8)}};
           } else {
             eprintfloc(arg.loc, "expected HEX2, found %s", token_kind_to_string(arg.kind));
           }
