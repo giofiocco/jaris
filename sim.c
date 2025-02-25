@@ -11,6 +11,7 @@
 #define KEY_FIFO_COUNT 1024
 
 #define SV_IMPLEMENTATION
+#include "errors.h"
 #include "files.h"
 #include "instructions.h"
 
@@ -76,8 +77,7 @@ void cpu_init(cpu_t *cpu, char *mem_path) {
 
   FILE *file = fopen(mem_path, "rb");
   if (!file) {
-    fprintf(stderr, "ERROR: cannot open file: 'mem.bin': %s\n", strerror(errno));
-    exit(1);
+    eprintf("cannot open file: 'mem.bin': %s\n", strerror(errno));
   }
   assert(fread(cpu->MEM, 1, 1 << 19, file) == 1 << 19);
   assert(fclose(file) == 0);
@@ -364,8 +364,7 @@ uint8_t find_scan_code(char c) {
     }
   }
   if (code == 0) {
-    printf("no scancode for '%c'\n", c);
-    exit(1);
+    eprintf("no scancode for '%c'\n", c);
   }
   return code;
 }
@@ -387,6 +386,7 @@ void load_input_string(cpu_t *cpu, char *string) {
       ++string;
       assert(cpu->key_fifo_i + 2 < 1000);
       cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x1C;
+
       cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x1C + 0x80;
     } else {
       uint8_t code = find_scan_code(*string);
@@ -695,18 +695,12 @@ void test_check(test_t *test) {
   for (int i = 0; i < 1 << 16; ++i) {
     if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
       if (!fail) {
-        printf("ERROR:\n");
+        fprintf(stderr, "ERROR:\n");
       }
       fail = 1;
-      printf("  at 0x%04X %05d expected %02X,   found %02X\n",
-             i,
-             i,
-             test->test_ram[i],
-             test->cpu.RAM[i]);
+      fprintf(stderr, "  at 0x%04X %05d expected %02X,   found %02X\n", i, i, test->test_ram[i], test->cpu.RAM[i]);
       if (i % 2 == 0) {
-        printf("                  expected %04X, found %04X\n",
-               test->test_ram[i] | (test->test_ram[i + 1] << 8),
-               cpu_read16(&test->cpu, i));
+        fprintf(stderr, "                  expected %04X, found %04X\n", test->test_ram[i] | (test->test_ram[i + 1] << 8), cpu_read16(&test->cpu, i));
       }
     }
   }
@@ -715,12 +709,11 @@ void test_check(test_t *test) {
   }
 }
 
-#define test_assert(cond__)                     \
-  do {                                          \
-    if (!(cond__)) {                            \
-      printf("ERROR: failed assert: " #cond__); \
-      exit(1);                                  \
-    }                                           \
+#define test_assert(cond__)               \
+  do {                                    \
+    if (!(cond__)) {                      \
+      eprintf("failed assert: " #cond__); \
+    }                                     \
   } while (0);
 
 void test_set_range(test_t *test, int ram_start, int count, uint8_t *data) {
@@ -895,7 +888,7 @@ void test() {
   }
   test_assert(running);
 
-  test_set_range(test, sh_input, 2, (uint8_t *)"ls");
+  test_set_range(test, sh_input, 3, (uint8_t *)"ls\0");
   test_set_u16(test, stdout_ptr, stdout_ptr + 4 + 5);
   test_set_range(test, stdout_ptr + 4, 5, (uint8_t *)"$ ls\n");
   test_check(test);
@@ -912,6 +905,41 @@ void test() {
   test_assert(running);
 
   test_unset_range(test, stdout_ptr, 256); // TODO: stdout
+  test_check(test);
+
+  printf("\tRun `cd dir`\n");
+
+  load_input_string(cpu, "cd dir\n");
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_ptr)) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+  while (running && cpu->RAM[cpu->IP] != RET) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+
+  test_set_range(test, sh_input, 7, (uint8_t *)"cd\0dir\0");
+  // TODO: stdout
+  test_set_u16(test, 0xF832, 7);
+  test_check(test);
+
+  test_unset_range(test, sh_input, 128);
+
+  printf("\tRun `/ls`\n");
+
+  load_input_string(cpu, "/ls\n");
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_ptr)) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+  while (running && cpu->RAM[cpu->IP] != RET) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+
+  // TODO: stdout
+  // test success
   test_check(test);
 
   printf("End\n");

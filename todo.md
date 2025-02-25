@@ -1,5 +1,7 @@
 bss section
 
+emit graph
+
 maybe check that reloc where is an even number
 
 test flag in assembler linker etc to test encoding and others
@@ -8,10 +10,6 @@ put the exe and exe_state things in link
 and obj things in assemble
 
 merge some asm files together
-
-# solve_path
-
-- absolute path
 
 # sh
 
@@ -28,6 +26,8 @@ merge some asm files together
 - option to select the stdlib location
 
 # Sim
+
+- test with a fixed mem.bin
 
 - step mode add commands
   - `read 0010` to read from ram

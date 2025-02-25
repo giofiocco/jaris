@@ -13,7 +13,7 @@ all: $(TARGETS) $(STDLIB_DOCS)
 $(STDLIB_DOCS): makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES))
 	perl makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES)) > $@
 
-mem.bin: $(patsubst %,mem/%,$(MEM_FILES)) encodemem | mem
+mem.bin: $(patsubst %,mem/%,$(MEM_FILES)) encodemem mem/ | mem
 	./encodemem -d mem -o mem.bin
 
 asm/build:
@@ -64,7 +64,7 @@ decodemem: decodemem.c
 inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
-sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) mem.bin
+sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) $(ERRORS_LIB) mem.bin
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
 docs.pdf: docs.roff

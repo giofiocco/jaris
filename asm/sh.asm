@@ -43,6 +43,7 @@ no_args:
   RAM_A input CALL solve_path
   CMPB JMPRN $not_found
   RAM_A input POPB CALL execute
+
   JMPR $_start
 
 not_found:
