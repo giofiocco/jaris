@@ -7,6 +7,7 @@ EXTERN print_with_len
 EXTERN execute
 EXTERN exit
 EXTERN str_find_char
+EXTERN print_int
 
   { current_process 0xF802 }
   { cwd_offset 0x02 }
@@ -43,6 +44,9 @@ no_args:
   RAM_A input CALL solve_path
   CMPB JMPRN $not_found
   RAM_A input POPB CALL execute
+
+  CALL print_int
+  RAM_AL " " CALL put_char
 
   JMPR $_start
 

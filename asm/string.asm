@@ -18,4 +18,3 @@ char_not_found:
   -- ^ c
   RAM_AL 0x00
   INCSP RET
-

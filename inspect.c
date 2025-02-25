@@ -125,10 +125,12 @@ void inspect_mem(char *filename) {
 int main(int argc, char **argv) {
   int kind = 0;
   int disassemble_flag = 0;
+  // int emit_graph = 0;
 
   struct argparse_option options[] = {
       OPT_GROUP("Options:"),
       OPT_BOOLEAN('d', "disassemble", &disassemble_flag, "dump disassembled code", NULL, 0, 0),
+      // OPT_BOOLEAN('g', "emit-graph", &emit_graph, "emit graph as dot file for graphviz (if possible) (pipe to dot command)", NULL, 0, 0),
       OPT_HELP(),
       OPT_GROUP("Kinds:"),
       OPT_BIT(0, "obj", &kind, "analyse the file as an obj", NULL, KOBJ, 0),

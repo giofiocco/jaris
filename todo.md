@@ -11,10 +11,6 @@ and obj things in assemble
 
 merge some asm files together
 
-# sh
-
-- print exitcode
-
 # Assembler
 
 - warn macro unused

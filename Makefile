@@ -9,7 +9,6 @@ STDLIB_DOCS=stdlib_docs.md
 .PHONY: all
 all: $(TARGETS) $(STDLIB_DOCS)
 
-
 $(STDLIB_DOCS): makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES))
 	perl makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES)) > $@
 

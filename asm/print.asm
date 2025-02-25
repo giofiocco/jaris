@@ -1,6 +1,9 @@
 GLOBAL print
 GLOBAL print_with_len
 GLOBAL put_char
+GLOBAL print_int
+
+EXTERN div
 
   { stdout_ptr_ptr 0xF80A }
 
@@ -71,4 +74,24 @@ put_char:
   -- stdout full
   RAM_A 0xEFFA 
 end:
+  RET
+
+
+-- [u16 num, _] -> [_, _]
+-- crash [0xEFFA, _] if stdout is full
+print_int:
+  CMPA JMPRNZ $print_digit
+  RAM_AL "0" CALLR $put_char
+  RET
+
+print_digit:
+  -- [num, _]
+  CMPA JMPRNZ $digit_to_char
+  RET
+digit_to_char:
+  A_B RAM_AL 0x0A CALL div
+  PUSHB
+  CALLR $print_digit
+  POPA RAM_BL "0" SUM
+  CALLR $put_char
   RET
