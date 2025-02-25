@@ -15,10 +15,11 @@ _start:
   CMPB JMPRZ $no_arg
   PUSHB
   B_A CALL solve_path
-  CMPB JMPRN $not_found
+  CMPA JMPRZ $not_found
 
   A_SEC RAM_NDX 0x00 MEM_A RAM_BL "D" SUB JMPRNZ $not_dir
 
+  SEC_A
   CALLR $set_parent_cwd
   INCSP
   RAM_AL 0x00 CALL exit
