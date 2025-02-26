@@ -26,7 +26,7 @@ _start:
 
 no_arg:
   RAM_AL 0x01 CALLR $set_parent_cwd
-  CALL exit
+  RAM_AL 0x00 CALL exit
 
 not_found:
   -- ^ path

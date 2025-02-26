@@ -9,8 +9,6 @@ test flag in assembler linker etc to test encoding and others
 put the exe and exe_state things in link
 and obj things in assemble
 
-merge some asm files together
-
 # Assembler
 
 - warn macro unused
@@ -55,4 +53,5 @@ arg: "asdf" 0x00
 
 # execute
 
+- errors instead of crashes (but how do you diff between exitcode or error from execute?)
 - allocate_page not as a function

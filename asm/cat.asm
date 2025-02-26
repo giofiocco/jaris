@@ -14,8 +14,8 @@ file: db 4
 _start:
   CMPB JMPRZ $no_arg
 
-  RAM_B file CALL open_file
-  CMPB JMPRN $not_found
+  B_A RAM_B file CALL open_file
+  CMPA JMPRZ $not_found
 loop:
   RAM_A file CALL read_u8
   INCA JMPRZ $end

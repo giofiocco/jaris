@@ -45,9 +45,9 @@ no_args:
   CMPB JMPRN $not_found
   RAM_A input POPB CALL execute
 
+  CMPA JMPRZ $_start
   CALL print_int
   RAM_AL " " CALL put_char
-
   JMPR $_start
 
 not_found:

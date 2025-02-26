@@ -1,4 +1,5 @@
 GLOBAL execute
+
 EXTERN open_file
 EXTERN read_u8
 EXTERN read_u16
