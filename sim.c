@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <errno.h>
+#include <raylib.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -15,6 +16,10 @@
 #include "files.h"
 #include "instructions.h"
 
+#define SCREEN_WIDTH  800
+#define SCREEN_HEIGHT 600
+#define ZOOM          1
+
 // clang-format off
 typedef enum {
   _HLT,
@@ -24,13 +29,12 @@ typedef enum {
   Bi, Bo,
   RAM, RAMo, RAM16,
   Xi, Yi, ALUo, _SUB, _SHR, Ci,
-  SPi, SPo, SPu, SPm,
+  SPi, SPo,
   IRi,
   SCr,
   SECi, SECo, NDXi, NDXo, MEMi, MEMo,
-
   KEYo,
-
+  GPUAi, GPUi,
   MICROCODE_FLAG_COUNT
 } microcode_flag_t;
 // clang-format on
@@ -66,10 +70,9 @@ typedef struct {
   uint8_t KEY_FIFO[KEY_FIFO_COUNT];
   int key_fifo_i;
 
-  // uint16_t ATTRIBUTE_RAM[1 << 14];
-  // uint8_t PATTERN_RAM[1 << 14];
-  // uint8_t PALETTE_RAM[1 << 8];
-  // RenderTexture2D screen;
+  uint8_t ATTRIBUTE_RAM[1 << 15];
+  uint8_t PATTERN_RAM[1 << 15];
+  RenderTexture2D screen;
 } cpu_t;
 
 void cpu_init(cpu_t *cpu, char *mem_path) {
@@ -219,9 +222,6 @@ void tick(cpu_t *cpu, bool *running) {
   }
   if (mc & (1 << SPo)) {
     bus = cpu->SP;
-  }
-  if (mc & (1 << SPu)) {
-    cpu->SP += mc & (1 << SPm) ? -2 : 2;
   }
   if (mc & (1 << NDXo)) {
     bus = cpu->NDX;
@@ -436,10 +436,25 @@ void set_control_rom() {
       RAM_B, 3, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Bi) | micro(IPp));
   set_instruction_allflag(RAM_B, 4, micro(IPp));
   set_instruction_allflag(RAM_B, 5, micro(SCr));
-  set_instruction_allflag(INCSP, 2, micro(SPu));
-  set_instruction_allflag(INCSP, 3, micro(SCr));
-  set_instruction_allflag(DECSP, 2, micro(SPu) | micro(SPm));
-  set_instruction_allflag(DECSP, 3, micro(SCr));
+
+  set_instruction_allflag(INCSP, 2, micro(SPo) | micro(Yi));
+  set_instruction_allflag(INCSP, 3, micro(Xi));
+  set_instruction_allflag(INCSP, 4, micro(Ci) | micro(ALUo) | micro(SPi));
+  set_instruction_allflag(INCSP, 5, micro(SPo) | micro(Yi));
+  set_instruction_allflag(INCSP, 6, micro(Ci) | micro(ALUo) | micro(SPi));
+  set_instruction_allflag(INCSP, 7, micro(SCr));
+
+  set_instruction_allflag(INCSP, 2, micro(SPo) | micro(Yi));
+  set_instruction_allflag(INCSP, 3, micro(Xi));
+  set_instruction_allflag(INCSP, 4, micro(Ci) | micro(ALUo) | micro(SPi));
+  set_instruction_allflag(INCSP, 5, micro(SPo) | micro(Yi));
+  set_instruction_allflag(INCSP, 6, micro(Ci) | micro(ALUo) | micro(SPi));
+  set_instruction_allflag(INCSP, 7, micro(SCr));
+
+  // set_instruction_allflag(INCSP, 2, micro(SPu));
+  // set_instruction_allflag(INCSP, 3, micro(SCr));
+  // set_instruction_allflag(DECSP, 2, micro(SPu) | micro(SPm));
+  // set_instruction_allflag(DECSP, 3, micro(SCr));
   set_instruction_allflag(PUSHA, 2, micro(SPo) | micro(MARi));
   set_instruction_allflag(
       PUSHA, 3, micro(Ao) | micro(RAM) | micro(RAM16) | micro(SPu) | micro(SPm));
@@ -619,8 +634,8 @@ void set_control_rom() {
   set_instruction_allflag(RET, 6, micro(IPp));
   set_instruction_allflag(RET, 7, micro(SCr));
 
-  set_instruction_allflag(KEY_A, 2, micro(KEYo) | micro(Ai));
-  set_instruction_allflag(KEY_A, 3, micro(SCr));
+  set_instruction_allflag(_KEY_A, 2, micro(KEYo) | micro(Ai));
+  set_instruction_allflag(_KEY_A, 3, micro(SCr));
 
   set_instruction_allflag(HLT, 2, micro(_HLT));
 }
@@ -945,6 +960,36 @@ void test() {
   printf("End\n");
 }
 
+Color palette[8] = {
+    {0, 0, 0, 0xFF},
+    {0, 0, 0xFF, 0xFF},
+    {0, 0xFF, 0, 0xFF},
+    {0, 0xFF, 0xFF, 0xFF},
+    {0xFF, 0, 0, 0xFF},
+    {0xFF, 0, 0xFF, 0xFF},
+    {0xFF, 0xFF, 0, 0xFF},
+    {0xFF, 0xFF, 0xFF, 0xFF},
+};
+
+void compute_screen(cpu_t *cpu) {
+  assert(cpu);
+
+  BeginTextureMode(cpu->screen);
+  ClearBackground(WHITE);
+
+  for (int y = 0; y < SCREEN_HEIGHT; ++y) {
+    for (int x = 0; x < SCREEN_WIDTH; ++x) {
+      int pattern_index = cpu->ATTRIBUTE_RAM[((y / 8) << 7) | (x / 8)];
+      int dy = y & 0b111;
+      int dx = x & 0b111;
+      uint8_t color_index = (cpu->PATTERN_RAM[(pattern_index << 3) | dy] >> (dx * 4)) & 0b1111;
+      DrawPixel(x, SCREEN_HEIGHT - y, palette[color_index]);
+    }
+  }
+
+  EndTextureMode();
+}
+
 void help(int exitcode) {
   printf("Usage: sim [options]\n\n"
          "Options:\n"
@@ -956,6 +1001,7 @@ void help(int exitcode) {
          " -s | --step                      enable step mode after the cpu is HLTed\n"
          "      --real-time                 sleeps each tick to simulate a 4MHz clock\n"
          "      --mem <mem-path>            set the binary file for MEM [default mem.bin]\n"
+         "      --screen                    enable screen\n"
          " -h | --help                      print this page and exit\n",
          KEY_FIFO_COUNT);
   exit(exitcode);
@@ -999,6 +1045,10 @@ void parse_range(char *range, int *start_out, int *end_out) {
 int main(int argc, char **argv) {
   (void)argc;
 
+  if (MICROCODE_FLAG_COUNT > 32) {
+    eprintf("MICROCODE_FLAG_COUNT == %d", MICROCODE_FLAG_COUNT);
+  }
+
   set_control_rom();
 
   int step_mode = 0;
@@ -1009,6 +1059,7 @@ int main(int argc, char **argv) {
   int ram_range_end = 0;
   char *mem_path = "mem.bin";
   int print_stdout = 0;
+  int screen = 0;
 
   ++argv;
   char *arg = *argv;
@@ -1038,6 +1089,8 @@ int main(int argc, char **argv) {
         mem_path = *argv;
       } else if (strcmp(arg + 2, "stdout") == 0) {
         print_stdout = 1;
+      } else if (strcmp(arg + 2, "screen") == 0) {
+        screen = 1;
       } else if (strcmp(arg + 2, "test") == 0) {
         test();
         exit(0);
@@ -1096,15 +1149,36 @@ int main(int argc, char **argv) {
 
   load_input_string(&cpu, input);
 
+  if (screen) {
+    SetTraceLogLevel(LOG_ERROR);
+    InitWindow(SCREEN_WIDTH * ZOOM, SCREEN_HEIGHT * ZOOM, "Screen");
+    cpu.screen = LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT);
+  }
+
   bool running = true;
   int ticks = 0;
   while (running) {
+    if (screen) {
+      compute_screen(&cpu);
+      if (WindowShouldClose()) {
+        running = false;
+      }
+      BeginDrawing();
+      ClearBackground(WHITE);
+      DrawTextureEx(cpu.screen.texture, (Vector2){0, 0}, 0, ZOOM, WHITE);
+      EndDrawing();
+    }
     tick(&cpu, &running);
     ++ticks;
     if (real_time_mode) {
       sleep(1.0 / 4.0E6);
     }
   }
+  if (screen) {
+    UnloadRenderTexture(cpu.screen);
+    CloseWindow();
+  }
+
   printf("ticks: %.3fE3 (%.3f ms @ 4 MHz, %.3f ms @ 10 MHz)\n",
          (float)ticks / 1E3,
          (float)ticks * 1E3 / 4E6,

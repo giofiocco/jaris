@@ -1,0 +1,26 @@
+.TL
+Gpu Diagram
+.PP
+
+10 bit x
+10 bit y
+8 bit colors
+
+.SM
+.PS
+SIG: box "signal"
+arrow 1
+box "VGA"
+arrow <- down 0.5 from last box.s
+SHR: box "shift reg"
+arrow <- down 0.5
+CHAR: box "CHAR"
+arrow <- 0.5
+box "ATTR"
+arrow <- down 0.5
+box "pos"
+arrow <- from CHAR.s down 0.25 then right 0.5
+"0" at last arrow .e + (0.1, 0)
+arrow from SIG.s down SIG.s.y-SHR.w.y then right to SHR.w
+arrow from SIG.s down SIG.s.y-CHAR.w.y then right to CHAR.w
+.PE
