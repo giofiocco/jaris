@@ -25,7 +25,8 @@ typedef enum {
   T_STRING,
   T_ALIGN,
   T_DB,
-  T_INT
+  T_INT,
+  T_BIN,
 } token_kind_t;
 #define TOKEN_KIND_MAX_LEN 6
 
@@ -79,6 +80,7 @@ char *token_kind_to_string(token_kind_t kind) {
     case T_ALIGN: return "ALIGN";
     case T_DB: return "DB";
     case T_INT: return "INT";
+    case T_BIN: return "BIN";
   }
   assert(0);
 }
@@ -196,6 +198,24 @@ token_t token_next(tokenizer_t *tokenizer) {
                           {start, len + 2},
                           tokenizer->loc,
                           {.num = strtol(start, NULL, 16)}};
+        tokenizer->loc.col += len + 2;
+      } else if (*tokenizer->buffer == '0'
+                 && (*(tokenizer->buffer + 1) == 'b' || *(tokenizer->buffer + 1) == 'B')) {
+        char *start = tokenizer->buffer;
+        int len = 0;
+        tokenizer->buffer += 2;
+        while (*tokenizer->buffer == '0' || *tokenizer->buffer == '1') {
+          ++len;
+          ++tokenizer->buffer;
+        }
+        tokenizer->loc.len = len + 2;
+        if (len != 8) {
+          eprintfloc(tokenizer->loc, "invalid BIN");
+        }
+        token = (token_t){T_BIN,
+                          {start, len + 2},
+                          tokenizer->loc,
+                          {.num = strtol(start + 2, NULL, 2)}};
         tokenizer->loc.col += len + 2;
       } else if (isdigit(*tokenizer->buffer)) {
         char *start = tokenizer->buffer;
@@ -322,13 +342,13 @@ bytecode_t compile(preprocessor_t *pre) {
         case INST_8BITS_ARG:
         {
           token_t arg = preprocessor_token_next(pre);
-          if (arg.kind == T_HEX) {
+          if (arg.kind == T_HEX || arg.kind == T_BIN) {
             bytecode = (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.as.num}};
           } else if (arg.kind == T_STRING && arg.image.len == 3) {
             bytecode = (bytecode_t){BINSTHEX, token.as.inst, {.num = arg.image.start[1]}};
           } else {
             eprintfloc(arg.loc,
-                       "expected HEX or STRING with len 1, found %s",
+                       "expected HEX, BIN or STRING with len 1, found %s",
                        token_kind_to_string(arg.kind));
           }
         } break;
@@ -378,6 +398,9 @@ bytecode_t compile(preprocessor_t *pre) {
       break;
     case T_STRING:
       bytecode = bytecode_with_sv(BSTRING, 0, (sv_t){token.image.start + 1, token.image.len - 2});
+      break;
+    case T_BIN:
+      bytecode = (bytecode_t){BHEX, 0, {.num = token.as.num}};
       break;
     case T_NONE:
       return (bytecode_t){BNONE, 0, {}};
