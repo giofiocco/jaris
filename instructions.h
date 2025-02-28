@@ -27,6 +27,7 @@ typedef enum {
   MEM_A, MEM_AH,
   CALL, CALLR, RET,
   _KEY_A,
+  DRW,
   HLT = 0x3F
 } instruction_t;
 // clang-format on

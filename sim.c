@@ -18,7 +18,8 @@
 
 #define SCREEN_WIDTH  800
 #define SCREEN_HEIGHT 600
-#define ZOOM          1
+#define ZOOM          1.5
+#define SCREEN_PAD    10
 
 // clang-format off
 typedef enum {
@@ -29,7 +30,7 @@ typedef enum {
   Bi, Bo,
   RAM, RAMo, RAM16,
   Xi, Yi, ALUo, _SUB, _SHR, Ci,
-  SPi, SPo,
+  SPi, SPo, SPu, SPm,
   IRi,
   SCr,
   SECi, SECo, NDXi, NDXo, MEMi, MEMo,
@@ -39,7 +40,7 @@ typedef enum {
 } microcode_flag_t;
 // clang-format on
 
-#define micro(__flag__) (1 << __flag__)
+#define micro(__flag__) ((long long)1 << __flag__)
 
 typedef uint64_t microcode_t;
 
@@ -70,9 +71,11 @@ typedef struct {
   uint8_t KEY_FIFO[KEY_FIFO_COUNT];
   int key_fifo_i;
 
+  uint16_t GPUA;
   uint8_t ATTRIBUTE_RAM[1 << 15];
   uint8_t PATTERN_RAM[1 << 15];
   RenderTexture2D screen;
+  bool has_screen;
 } cpu_t;
 
 void cpu_init(cpu_t *cpu, char *mem_path) {
@@ -175,6 +178,28 @@ void dumpsbit(uint32_t num) {
   }
 }
 
+void compute_screen(cpu_t *cpu) {
+  assert(cpu);
+
+  BeginTextureMode(cpu->screen);
+  ClearBackground(WHITE);
+  for (int y = 0; y < SCREEN_HEIGHT; ++y) {
+    for (int x = 0; x < SCREEN_WIDTH; ++x) {
+      int pattern_index = cpu->ATTRIBUTE_RAM[((y / 8) << 8) + (x / 8)];
+      int dy = y & 0b111;
+      int dx = x & 0b111;
+      uint8_t color = (cpu->PATTERN_RAM[pattern_index * 8 + dy] >> dx) & 1;
+      DrawPixel(x, SCREEN_HEIGHT - y - 1, color ? WHITE : BLACK);
+    }
+  }
+
+  EndTextureMode();
+}
+
+bool check_microcode(microcode_t mc, microcode_flag_t flag) {
+  return (mc >> flag) & 1;
+}
+
 void tick(cpu_t *cpu, bool *running) {
   assert(cpu);
   assert(running);
@@ -184,110 +209,131 @@ void tick(cpu_t *cpu, bool *running) {
 
   // dumpsbit(mc); putchar('\n');
 
-  if (mc & (1 << _HLT)) {
+  if (check_microcode(mc, _HLT)) {
     *running = false;
     cpu->SC = 0;
   }
-  if (mc & (1 << IPo)) {
+  if (check_microcode(mc, IPo)) {
     bus = cpu->IP;
   }
-  if (mc & (1 << Ao)) {
+  if (check_microcode(mc, Ao)) {
     bus = cpu->A;
   }
-  if (mc & (1 << Bo)) {
+  if (check_microcode(mc, Bo)) {
     bus = cpu->B;
   }
-  if ((mc & (1 << RAM)) && (mc & (1 << RAMo))) {
-    if (mc & (1 << RAM16)) {
+  if ((check_microcode(mc, RAM)) && check_microcode(mc, RAMo)) {
+    if (check_microcode(mc, RAM16)) {
       bus = (cpu->RAM[((cpu->MAR / 2) * 2) + 1] << 8) | cpu->RAM[(cpu->MAR / 2) * 2];
     } else {
       bus = cpu->RAM[cpu->MAR];
     }
   }
-  if (mc & (1 << ALUo)) {
-    if (mc & (1 << _SHR)) {
+  if (check_microcode(mc, ALUo)) {
+    if (check_microcode(mc, _SHR)) {
       bus = cpu->X >> 1;
       cpu->FR = (bus == 0) | ((bus >> 15) << 1) | ((cpu->X & 1) << 2);
     } else {
       uint16_t result = cpu->X;
-      if (mc & (1 << _SUB)) {
+      if (check_microcode(mc, _SUB)) {
         result ^= 0xFFFF;
       }
-      if (mc & (1 << Ci)) {
+      if (check_microcode(mc, Ci)) {
         ++result;
       }
       bus = result + cpu->Y;
       cpu->FR = (bus == 0) | ((bus >> 15) << 1) | ((((uint32_t)result + cpu->Y) >> 16) << 2);
     }
   }
-  if (mc & (1 << SPo)) {
+  if (check_microcode(mc, SPo)) {
     bus = cpu->SP;
   }
-  if (mc & (1 << NDXo)) {
+  if (check_microcode(mc, SPu)) {
+    cpu->SP += check_microcode(mc, SPm) ? -2 : 2;
+  }
+  if (check_microcode(mc, NDXo)) {
     bus = cpu->NDX;
   }
-  if (mc & (1 << MEMo)) {
+  if (check_microcode(mc, MEMo)) {
     bus = cpu->MEM[cpu->NDX | (cpu->SEC << 8)];
   }
-  if (mc & (1 << SECo)) {
+  if (check_microcode(mc, SECo)) {
     bus = cpu->SEC;
   }
-  if (mc & (1 << KEYo)) {
+  if (check_microcode(mc, KEYo)) {
     // if (!cpu->KEY_FIFO[0]) { cpu->KEY_FIFO[0] = getchar(); }
     bus = cpu->KEY_FIFO[0];
     memcpy(cpu->KEY_FIFO, cpu->KEY_FIFO + 1, cpu->key_fifo_i);
     cpu->key_fifo_i--;
   }
-  if (mc & (1 << IPi)) {
+  if (check_microcode(mc, IPi)) {
     cpu->IP = bus;
   }
-  if (mc & (1 << IPp)) {
+  if (check_microcode(mc, IPp)) {
     ++cpu->IP;
   }
-  if (mc & (1 << Ai)) {
+  if (check_microcode(mc, Ai)) {
     cpu->A = bus;
   }
-  if (mc & (1 << AHi)) {
+  if (check_microcode(mc, AHi)) {
     cpu->A = (bus << 8) | (cpu->A & 0xFF);
   }
-  if (mc & (1 << MARi)) {
+  if (check_microcode(mc, MARi)) {
     cpu->MAR = bus;
   }
-  if (mc & (1 << Bi)) {
+  if (check_microcode(mc, Bi)) {
     cpu->B = bus;
   }
-  if ((mc & (1 << RAM)) && !(mc & (1 << RAMo))) {
-    if (mc & (1 << RAM16)) {
+  if ((check_microcode(mc, RAM)) && !check_microcode(mc, RAMo)) {
+    if (check_microcode(mc, RAM16)) {
       cpu->RAM[((cpu->MAR / 2) * 2) + 1] = bus >> 8;
       cpu->RAM[(cpu->MAR / 2) * 2] = bus & 0xFF;
     } else {
       cpu->RAM[cpu->MAR] = bus;
     }
   }
-  if (mc & (1 << Xi)) {
+  if (check_microcode(mc, Xi)) {
     cpu->X = bus;
   }
-  if (mc & (1 << Yi)) {
+  if (check_microcode(mc, Yi)) {
     cpu->Y = bus;
   }
-  if (mc & (1 << SPi)) {
+  if (check_microcode(mc, SPi)) {
     cpu->SP = bus;
   }
-  if (mc & (1 << IRi)) {
+  if (check_microcode(mc, IRi)) {
     cpu->IR = bus & 0xFF;
   }
-  if (mc & (1 << SCr)) {
+  if (check_microcode(mc, SCr)) {
     cpu->SC = 0;
     return;
   }
-  if (mc & (1 << SECi)) {
+  if (check_microcode(mc, SECi)) {
     cpu->SEC = bus & ((1 << 12) - 1);
   }
-  if (mc & (1 << NDXi)) {
+  if (check_microcode(mc, NDXi)) {
     cpu->NDX = bus;
   }
-  if (mc & (1 << MEMi)) {
+  if (check_microcode(mc, MEMi)) {
     assert(0);
+  }
+  if (check_microcode(mc, GPUAi)) {
+    cpu->GPUA = bus;
+  }
+  if (check_microcode(mc, GPUi)) {
+    if ((cpu->GPUA >> 15) & 1) {
+      cpu->PATTERN_RAM[cpu->GPUA & 0x7FFF] = bus;
+    } else {
+      cpu->ATTRIBUTE_RAM[cpu->GPUA & 0x7FFF] = bus;
+
+      if (cpu->has_screen) {
+        compute_screen(cpu);
+        BeginDrawing();
+        ClearBackground(WHITE);
+        DrawTextureEx(cpu->screen.texture, (Vector2){SCREEN_PAD, SCREEN_PAD}, 0, ZOOM, WHITE);
+        EndDrawing();
+      }
+    }
   }
 
   cpu->SC = (cpu->SC + 1) % 16;
@@ -436,25 +482,10 @@ void set_control_rom() {
       RAM_B, 3, micro(RAM) | micro(RAMo) | micro(RAM16) | micro(Bi) | micro(IPp));
   set_instruction_allflag(RAM_B, 4, micro(IPp));
   set_instruction_allflag(RAM_B, 5, micro(SCr));
-
-  set_instruction_allflag(INCSP, 2, micro(SPo) | micro(Yi));
-  set_instruction_allflag(INCSP, 3, micro(Xi));
-  set_instruction_allflag(INCSP, 4, micro(Ci) | micro(ALUo) | micro(SPi));
-  set_instruction_allflag(INCSP, 5, micro(SPo) | micro(Yi));
-  set_instruction_allflag(INCSP, 6, micro(Ci) | micro(ALUo) | micro(SPi));
-  set_instruction_allflag(INCSP, 7, micro(SCr));
-
-  set_instruction_allflag(INCSP, 2, micro(SPo) | micro(Yi));
-  set_instruction_allflag(INCSP, 3, micro(Xi));
-  set_instruction_allflag(INCSP, 4, micro(Ci) | micro(ALUo) | micro(SPi));
-  set_instruction_allflag(INCSP, 5, micro(SPo) | micro(Yi));
-  set_instruction_allflag(INCSP, 6, micro(Ci) | micro(ALUo) | micro(SPi));
-  set_instruction_allflag(INCSP, 7, micro(SCr));
-
-  // set_instruction_allflag(INCSP, 2, micro(SPu));
-  // set_instruction_allflag(INCSP, 3, micro(SCr));
-  // set_instruction_allflag(DECSP, 2, micro(SPu) | micro(SPm));
-  // set_instruction_allflag(DECSP, 3, micro(SCr));
+  set_instruction_allflag(INCSP, 2, micro(SPu));
+  set_instruction_allflag(INCSP, 3, micro(SCr));
+  set_instruction_allflag(DECSP, 2, micro(SPu) | micro(SPm));
+  set_instruction_allflag(DECSP, 3, micro(SCr));
   set_instruction_allflag(PUSHA, 2, micro(SPo) | micro(MARi));
   set_instruction_allflag(
       PUSHA, 3, micro(Ao) | micro(RAM) | micro(RAM16) | micro(SPu) | micro(SPm));
@@ -633,10 +664,11 @@ void set_control_rom() {
   set_instruction_allflag(RET, 5, micro(IPp));
   set_instruction_allflag(RET, 6, micro(IPp));
   set_instruction_allflag(RET, 7, micro(SCr));
-
   set_instruction_allflag(_KEY_A, 2, micro(KEYo) | micro(Ai));
   set_instruction_allflag(_KEY_A, 3, micro(SCr));
-
+  set_instruction_allflag(DRW, 2, micro(Bo) | micro(GPUAi));
+  set_instruction_allflag(DRW, 3, micro(Ao) | micro(GPUi));
+  set_instruction_allflag(DRW, 4, micro(SCr));
   set_instruction_allflag(HLT, 2, micro(_HLT));
 }
 
@@ -960,36 +992,6 @@ void test() {
   printf("End\n");
 }
 
-Color palette[8] = {
-    {0, 0, 0, 0xFF},
-    {0, 0, 0xFF, 0xFF},
-    {0, 0xFF, 0, 0xFF},
-    {0, 0xFF, 0xFF, 0xFF},
-    {0xFF, 0, 0, 0xFF},
-    {0xFF, 0, 0xFF, 0xFF},
-    {0xFF, 0xFF, 0, 0xFF},
-    {0xFF, 0xFF, 0xFF, 0xFF},
-};
-
-void compute_screen(cpu_t *cpu) {
-  assert(cpu);
-
-  BeginTextureMode(cpu->screen);
-  ClearBackground(WHITE);
-
-  for (int y = 0; y < SCREEN_HEIGHT; ++y) {
-    for (int x = 0; x < SCREEN_WIDTH; ++x) {
-      int pattern_index = cpu->ATTRIBUTE_RAM[((y / 8) << 7) | (x / 8)];
-      int dy = y & 0b111;
-      int dx = x & 0b111;
-      uint8_t color_index = (cpu->PATTERN_RAM[(pattern_index << 3) | dy] >> (dx * 4)) & 0b1111;
-      DrawPixel(x, SCREEN_HEIGHT - y, palette[color_index]);
-    }
-  }
-
-  EndTextureMode();
-}
-
 void help(int exitcode) {
   printf("Usage: sim [options]\n\n"
          "Options:\n"
@@ -1044,10 +1046,6 @@ void parse_range(char *range, int *start_out, int *end_out) {
 
 int main(int argc, char **argv) {
   (void)argc;
-
-  if (MICROCODE_FLAG_COUNT > 32) {
-    eprintf("MICROCODE_FLAG_COUNT == %d", MICROCODE_FLAG_COUNT);
-  }
 
   set_control_rom();
 
@@ -1146,27 +1144,22 @@ int main(int argc, char **argv) {
 
   cpu_t cpu = {0};
   cpu_init(&cpu, mem_path);
+  cpu.has_screen = screen;
 
   load_input_string(&cpu, input);
 
-  if (screen) {
+  if (cpu.has_screen) {
     SetTraceLogLevel(LOG_ERROR);
-    InitWindow(SCREEN_WIDTH * ZOOM, SCREEN_HEIGHT * ZOOM, "Screen");
+    InitWindow(SCREEN_WIDTH * ZOOM + SCREEN_PAD * 2, SCREEN_HEIGHT * ZOOM + SCREEN_PAD * 2, "Jaris screen");
     cpu.screen = LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT);
   }
 
   bool running = true;
   int ticks = 0;
   while (running) {
-    if (screen) {
-      compute_screen(&cpu);
-      if (WindowShouldClose()) {
-        running = false;
-      }
-      BeginDrawing();
-      ClearBackground(WHITE);
-      DrawTextureEx(cpu.screen.texture, (Vector2){0, 0}, 0, ZOOM, WHITE);
-      EndDrawing();
+    PollInputEvents();
+    if (cpu.has_screen && WindowShouldClose()) {
+      break;
     }
     tick(&cpu, &running);
     ++ticks;
@@ -1174,7 +1167,10 @@ int main(int argc, char **argv) {
       sleep(1.0 / 4.0E6);
     }
   }
-  if (screen) {
+  if (cpu.has_screen) {
+    while (!WindowShouldClose()) {
+      PollInputEvents();
+    }
     UnloadRenderTexture(cpu.screen);
     CloseWindow();
   }

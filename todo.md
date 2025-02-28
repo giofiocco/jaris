@@ -1,5 +1,7 @@
 bss section
 
+remove some micro flags
+
 emit graph
 
 maybe check that reloc where is an even number

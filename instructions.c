@@ -62,6 +62,7 @@ char *instruction_to_string(instruction_t instruction) {
     case CALLR: return "CALLR";
     case RET: return "RET";
     case _KEY_A: return "KEY_A";
+    case DRW: return "DRW";
     case HLT: return "HLT";
   }
   return NULL;
@@ -179,6 +180,8 @@ int sv_to_instruction(sv_t sv, instruction_t *out) {
     *out = RET;
   } else if (sv_eq(sv, sv_from_cstr("KEY_A"))) {
     *out = _KEY_A;
+  } else if (sv_eq(sv, sv_from_cstr("DRW"))) {
+    *out = DRW;
   } else if (sv_eq(sv, sv_from_cstr("HLT"))) {
     *out = HLT;
   } else {
@@ -199,8 +202,9 @@ instruction_stat_t instruction_stat(instruction_t instruction) {
     case A_SP: case SP_A:
     case A_SEC: case SEC_A:
     case INCNDX: case NDX_A: case A_NDX: case MEM_A: case MEM_AH:
-    case RET: 
+    case RET:
     case _KEY_A:
+    case DRW:
     case HLT:
       return (instruction_stat_t){INST_NO_ARGS};
     case RAM_AL: case RAM_BL:
