@@ -11,6 +11,7 @@ Jaris is a 16bit computer
    - [OBJ](#obj-file)
    - [BIN](#bin-file)
    - [SO](#so-file)
+   - [Font](#font-file)
 4. [File System](#file-system)
    - [Dir Sector](#directory-sector)
    - [File Sector](#file-sector)
@@ -204,6 +205,20 @@ Include all symbols in symbols, all relreloc info
 | :------- | :------------- |
 | 2        | where to subst |
 | 2        | what to subst  |
+
+### Font File
+
+| size [B] | description   |
+| :------- | :------------ |
+| 2        | pattern count |
+| 9\*#     | patterns      |
+
+Pattern:
+
+| size [B] | description  |
+| :------- | :----------- |
+| 1        | code pattern |
+| 8        | pattern      |
 
 ## File System
 

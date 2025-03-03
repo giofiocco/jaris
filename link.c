@@ -45,7 +45,7 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
   for (int i = 0; i < obj->extern_count; ++i) {
     copied[obj->externs[i]] = 1;
     symbol_t *from = &obj->symbols[obj->externs[i]];
-    int index = exe_find_symbol(exe, from->image);
+    int index = exe_find_symbol(exe, from->image); // TODO: find global
     if (index == -1) {
       assert(state->extern_count + 1 < EXTERN_MAX_COUNT);
       state->externs[state->extern_count++] = exe->symbol_count;

@@ -1,5 +1,6 @@
 GLOBAL _start
 EXTERN execute
+EXTERN load_font
 
 stdout: db 256
 stdout_end:
@@ -19,21 +20,12 @@ _start:
   RAM_B stdout RAM_AL 0x04 SUM RAM_B stdout A_rB -- stdout->next_char_ptr
   RAM_A stdout INCA INCA A_B RAM_A stdout_end A_rB -- stdout->end_ptr
 
-  RAM_B 0x8008 RAM_AL 0b10101010 DRW
-  RAM_B 0x8009 RAM_AL 0b01010101 DRW
-  RAM_B 0x800A RAM_AL 0b10101010 DRW
-  RAM_B 0x800B RAM_AL 0b01010101 DRW
-  RAM_B 0x800C RAM_AL 0b10101010 DRW
-  RAM_B 0x800D RAM_AL 0b01010101 DRW
-  RAM_B 0x800E RAM_AL 0b10101010 DRW
-  RAM_B 0x800F RAM_AL 0b01010101 DRW
-
-  RAM_B 0x0004 RAM_AL 0x01 DRW
-  HLT
+  RAM_A font_path CALL load_font
 
   RAM_A path RAM_BL 0x00 CALL execute
 
   RAM_B 0x0000
   HLT
 
+font_path: "font" 0x00
 path: "sh" 0x00

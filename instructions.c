@@ -63,6 +63,7 @@ char *instruction_to_string(instruction_t instruction) {
     case RET: return "RET";
     case _KEY_A: return "KEY_A";
     case DRW: return "DRW";
+    case RAM_DRW: return "RAM_DRW";
     case HLT: return "HLT";
   }
   return NULL;
@@ -182,6 +183,8 @@ int sv_to_instruction(sv_t sv, instruction_t *out) {
     *out = _KEY_A;
   } else if (sv_eq(sv, sv_from_cstr("DRW"))) {
     *out = DRW;
+  } else if (sv_eq(sv, sv_from_cstr("RAM_DRW"))) {
+    *out = RAM_DRW;
   } else if (sv_eq(sv, sv_from_cstr("HLT"))) {
     *out = HLT;
   } else {
@@ -210,6 +213,7 @@ instruction_stat_t instruction_stat(instruction_t instruction) {
     case RAM_AL: case RAM_BL:
     case PEEKAR: case PUSHAR:
     case RAM_NDX:
+    case RAM_DRW:
       return (instruction_stat_t){INST_8BITS_ARG};
     case RAM_A: case RAM_B:
     case JMP:

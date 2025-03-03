@@ -1,9 +1,9 @@
-TARGETS=assembler linker encodemem sim inspect decodemem docs.pdf
+TARGETS=assembler linker encodemem sim inspect decodemem docs.pdf encodefont
 CFLAGS=-Wall -Wextra -std=c99 -g
 
 STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string
 PROGRAMS=shutdown ls sh cd cat
-MEM_FILES=__bootloader __os __stdlib $(PROGRAMS)
+MEM_FILES=__bootloader __os __stdlib font $(PROGRAMS)
 STDLIB_DOCS=stdlib_docs.md
 
 .PHONY: all
@@ -31,11 +31,14 @@ mem/__bootloader: asm/build/bootloader.o linker | mem
 	./linker $(LINKER_FLAGS) --bin --nostdlib -o $@ $<
 	wc -c $@
 
-mem/__os: asm/build/os.o mem/__stdlib linker | mem
-	./linker $(LINKER_FLAGS) -o $@ $<
+mem/__os: asm/build/os.o asm/build/load_font.o mem/__stdlib linker | mem
+	./linker $(LINKER_FLAGS) -o $@ $(filter %.o, $^)
 
 mem/__stdlib: $(patsubst %,asm/build/%.o,$(STDLIB_FILES)) linker | mem 
 	./linker $(LINKER_FLAGS) --so --nostdlib -o $@ $(filter %.o, $^) 
+
+mem/font: encodefont | mem
+	./encodefont $@
 
 mem/%: asm/build/%.o mem/__stdlib linker | mem
 	./linker $(LINKER_FLAGS) -o $@ $<
@@ -65,6 +68,9 @@ inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 
 sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) $(ERRORS_LIB) mem.bin
 	cc $(CFLAGS) -o $@ $(filter %.c, $^) -lraylib
+
+encodefont: encodefont.c
+	cc $(CFLAGS) -o $@ $<
 
 docs.pdf: docs.roff
 	groff -p -t -ms $^ -Tpdf > $@

@@ -18,7 +18,7 @@
 
 #define SCREEN_WIDTH  800
 #define SCREEN_HEIGHT 600
-#define ZOOM          1.5
+#define ZOOM          1
 #define SCREEN_PAD    10
 
 // clang-format off
@@ -170,11 +170,11 @@ void set_instruction_allflag(instruction_t inst, uint8_t step, microcode_t code)
   }
 }
 
-void dumpsbit(uint32_t num) {
+void dumpsbit(uint32_t num, int bits) {
   putchar('0');
   putchar('b');
-  for (int i = 0; i < 32; ++i) {
-    putchar((num >> (31 - i)) & 1 ? '1' : '0');
+  for (int i = 0; i < bits; ++i) {
+    putchar((num >> (bits - 1 - i)) & 1 ? '1' : '0');
   }
 }
 
@@ -188,7 +188,7 @@ void compute_screen(cpu_t *cpu) {
       int pattern_index = cpu->ATTRIBUTE_RAM[((y / 8) << 8) + (x / 8)];
       int dy = y & 0b111;
       int dx = x & 0b111;
-      uint8_t color = (cpu->PATTERN_RAM[pattern_index * 8 + dy] >> dx) & 1;
+      uint8_t color = (cpu->PATTERN_RAM[pattern_index * 8 + dy] >> (7 - dx)) & 1;
       DrawPixel(x, SCREEN_HEIGHT - y - 1, color ? WHITE : BLACK);
     }
   }
@@ -322,9 +322,9 @@ void tick(cpu_t *cpu, bool *running) {
   }
   if (check_microcode(mc, GPUi)) {
     if ((cpu->GPUA >> 15) & 1) {
-      cpu->PATTERN_RAM[cpu->GPUA & 0x7FFF] = bus;
+      cpu->PATTERN_RAM[cpu->GPUA & 0x7FFF] = bus & 0xFF;
     } else {
-      cpu->ATTRIBUTE_RAM[cpu->GPUA & 0x7FFF] = bus;
+      cpu->ATTRIBUTE_RAM[cpu->GPUA & 0x7FFF] = bus & 0xFF;
 
       if (cpu->has_screen) {
         compute_screen(cpu);
@@ -669,6 +669,10 @@ void set_control_rom() {
   set_instruction_allflag(DRW, 2, micro(Bo) | micro(GPUAi));
   set_instruction_allflag(DRW, 3, micro(Ao) | micro(GPUi));
   set_instruction_allflag(DRW, 4, micro(SCr));
+  set_instruction_allflag(RAM_DRW, 2, micro(Bo) | micro(GPUAi));
+  set_instruction_allflag(RAM_DRW, 3, micro(IPo) | micro(MARi));
+  set_instruction_allflag(RAM_DRW, 4, micro(RAM) | micro(RAMo) | micro(GPUi) | micro(IPp));
+  set_instruction_allflag(RAM_DRW, 5, micro(SCr));
   set_instruction_allflag(HLT, 2, micro(_HLT));
 }
 
