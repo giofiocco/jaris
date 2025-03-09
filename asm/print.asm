@@ -95,3 +95,4 @@ digit_to_char:
   POPA RAM_BL "0" SUM
   CALLR $put_char
   RET
+

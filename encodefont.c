@@ -2,19 +2,29 @@
 #include <errno.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+
+#define SV_IMPLEMENTATION
+#include "errors.h"
+#include "files.h"
 
 int main(int argc, char **argv) {
   if (argc != 2) {
-    printf("ERROR: expected output file path\n");
-    exit(1);
+    eprintf("expected output file path");
+  }
+
+  if (decode_char(encode_char(0)) != 0) {
+    eprintf("%c -> 0x%02X -> %c", 0, encode_char(0), decode_char(encode_char(0)));
+  }
+  for (int i = 32; i < 127; ++i) {
+    if (decode_char(encode_char(i)) != i) {
+      eprintf("%c -> 0x%02X -> %c", i, encode_char(i), decode_char(encode_char(i)));
+    }
   }
 
   FILE *file = fopen(argv[1], "wb");
   if (!file) {
-    printf("ERROR: cannot open file '%s': '%s'", argv[1], strerror(errno));
-    exit(1);
+    eprintf("cannot open file '%s': '%s'", argv[1], strerror(errno));
   }
 
   uint16_t count = 0;

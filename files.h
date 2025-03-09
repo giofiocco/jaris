@@ -82,6 +82,9 @@ typedef struct {
   uint16_t so_globals_pos[DYNAMIC_MAX_COUNT][GLOBAL_MAX_COUNT];
 } exe_state_t;
 
+uint16_t encode_char(char c);
+char decode_char(uint16_t code);
+
 void symbol_list_dump(symbol_t *symbols, uint16_t count);
 void symbols_list_decode(symbol_t *symbols, uint16_t *count, FILE *file);
 void symbols_list_encode(symbol_t *symbols, uint16_t count, FILE *file);

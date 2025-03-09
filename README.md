@@ -6,16 +6,17 @@ Jaris is a 16bit computer
 
 1. [Architecture](#architecture)
 2. [Assembler](#assembler)
-3. [File Specifications](#file-specifications)
+3. [Char Encoding](#char-encoding)
+4. [File Specifications](#file-specifications)
    - [EXE](#exe-file)
    - [OBJ](#obj-file)
    - [BIN](#bin-file)
    - [SO](#so-file)
    - [Font](#font-file)
-4. [File System](#file-system)
+5. [File System](#file-system)
    - [Dir Sector](#directory-sector)
    - [File Sector](#file-sector)
-5. [RAM Layout](#ram-layout)
+6. [RAM Layout](#ram-layout)
    - [OS struct](#os-struct)
    - [Process struct](#process-struct)
    - [FILE struct](#file-struct)
@@ -90,6 +91,27 @@ IMAGE
 ### Comments
 
 - Single line comments: `--.*\n`
+
+## Char Encoding
+
+| hex | char | hex | char | hex | char | hex | char  | hex | char     | hex | char | hex | char |
+| --- | ---- | --- | ---- | --- | ---- | --- | ----- | --- | -------- | --- | ---- | --- | ---- |
+| 00  | null | 10  | P    | 20  | f    | 30  | v     | 40  | new line | 50  | :    | 60  | ~    |
+| 01  | A    | 11  | Q    | 21  | g    | 31  | w     | 41  | !        | 51  | ;    |
+| 02  | B    | 12  | R    | 22  | h    | 32  | x     | 42  | "        | 52  | <    |
+| 03  | C    | 13  | S    | 23  | i    | 33  | y     | 43  | #        | 53  | =    |
+| 04  | D    | 14  | T    | 24  | j    | 34  | z     | 44  | $        | 54  | >    |
+| 05  | E    | 15  | U    | 25  | k    | 35  | 0     | 45  | %        | 55  | ?    |
+| 06  | F    | 16  | V    | 26  | l    | 36  | 1     | 46  | &        | 56  | @    |
+| 07  | G    | 17  | W    | 27  | m    | 37  | 2     | 47  | '        | 57  | [    |
+| 08  | H    | 18  | X    | 28  | n    | 38  | 3     | 48  | (        | 58  | \\   |
+| 09  | I    | 19  | Y    | 29  | o    | 39  | 4     | 49  | )        | 59  | ]    |
+| 0A  | J    | 1A  | Z    | 2A  | p    | 3A  | 5     | 4A  | \*       | 5A  | ^    |
+| 0B  | K    | 1B  | a    | 2B  | q    | 3B  | 6     | 4B  | +        | 5B  | \_   |
+| 0C  | L    | 1C  | b    | 2C  | r    | 3C  | 7     | 4C  | ,        | 5C  | `    |
+| 0D  | M    | 1D  | c    | 2D  | s    | 3D  | 8     | 4D  | -        | 5D  | {    |
+| 0E  | N    | 1E  | d    | 2E  | t    | 3E  | 9     | 4E  | .        | 5E  | \|   |
+| 0F  | O    | 1F  | e    | 2F  | u    | 3F  | space | 4F  | /        | 5F  | }    |
 
 ## File Specifications
 

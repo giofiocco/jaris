@@ -69,8 +69,8 @@ inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) $(ERRORS_LIB) mem.bin
 	cc $(CFLAGS) -o $@ $(filter %.c, $^) -lraylib
 
-encodefont: encodefont.c
-	cc $(CFLAGS) -o $@ $<
+encodefont: encodefont.c $(ERRORS_LIB) $(FILES_DEP)
+	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
 docs.pdf: docs.roff
 	groff -p -t -ms $^ -Tpdf > $@
