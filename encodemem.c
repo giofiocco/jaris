@@ -6,7 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define SV_IMPLEMENTATION
 #include "argparse/argparse.h"
+#include "files.h"
 
 #define TODO assert(0 && "TO IMPLEMENT")
 
@@ -46,6 +48,18 @@ void sector_push_u16(uint8_t **sector, uint16_t data) {
   *sector += 2;
 }
 
+void sector_push_string(uint8_t **sector, char *str, int count) {
+  assert(sector);
+  assert(*sector);
+  assert(str);
+  assert(count > 0);
+
+  for (int i = 0; i < count; ++i) {
+    (*sector)[i] = encode_char(str[i]);
+  }
+  *sector += count;
+}
+
 uint16_t encode_file(FILE *file, int offset) {
   assert(file);
 
@@ -57,7 +71,7 @@ uint16_t encode_file(FILE *file, int offset) {
   uint8_t *sector = SECTORS[SECTORI++];
   uint8_t *sector_start = sector;
 
-  sector_push_u8(&sector, 'F');
+  sector_push_u8(&sector, encode_char('F'));
 
   if (size + 4 >= SECTOR_SIZE) {
     assert(fread(sector_start + 4, 1, SECTOR_SIZE - 4, file) == SECTOR_SIZE - 4);
@@ -84,11 +98,11 @@ uint16_t encode_dir(char *path, uint16_t parent, uint16_t head) {
     head = sector_ptr;
   }
 
-  sector_push_u8(&sector, 'D');
+  sector_push_u8(&sector, encode_char('D'));
   sector_push_u16(&sector, 0xFFFF);
-  sector_push(&sector, "..\0", 3);
+  sector_push_string(&sector, "..\0", 3);
   sector_push_u16(&sector, parent);
-  sector_push(&sector, ".\0", 2);
+  sector_push_string(&sector, ".\0", 2);
   sector_push_u16(&sector, head);
 
   DIR *dir = opendir(path);
@@ -104,7 +118,7 @@ uint16_t encode_dir(char *path, uint16_t parent, uint16_t head) {
     }
 
     int name_len = strlen(d->d_name);
-    sector_push(&sector, d->d_name, name_len);
+    sector_push_string(&sector, d->d_name, name_len);
     sector += 1;
 
     int full_path_len = strlen(path) + name_len + 2;

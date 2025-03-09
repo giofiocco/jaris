@@ -318,7 +318,7 @@ void obj_compile_bytecode(obj_t *obj, bytecode_t bc) {
       break;
     case BSTRING:
       for (char *c = bc.arg.string; *c; ++c) {
-        obj_add_hex(obj, *c);
+        obj_add_hex(obj, encode_char(*c));
       }
       break;
     case BSETLABEL:

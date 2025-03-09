@@ -57,7 +57,7 @@ assembler: assembler.c $(ASSEMBLE_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 linker: linker.c link.c $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ARG_PARSER_LIB) 
 	cc $(CFLAGS) -o $@ $(filter %.c, $^) 
 
-encodemem: encodemem.c $(ARG_PARSER_LIB)
+encodemem: encodemem.c $(ARG_PARSER_LIB) $(FILES_DEP)
 	cc $(CFLAGS) -D_DEFAULT_SOURCE -o $@ $(filter %.c, $^)
 
 decodemem: decodemem.c
