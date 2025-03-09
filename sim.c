@@ -155,8 +155,7 @@ void cpu_dump_stdout(cpu_t *cpu) {
   printf("\n");
 }
 
-void set_instruction_flags(
-    instruction_t inst, uint8_t step, uint8_t flags, bool invert, microcode_t code) {
+void set_instruction_flags(instruction_t inst, uint8_t step, uint8_t flags, bool invert, microcode_t code) {
   for (int i = 0; i < 1 << 3; ++i) {
     if (invert ? !(flags & i) : flags & i) {
       control_rom[inst | (step << 6) | (i << (6 + 4))] = code;

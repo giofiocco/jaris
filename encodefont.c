@@ -18,8 +18,7 @@ int main(int argc, char **argv) {
   }
 
   uint16_t count = 0;
-  assert(putc(0, file) != -1);
-  assert(putc(0, file) != -1);
+  assert(fwrite(&count, 2, 1, file) == 1);
 
   ++count;
   assert(putc('a', file) != -1);

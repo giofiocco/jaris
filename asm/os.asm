@@ -22,6 +22,8 @@ _start:
 
   RAM_A font_path CALL load_font
 
+  RAM_AL "a" RAM_BL 0x00 DRW
+
   RAM_A path RAM_BL 0x00 CALL execute
 
   RAM_B 0x0000

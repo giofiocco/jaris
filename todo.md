@@ -39,6 +39,7 @@ and obj things in assemble
 
 # Inspect
 
+- font file
 - disassemble using debug info
 - read from the stdin
 

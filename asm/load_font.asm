@@ -1,14 +1,35 @@
 GLOBAL load_font
 EXTERN open_file
+EXTERN read_u16
+EXTERN read_u8
 
 file: db 4
 
 -- [cstr path, _] -> [_, _]
 -- set patterns in the file
--- but not uset the others
+-- but nt uset the others
 -- ERRORS:
--- [0, 0xFFFF] if file not found
+-- crash [0, 0xFFFF] if file not found
 load_font:
   RAM_B file CALL open_file
+  CMPA JMPRZ $not_found
 
-  RAM_AL 0xAA HLT
+  RAM_A file CALL read_u16
+pattern_loop:
+  PUSHA
+  -- ^ count
+  RAM_A file CALL read_u8 SHL SHL SHL RAM_B 0x8000 SUM
+  PUSHA RAM_A file CALL read_u8 POPB DRW INCB
+  PUSHB RAM_A file CALL read_u8 POPB DRW INCB
+  PUSHB RAM_A file CALL read_u8 POPB DRW INCB
+  PUSHB RAM_A file CALL read_u8 POPB DRW INCB
+  PUSHB RAM_A file CALL read_u8 POPB DRW INCB
+  PUSHB RAM_A file CALL read_u8 POPB DRW INCB
+  PUSHB RAM_A file CALL read_u8 POPB DRW INCB
+  PUSHB RAM_A file CALL read_u8 POPB DRW
+  POPA DECA JMPRNZ $pattern_loop
+
+  RET
+
+not_found:
+  HLT
