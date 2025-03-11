@@ -1,11 +1,13 @@
 GLOBAL print
-GLOBAL print_with_len
 GLOBAL put_char
 GLOBAL print_int
 
 EXTERN div
 
-  { stdout_ptr_ptr 0xF80A }
+  { current_process_ptr 0xF802 }
+  { stdout_offset 0x06 }
+  { screen_text_row_ptr 0xF80A }
+  { screen_text_col_ptr 0xF80B }
 
 -- [cstr ptr, _] -> [_, _]
 print:
@@ -19,63 +21,59 @@ print_end:
   -- ^ ptr
   INCSP RET
 
--- [char *ptr, u16 len] -> [0, _]
--- print str with known len
--- crash [0xFFFA, _] if too big
-print_with_len:
-  PUSHA PUSHB
-  -- ^ len ptr
+-- [char, _] -> [_, _]
+-- crash [0xEFFA, _] if stdout ridirect
+-- TODO: wrap screen if row too low
+put_char:
+  PUSHA
 
-  RAM_B stdout_ptr_ptr rB_A A_B rB_A PUSHA PUSHB B_A -- next
-  -- ^ &next next len ptr
-  INCA INCA A_B rB_A A_B PEEKAR 0x06 -- [next, ending]
-  SUB A_B PEEKAR 0x04 SUB -- ending - next - len
-  JMPRN $too_big
+  RAM_B current_process_ptr rB_A RAM_BL stdout_offset SUM A_B rB_A
+  INCA JMPRNZ $ridirect
 
-  PEEKAR 0x04 A_B PEEKAR 0x06 SUM POPB A_rB -- *next += len
+  PEEKA RAM_BL 0x0A SUB JMPRNZ $no_new_line
+  RAM_B screen_text_col_ptr RAM_AL 0x00 AL_rB
+  RAM_B screen_text_row_ptr rB_AL INCA AL_rB
+  INCSP RET
+no_new_line:
 
-  PEEKAR 0x04
-loop:
-  -- ^ next len ptr [len, _]
-  PUSHAR 0x04
+  RAM_B screen_text_row_ptr rB_AL PUSHA
+  RAM_B screen_text_col_ptr rB_AL POPB B_AH
 
-  PEEKAR 0x06 A_B rB_AL PUSHA B_A INCA PUSHAR 0x08
-  -- ^ char next len ptr
-  POPA POPB AL_rB
-  B_A INCA PUSHA
+  A_B POPA DRW
 
-  PEEKAR 0x04 DECA JMPRNZ $loop
-  -- ^ next len ptr
-  INCSP INCSP INCSP RAM_AL 0x00 RET
+  RAM_B screen_text_col_ptr rB_AL INCA AL_rB
+  RAM_BL 0x64 SUB JMPRNZ $end_new_line
+  RAM_B screen_text_col_ptr RAM_AL 0x00 AL_rB
+  RAM_B screen_text_row_ptr rB_AL INCA AL_rB
+end_new_line:
+  RET
 
-too_big:
-    -- ^ &next next len ptr
-  RAM_A 0xFFFA
-  HLT
+ridirect:
+  -- ^ char [stdout_ptr + 1, _]
+  RAM_A 0xEFFA HLT
 
 -- [char, _] -> [_, _]
 -- crash [0xEFFA, _] if stdout is full
-put_char:
-  PUSHA
-  RAM_B stdout_ptr_ptr rB_A PUSHA -- push &next_char_ptr
-  A_B rB_A -- next_char_ptr
-  -- ^ &next_char_ptr char [next_char_ptr, _]
-  A_B PEEKAR 0x04 AL_rB
-
-  B_A INCA PEEKB A_rB -- *(&next_char_ptr) ++
-  -- ^ &next_char_ptr char [next_char_ptr, _]
-
-  A_B POPA INCA INCA PUSHB 
-  -- ^ next_char_ptr char [&ending_char_ptr, _]
-  A_B rB_A POPB INCSP
-  -- ^ [ending_char_ptr, next_char_ptr]
-  SUB JMPRN $end -- if (next_char_ptr - ending_char_ptr < 0) goto end
-
-  -- stdout full
-  RAM_A 0xEFFA 
-end:
-  RET
-
+-- put_char:
+--   PUSHA
+--   RAM_B stdout_ptr_ptr rB_A PUSHA -- push &next_char_ptr
+--   A_B rB_A -- next_char_ptr
+--   -- ^ &next_char_ptr char [next_char_ptr, _]
+--   A_B PEEKAR 0x04 AL_rB
+-- 
+--   B_A INCA PEEKB A_rB -- *(&next_char_ptr) ++
+--   -- ^ &next_char_ptr char [next_char_ptr, _]
+-- 
+--   A_B POPA INCA INCA PUSHB 
+--   -- ^ next_char_ptr char [&ending_char_ptr, _]
+--   A_B rB_A POPB INCSP
+--   -- ^ [ending_char_ptr, next_char_ptr]
+--   SUB JMPRN $end -- if (next_char_ptr - ending_char_ptr < 0) goto end
+-- 
+--   -- stdout full
+--   RAM_A 0xEFFA
+-- end:
+--   RET
 
 -- [u16 num, _] -> [_, _]
 -- crash [0xEFFA, _] if stdout is full

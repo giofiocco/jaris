@@ -3,7 +3,6 @@ EXTERN solve_path
 EXTERN get_char
 EXTERN put_char
 EXTERN print
-EXTERN print_with_len
 EXTERN execute
 EXTERN exit
 EXTERN str_find_char

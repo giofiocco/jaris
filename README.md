@@ -284,7 +284,8 @@ The first process struct is the os-process
 | 2        | ptr to current process struct |
 | 2        | used process map              |
 | 4        | used page map                 |
-| 2        | stdout struct ptr             |
+| 1        | screen text row               |
+| 1        | screen text col               |
 
 ### Process Struct
 
@@ -293,6 +294,10 @@ The first process struct is the os-process
 | 2        | ptr to parent process |
 | 2        | cwd sec               |
 | 2        | SP                    |
+| 2        | stdout buffer ptr     |
+
+If the stdout buffer ptr is 0xFFFF the put_char function will print chars to the screen
+otherwise should point to a stdout struct (ridirection).
 
 The SP is 0x0000 and set otherwise when execute another process
 

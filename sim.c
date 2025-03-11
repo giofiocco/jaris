@@ -17,8 +17,8 @@
 #include "instructions.h"
 
 #define SCREEN_WIDTH  800
-#define SCREEN_HEIGHT 600
-#define ZOOM          1
+#define SCREEN_HEIGHT 100
+#define ZOOM          2
 #define SCREEN_PAD    10
 
 // clang-format off
@@ -72,7 +72,7 @@ typedef struct {
   int key_fifo_i;
 
   uint16_t GPUA;
-  uint8_t ATTRIBUTE_RAM[1 << 15];
+  uint16_t ATTRIBUTE_RAM[1 << 15];
   uint8_t PATTERN_RAM[1 << 15];
   RenderTexture2D screen;
   bool has_screen;
@@ -130,31 +130,6 @@ void cpu_dump_ram_range(cpu_t *cpu, uint16_t from, uint16_t to) {
   }
 }
 
-void cpu_dump_stdout(cpu_t *cpu) {
-  assert(cpu);
-
-  uint16_t stdout_ptr = cpu_read16(cpu, 0xF80A);
-  uint16_t stdout_next_char = cpu_read16(cpu, stdout_ptr);
-
-  printf("STDOUT: %d\n", stdout_next_char - stdout_ptr - 4);
-  for (uint16_t i = stdout_ptr + 4; i < stdout_next_char; ++i) {
-    switch (cpu->RAM[i]) {
-      case '\t':
-        printf("»");
-        break;
-      case ' ':
-        printf("·");
-        break;
-      case '\n':
-        printf("⏎\n");
-        break;
-      default:
-        printf("%c", cpu->RAM[i]);
-    }
-  }
-  printf("\n");
-}
-
 void set_instruction_flags(instruction_t inst, uint8_t step, uint8_t flags, bool invert, microcode_t code) {
   for (int i = 0; i < 1 << 3; ++i) {
     if (invert ? !(flags & i) : flags & i) {
@@ -184,7 +159,9 @@ void compute_screen(cpu_t *cpu) {
   ClearBackground(WHITE);
   for (int y = 0; y < SCREEN_HEIGHT; ++y) {
     for (int x = 0; x < SCREEN_WIDTH; ++x) {
-      int pattern_index = cpu->ATTRIBUTE_RAM[((y / 8) << 8) + (x / 8)];
+      uint16_t attribute = cpu->ATTRIBUTE_RAM[((y / 8) << 8) + (x / 8)];
+      uint16_t pattern_index = attribute & 0x0FFF;
+      uint8_t palette_index = (attribute >> 12) & 0xF;
       int dy = y & 0b111;
       int dx = x & 0b111;
       uint8_t color = (cpu->PATTERN_RAM[pattern_index * 8 + dy] >> (7 - dx)) & 1;
@@ -1001,7 +978,6 @@ void help(int exitcode) {
          " -i | --input <string>            input <string> to computer [max %d char]\n"
          " -r | --ram-range <start>:<end>   print ram from <start> to <end> when HLTed (example "
          "2:0xFA)\n"
-         "      --stdout                    print the stdout when HLTed\n"
          " -t | --test                      run test and exit\n"
          " -s | --step                      enable step mode after the cpu is HLTed\n"
          "      --real-time                 sleeps each tick to simulate a 4MHz clock\n"
@@ -1059,7 +1035,6 @@ int main(int argc, char **argv) {
   int ram_range_start = 0;
   int ram_range_end = 0;
   char *mem_path = "mem.bin";
-  int print_stdout = 0;
   int screen = 0;
 
   ++argv;
@@ -1088,8 +1063,6 @@ int main(int argc, char **argv) {
           help(1);
         }
         mem_path = *argv;
-      } else if (strcmp(arg + 2, "stdout") == 0) {
-        print_stdout = 1;
       } else if (strcmp(arg + 2, "screen") == 0) {
         screen = 1;
       } else if (strcmp(arg + 2, "test") == 0) {
@@ -1203,10 +1176,6 @@ int main(int argc, char **argv) {
                "  stdout               print the stdout\n"
                "  skip                 skip to the RET inst\n"
                "  next                 run to the next HLT\n");
-      } else if (strcmp(input, "stdout\n") == 0) {
-        cpu_dump_stdout(&cpu);
-        printf("> ");
-        continue;
       } else if (strcmp(input, "skip\n") == 0) {
         running = true;
         do {
@@ -1237,10 +1206,6 @@ int main(int argc, char **argv) {
   cpu_dump(&cpu);
   if (ram_range_end != ram_range_start) {
     cpu_dump_ram_range(&cpu, ram_range_start, ram_range_end);
-  }
-
-  if (print_stdout) {
-    cpu_dump_stdout(&cpu);
   }
 
   return 0;
