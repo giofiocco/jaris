@@ -1,4 +1,5 @@
 *.o
+*.pdf
 build/
 mem/
 mem.bin
@@ -8,4 +9,4 @@ encodemem
 inspect
 sim
 decodemem
-docs.pdf
+encodefont
