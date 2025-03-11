@@ -19,8 +19,7 @@ _start:
 
   RAM_A font_path CALL load_font
 
-  RAM_A text CALL print
-  HLT
+  -- RAM_A test_font CALL print HLT
 
   RAM_A path RAM_BL 0x00 CALL execute
 
@@ -30,5 +29,8 @@ _start:
 font_path: "font" 0x00
 path: "sh" 0x00
 
-text: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" 0x0A
-      "0123456789" 0x00
+test_font: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" 0x0A
+           "abcdefghijklmnopqrstuvwxyz" 0x0A
+           "0123456789" 0x0A
+           "!" 0x22 "#$%&'()*+,-./:;<=>?@[\]^_`{|}"
+           0x00

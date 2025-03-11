@@ -4,6 +4,7 @@ EXTERN open_file
 EXTERN read_u8
 EXTERN read_u16
 
+  { stdlib_ptr_ptr 0xF800 }
   { page_size 0x0800 }
   { iup_ptr  0xF806 }
   { iup2_ptr 0xF808 }
@@ -12,7 +13,7 @@ EXTERN read_u16
   { current_process_ptr 0xF802 }
   { cwd_offset 0x02 }
   { SP_offset 0x04 }
-  { stdlib_ptr_ptr 0xF800 }
+  { stdout_offset 0x06 }
 
 ALIGN file: db 4
 
@@ -105,6 +106,8 @@ search_process:
 
   -- ^ new_sp process_ptr ram_start argv
   PEEKAR 0x04 RAM_BL SP_offset SUM A_B RAM_AL 0x00 A_rB -- process_ptr->SP = 0
+
+  PEEKAR 0x04 RAM_BL stdout_offset SUM A_B RAM_A 0xFFFF A_rB -- process_ptr->stdout = 0xFFFF
 
   SP_A RAM_BL 0x08 SUM PUSHA -- sp before return ptr
   PEEKAR 0x06 A_B rB_A RAM_BL SP_offset SUM A_B POPA A_rB -- process_ptr->parent_process->SP = sp before return ptr
