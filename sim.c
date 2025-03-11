@@ -18,7 +18,7 @@
 
 #define SCREEN_WIDTH  800
 #define SCREEN_HEIGHT 100
-#define ZOOM          2
+#define ZOOM          4
 #define SCREEN_PAD    10
 
 // clang-format off
