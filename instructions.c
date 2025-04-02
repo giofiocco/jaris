@@ -323,7 +323,7 @@ void bytecode_to_asm(FILE *stream, bytecode_t bc) {
       fprintf(stream, "ALIGN ");
       break;
     case BDB:
-      fprintf(stream, "DB %d\n", bc.arg.num);
+      fprintf(stream, "db %d\n", bc.arg.num);
       break;
   }
 }
