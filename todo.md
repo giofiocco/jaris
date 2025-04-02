@@ -17,10 +17,6 @@ and obj things in assemble
 - warn label unused
 - warn if extern not used
 
-# Linker
-
-- option to select the stdlib location
-
 # Sim
 
 - test with a fixed mem.bin
