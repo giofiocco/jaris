@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
       OPT_STRING(
           'l', NULL, &dynamic_filename, "link dynamically with file name", add_dynamic_file, 0, 0),
       OPT_BOOLEAN(0, "nostdlib", &no_std_lib_link, "not link with std lib", NULL, 0, 0),
-      OPT_STRING('l', "stdlib_path", &stdlib_path, "set path of stdlib [default 'mem/__stdlib']", NULL, 0, 0),
+      OPT_STRING(0, "stdlib_path", &stdlib_path, "set path of stdlib [default 'mem/__stdlib']", NULL, 0, 0),
       OPT_BIT(0, "bin", &flags, "output bin file", NULL, LINK_FLAG_BIN, 0),
       OPT_BIT(0, "so", &flags, "output so file", NULL, LINK_FLAG_SO, 0),
       OPT_BIT('d', "debug", &flags, "debug info", NULL, LINK_FLAG_EXE_STATE, 0),
