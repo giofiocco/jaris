@@ -22,7 +22,7 @@ print_end:
   INCSP RET
 
 -- [char, _] -> [_, _]
--- crash [0xEFFA, _] if stdout ridirect
+-- crash [0xEFFA, _] if stdout full
 -- TODO: wrap screen if row too low
 put_char:
   PUSHA
@@ -50,6 +50,15 @@ end_new_line:
 
 ridirect:
   -- ^ char [stdout_ptr + 1, _]
+  DECA A_B rB_A CMPA JMPRZ $stdout_full
+  DECA A_rB
+  RAM_AL 0x02 SUM A_B rB_A PUSHB
+  -- ^ &next_ptr char
+  A_B PEEKAR 0x04 AL_rB -- *next_char = char
+  B_A INCA POPB A_rB
+  INCSP RET
+
+stdout_full:
   RAM_A 0xEFFA HLT
 
 -- [char, _] -> [_, _]

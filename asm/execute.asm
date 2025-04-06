@@ -107,7 +107,8 @@ search_process:
   -- ^ new_sp process_ptr ram_start argv
   PEEKAR 0x04 RAM_BL SP_offset SUM A_B RAM_AL 0x00 A_rB -- process_ptr->SP = 0
 
-  PEEKAR 0x04 RAM_BL stdout_offset SUM A_B RAM_A 0xFFFF A_rB -- process_ptr->stdout = 0xFFFF
+  PEEKAR 0x04 A_B rB_A RAM_BL stdout_offset SUM A_B rB_A PUSHA
+  PEEKAR 0x06 RAM_BL stdout_offset SUM A_B POPA A_rB -- process_ptr->stdout = process_ptr->parent_process->stdout
 
   SP_A RAM_BL 0x08 SUM PUSHA -- sp before return ptr
   PEEKAR 0x06 A_B rB_A RAM_BL SP_offset SUM A_B POPA A_rB -- process_ptr->parent_process->SP = sp before return ptr

@@ -4,6 +4,8 @@ EXTERN execute
 EXTERN load_font
 EXTERN print
 
+stdout: db 128
+
 _start:
   -- ptr to stdlib set by the bootloader
   RAM_B 0xF802 RAM_A 0xF820 A_rB -- ptr to current process struct 
@@ -15,11 +17,13 @@ _start:
   RAM_B 0xF820 RAM_A 0xFFFF A_rB -- ptr to parent process
   RAM_B 0xF822 RAM_A 0x0001 A_rB -- cwd sec
   RAM_B 0xF824 RAM_A 0xFFFE A_rB -- SP
-  RAM_B 0xF826 RAM_A 0xFFFF A_rB -- stdout struct ptr
+  RAM_B 0xF826 RAM_A stdout A_rB -- stdout redirect
+
+  -- stdout
+  RAM_AL 0x80 RAM_B stdout A_rB
+  RAM_AL 0x02 SUM A_B INCA INCA A_rB
 
   RAM_A font_path CALL load_font
-
-  -- RAM_A test_font CALL print HLT
 
   RAM_A path RAM_BL 0x00 CALL execute
 
@@ -28,9 +32,3 @@ _start:
 
 font_path: "font" 0x00
 path: "sh" 0x00
-
-test_font: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" 0x0A
-           "abcdefghijklmnopqrstuvwxyz" 0x0A
-           "0123456789" 0x0A
-           "!" 0x22 "#$%&'()*+,-./:;<=>?@[\]^_`{|}"
-           0x00

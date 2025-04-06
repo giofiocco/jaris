@@ -16,9 +16,11 @@
 #include "files.h"
 #include "instructions.h"
 
-#define SCREEN_WIDTH  800
-#define SCREEN_HEIGHT 100
-#define ZOOM          4
+// #define SCREEN_WIDTH  800
+// #define SCREEN_HEIGHT 60
+#define SCREEN_WIDTH  640
+#define SCREEN_HEIGHT 350
+#define ZOOM          2
 #define SCREEN_PAD    10
 
 // clang-format off
@@ -128,6 +130,30 @@ void cpu_dump_ram_range(cpu_t *cpu, uint16_t from, uint16_t to) {
   for (int i = from - from % 2; i < to + 1 - to % 2; i += 2) {
     printf("\t%04X   %02X %02X %d\n", i, cpu->RAM[i], cpu->RAM[i + 1], cpu_read16(cpu, i));
   }
+}
+
+void cpu_dump_stdout(cpu_t *cpu, uint16_t pos) {
+  assert(cpu);
+  assert(pos % 2 == 0);
+
+  int to = cpu_read16(cpu, pos + 2);
+  printf("STDOUT 0x%04X: (%d chars)\n", pos, to - pos - 4);
+  for (int i = pos + 4; i < to; ++i) {
+    switch (cpu->RAM[i]) {
+      case '\t':
+        printf("»");
+        break;
+      case ' ':
+        printf("·");
+        break;
+      case '\n':
+        printf("⏎\n");
+        break;
+      default:
+        putchar(cpu->RAM[i]);
+    }
+  }
+  printf("EOF\n");
 }
 
 void set_instruction_flags(instruction_t inst, uint8_t step, uint8_t flags, bool invert, microcode_t code) {
@@ -315,6 +341,7 @@ void tick(cpu_t *cpu, bool *running) {
   cpu->SC = (cpu->SC + 1) % 16;
 }
 
+// look at https://www.vetra.com/scancodes.html
 // based on https://wiki.osdev.org/PS/2_Keyboard scan code set 1
 static char scancodeset[256] = {
     0,
@@ -673,6 +700,18 @@ void exe_reloc(exe_t *exe, uint16_t start_pos, uint16_t stdlib_pos) {
   }
 }
 
+symbol_t *find_sybol(symbol_t *symbols, int count, char *name) {
+  assert(symbols);
+  assert(name);
+
+  for (int i = 0; i < count; ++i) {
+    if (strcmp(symbols[i].image, name) == 0) {
+      return &symbols[i];
+    }
+  }
+  return NULL;
+}
+
 typedef struct {
   cpu_t cpu;
   int16_t test_ram[1 << 16]; // negative if undef
@@ -810,6 +849,12 @@ void test() {
   test_set_range(test, 0, os.code_size, os.code);
   test_check(test);
 
+  {
+    symbol_t *file = find_sybol(os.symbols, os.symbol_count, "file");
+    test_assert(file);
+    test_unset_range(test, file->pos, 4);
+  }
+
   printf("\tCheck if stdlib is loaded\n");
 
   so_t stdlib = so_decode_file("mem/__stdlib");
@@ -820,6 +865,7 @@ void test() {
     stdlib.code[entry.where + 1] = (entry.what >> 8) & 0xFF;
   }
 
+  // TODO: rewrite with find_symbol
   uint16_t execute_ptr = 0;
   uint16_t open_file_ptr = 0;
   uint16_t exit_ptr = 0;
@@ -839,11 +885,10 @@ void test() {
   test_set_range(test, os.code_size, stdlib.code_size, stdlib.code);
   test_check(test);
 
-  for (int i = 0; i < stdlib.symbol_count; ++i) {
-    if (strcmp(stdlib.symbols[i].image, "file") == 0) {
-      test_unset_range(test, stdlib.symbols[i].pos + os.code_size, 4);
-      break;
-    }
+  {
+    symbol_t *file = find_sybol(stdlib.symbols, stdlib.symbol_count, "file");
+    test_assert(file);
+    test_unset_range(test, file->pos + os.code_size, 4);
   }
 
   printf("\tRun os till CALL execute sh\n");
@@ -859,21 +904,32 @@ void test() {
 
   printf("\tCheck os struct, process and stdout\n");
 
-  test_set_u16(test, 0xF800, os.code_size);
-  test_set_u16(test, 0xF802, 0xF820);
-  test_set_u16(test, 0xF804, 0x8000);
-  test_set_u16(test, 0xF806, 0x8000);
-  test_set_u16(test, 0xF808, 0);
-  test_set_u16(test, 0xF820, 0xFFFF);
-  test_set_u16(test, 0xF822, 1);
-  test_set_u16(test, 0xF824, 0xFFFE);
-  uint16_t stdout_ptr = cpu_read16(cpu, 0xF80A);
-  assert(stdout_ptr % 2 == 0);
-  test_set_u16(test, stdout_ptr, stdout_ptr + 4);
-  test_set_u16(test, stdout_ptr + 2, stdout_ptr + 256);
+  uint16_t stdout_pos = 0xFFFF;
+  {
+    symbol_t *stdout_symbol = find_sybol(os.symbols, os.symbol_count, "stdout");
+    test_assert(stdout_symbol);
+    stdout_pos = stdout_symbol->pos;
+  }
+  test_assert(stdout_pos);
+  test_set_u16(test, stdout_pos, 128);
+  test_set_u16(test, stdout_pos + 2, stdout_pos + 4);
+
+  // os struct:
+  test_set_u16(test, 0xF800, os.code_size); // stdlib
+  test_set_u16(test, 0xF802, 0xF820);       // current process
+  test_set_u16(test, 0xF804, 0x8000);       // used process map
+  test_set_u16(test, 0xF806, 0x8000);       // used page map
+  test_set_u16(test, 0xF808, 0);            // used page map
+  test_set_u16(test, 0xF80A, 0);            // screen text row - col
+  //  os process:
+  test_set_u16(test, 0xF820, 0xFFFF);     // parent process
+  test_set_u16(test, 0xF822, 1);          // cwd sec
+  test_set_u16(test, 0xF824, 0xFFFE);     //  SP
+  test_set_u16(test, 0xF826, stdout_pos); // stdout redirect
+
   test_check(test);
 
-  test_unset_range(test, 0xF824, 2);
+  test_unset_range(test, 0xF824, 2); // os.SP
 
   printf("\tRun execute sh\n");
 
@@ -889,25 +945,26 @@ void test() {
 
   test_set_range(test, 2048, sh.code_size, sh.code);
 
-  test_set_u16(test, 0xF802, 0xF830);
-  test_set_u16(test, 0xF804, 0xC000);
-  test_set_u16(test, 0xF806, 0xC000);
-  test_set_u16(test, 0xF830, 0xF820);
-  test_set_u16(test, 0xF832, 1);
-  test_set_u16(test, 0xF834, 0);
+  test_set_u16(test, 0xF802, 0xF830); // current process
+  test_set_u16(test, 0xF804, 0xC000); // used process map
+  test_set_u16(test, 0xF806, 0xC000); // used page map
+
+  // sh process:
+  test_set_u16(test, 0xF830, 0xF820);     // parent process
+  test_set_u16(test, 0xF832, 1);          // cwd
+  test_set_u16(test, 0xF834, 0);          // SP
+  test_set_u16(test, 0xF836, stdout_pos); // stdout redirect
+
   test_check(test);
-  test_unset_range(test, 0xF834, 2);
+
+  test_unset_range(test, 0xF80A, 2); // screen text row and col
+  test_unset_range(test, 0xF834, 2); // process.SP
 
   printf("\tInput 'ls'\n");
 
-  uint16_t sh_input = 0;
-  for (int i = 0; i < sh.symbol_count; ++i) {
-    if (strcmp(sh.symbols[i].image, "input") == 0) {
-      sh_input = sh.symbols[i].pos + 2048;
-      break;
-    }
-  }
-  assert(sh_input != 0);
+  symbol_t *sh_input_s = find_sybol(sh.symbols, sh.symbol_count, "input");
+  test_assert(sh_input_s);
+  uint16_t sh_input = sh_input_s->pos + 2048;
 
   load_input_string(cpu, "ls\n");
   while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_ptr)) {
@@ -915,10 +972,13 @@ void test() {
   }
   test_assert(running);
 
+  test_set_u16(test, stdout_pos, 128 - 2 - 3);
+  test_set_u16(test, stdout_pos + 2, stdout_pos + 4 + 5);
+  test_unset_range(test, stdout_pos + 4, stdout_pos + 128 - 4); // TODO: test stdout
   test_set_range(test, sh_input, 3, (uint8_t *)"ls\0");
-  test_set_u16(test, stdout_ptr, stdout_ptr + 4 + 5);
-  test_set_range(test, stdout_ptr + 4, 5, (uint8_t *)"$ ls\n");
   test_check(test);
+
+  test_unset_range(test, stdout_pos, stdout_pos + 128); // TODO: test stdout
 
   printf("\tRun ls command till exit\n");
 
@@ -931,7 +991,6 @@ void test() {
   }
   test_assert(running);
 
-  test_unset_range(test, stdout_ptr, 256); // TODO: stdout
   test_check(test);
 
   printf("\tRun `cd dir`\n");
@@ -946,9 +1005,39 @@ void test() {
   }
   test_assert(running);
 
+  uint16_t dir_sec = 0;
+  // TODO: put in decode_dir ... in file
+  {
+    FILE *mem = fopen("mem.bin", "rb");
+    test_assert(mem);
+    test_assert(fseek(mem, 256, SEEK_SET) == 0);
+    test_assert(fgetc(mem) == 'D');
+    test_assert(fgetc(mem) == 0xFF);
+    test_assert(fgetc(mem) == 0xFF);
+    for (int i = 3; i < 256;) {
+      uint16_t sec = 0;
+      char name[256] = {0};
+      for (int j = 0; j < 256; ++j) {
+        name[j] = fgetc(mem);
+        test_assert(name[j] != -1);
+        if (name[j] == 0) {
+          break;
+        }
+      }
+      test_assert(fread(&sec, 2, 1, mem) == 1);
+      test_assert(sec != 0);
+      if (strcmp(name, "dir") == 0) {
+        dir_sec = sec;
+        break;
+      }
+      i += strlen(name) + 3;
+    }
+    fclose(mem);
+  }
+  test_assert(dir_sec != 0);
+
   test_set_range(test, sh_input, 7, (uint8_t *)"cd\0dir\0");
-  // TODO: stdout
-  test_set_u16(test, 0xF832, 7);
+  test_set_u16(test, 0xF832, dir_sec);
   test_check(test);
 
   test_unset_range(test, sh_input, 128);
@@ -965,7 +1054,6 @@ void test() {
   }
   test_assert(running);
 
-  // TODO: stdout
   // test success
   test_check(test);
 
@@ -983,6 +1071,7 @@ void help(int exitcode) {
          "      --real-time                 sleeps each tick to simulate a 4MHz clock\n"
          "      --mem <mem-path>            set the binary file for MEM [default mem.bin]\n"
          "      --screen                    enable screen\n"
+         "      --stdout <start>:<end>      print ram from <start> to <end> as a stdout struct\n"
          " -h | --help                      print this page and exit\n",
          KEY_FIFO_COUNT);
   exit(exitcode);
@@ -1036,6 +1125,7 @@ int main(int argc, char **argv) {
   int ram_range_end = 0;
   char *mem_path = "mem.bin";
   int screen = 0;
+  int stdout_pos = 0;
 
   ++argv;
   char *arg = *argv;
@@ -1056,6 +1146,13 @@ int main(int argc, char **argv) {
         arg[1] = 'r';
         arg[2] = 0;
         continue;
+      } else if (strcmp(arg + 2, "stdout") == 0) {
+        ++argv;
+        if (*argv == NULL) {
+          printf("ERROR: --stdout expects an int\n");
+          help(1);
+        }
+        stdout_pos = atoi(*argv);
       } else if (strcmp(arg + 2, "mem") == 0) {
         ++argv;
         if (*argv == NULL) {
@@ -1207,6 +1304,8 @@ int main(int argc, char **argv) {
   if (ram_range_end != ram_range_start) {
     cpu_dump_ram_range(&cpu, ram_range_start, ram_range_end);
   }
+
+  cpu_dump_stdout(&cpu, stdout_pos);
 
   return 0;
 }
