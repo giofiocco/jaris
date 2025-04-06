@@ -1125,7 +1125,7 @@ int main(int argc, char **argv) {
   int ram_range_end = 0;
   char *mem_path = "mem.bin";
   int screen = 0;
-  int stdout_pos = 0;
+  int stdout_pos = 0xFFFF;
 
   ++argv;
   char *arg = *argv;
@@ -1305,7 +1305,9 @@ int main(int argc, char **argv) {
     cpu_dump_ram_range(&cpu, ram_range_start, ram_range_end);
   }
 
-  cpu_dump_stdout(&cpu, stdout_pos);
+  if (stdout_pos != 0xFFFF) {
+    cpu_dump_stdout(&cpu, stdout_pos);
+  }
 
   return 0;
 }
