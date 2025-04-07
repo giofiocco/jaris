@@ -1,5 +1,6 @@
--- expects in the last 4 bytes of sec 0 the ptr to os and stdlib sec 
--- [0xFFFF, _] if os + stdlib is more than one page
+-- expects in the last 4 bytes of sec 0 the ptr to os and stdlib sec
+-- [0xFFFE, _] if os + stdlib is more than one page
+-- [0xFFFF, 0xFFFF] if os is dynamically linked with not the stdlib
 
 { os_sec_pos 0xFC }
 { next_index 0x01 }
@@ -106,4 +107,5 @@ get_16:
   RET
 
 too_big:
-  RAM_A 0xFFFF
+  RAM_A 0xFFFE
+  HLT
