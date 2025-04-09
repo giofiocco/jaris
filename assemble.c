@@ -351,6 +351,9 @@ bytecode_t compile(preprocessor_t *pre) {
                        "expected HEX, BIN or STRING with len 1, found %s",
                        token_kind_to_string(arg.kind));
           }
+          if ((token.as.inst == PEEKAR || token.as.inst == PUSHAR) && bytecode.arg.num % 2 != 0) {
+            eprintfloc(arg.loc, "expected even number");
+          }
         } break;
         case INST_16BITS_ARG:
         {
