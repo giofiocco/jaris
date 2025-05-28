@@ -17,6 +17,8 @@ int main(int argc, char **argv) {
     exit(1);
   }
 
+  assert(fwrite("FONT", 1, 4, file) == 4);
+
   uint16_t count = 0;
   assert(fwrite(&count, 2, 1, file) == 1);
 
@@ -1060,7 +1062,8 @@ int main(int argc, char **argv) {
   assert(putc(0b00111100, file) != -1);
   assert(putc(0, file) != -1);
 
-  rewind(file);
+  // rewind(file);
+  assert(fseek(file, 4, SEEK_SET) == 0);
   assert(fwrite(&count, 2, 1, file) == 1);
 
   assert(fclose(file) == 0);

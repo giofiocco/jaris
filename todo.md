@@ -1,5 +1,7 @@
 bss section
 
+font file magic number FONT
+
 remove some micro flags
 
 emit graph

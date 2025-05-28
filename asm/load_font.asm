@@ -10,9 +10,13 @@ file: db 4
 -- but nt uset the others
 -- ERRORS:
 -- crash [0, 0xFFFF] if file not found
+-- crash [0, 0xFFFA] if file is not a font
 load_font:
   RAM_B file CALL open_file
   CMPA JMPRZ $not_found
+
+  RAM_A file CALL read_u16 RAM_B "FO" SUB JMPRNZ $not_font
+  RAM_A file CALL read_u16 RAM_B "NT" SUB JMPRNZ $not_font
 
   RAM_A file CALL read_u16
 pattern_loop:
@@ -32,4 +36,8 @@ pattern_loop:
   RET
 
 not_found:
+  HLT
+
+not_font:
+  RAM_B 0xFFFA
   HLT

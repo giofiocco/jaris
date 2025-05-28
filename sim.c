@@ -194,7 +194,6 @@ void compute_screen(cpu_t *cpu) {
       DrawPixel(x, SCREEN_HEIGHT - y - 1, color ? WHITE : BLACK);
     }
   }
-
   EndTextureMode();
 }
 
@@ -1056,6 +1055,8 @@ void test() {
 
   // test success
   test_check(test);
+
+  printf("TODO: test load font");
 
   printf("End\n");
 }

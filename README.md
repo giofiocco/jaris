@@ -210,6 +210,7 @@ Include all symbols in symbols, all relreloc info
 
 | size [B] | description   |
 | :------- | :------------ |
+| 4        | 'FONT'        |
 | 2        | pattern count |
 | 9\*#     | patterns      |
 

@@ -25,5 +25,4 @@ next:
 
 end:
   RAM_AL 0x0A CALL put_char -- new line
-  RAM_AL 0x00
-  CALL exit
+  RAM_AL 0x00 CALL exit

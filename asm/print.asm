@@ -52,7 +52,7 @@ ridirect:
   -- ^ char [stdout_ptr + 1, _]
   DECA A_B rB_A CMPA JMPRZ $stdout_full
   DECA A_rB
-  RAM_AL 0x02 SUM A_B rB_A PUSHB
+  RAM_AL 0x02 SUM PUSHA A_B rB_A
   -- ^ &next_ptr char
   A_B PEEKAR 0x04 AL_rB -- *next_char = char
   B_A INCA POPB A_rB
@@ -60,29 +60,6 @@ ridirect:
 
 stdout_full:
   RAM_A 0xEFFA HLT
-
--- [char, _] -> [_, _]
--- crash [0xEFFA, _] if stdout is full
--- put_char:
---   PUSHA
---   RAM_B stdout_ptr_ptr rB_A PUSHA -- push &next_char_ptr
---   A_B rB_A -- next_char_ptr
---   -- ^ &next_char_ptr char [next_char_ptr, _]
---   A_B PEEKAR 0x04 AL_rB
--- 
---   B_A INCA PEEKB A_rB -- *(&next_char_ptr) ++
---   -- ^ &next_char_ptr char [next_char_ptr, _]
--- 
---   A_B POPA INCA INCA PUSHB 
---   -- ^ next_char_ptr char [&ending_char_ptr, _]
---   A_B rB_A POPB INCSP
---   -- ^ [ending_char_ptr, next_char_ptr]
---   SUB JMPRN $end -- if (next_char_ptr - ending_char_ptr < 0) goto end
--- 
---   -- stdout full
---   RAM_A 0xEFFA
--- end:
---   RET
 
 -- [u16 num, _] -> [_, _]
 -- crash [0xEFFA, _] if stdout is full

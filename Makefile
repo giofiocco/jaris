@@ -1,4 +1,4 @@
-TARGETS=assembler linker encodemem sim inspect decodemem docs.pdf encodefont
+TARGETS=assembler linker encodemem sim inspect decodemem docsold.pdf encodefont
 CFLAGS=-Wall -Wextra -std=c99 -g
 
 STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string
@@ -72,7 +72,7 @@ sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) $(ERRORS_LIB) mem.bin
 encodefont: encodefont.c
 	cc $(CFLAGS) -o $@ $<
 
-docs.pdf: docs.roff
+docsold.pdf: docsold.roff
 	groff -p -t -ms $^ -Tpdf > $@
 
 .PHONY: clean
