@@ -10,35 +10,35 @@
 { ptr_to_stdlib_ptr 0xF800 }
 
 RAM_A 0xFEFE A_SP -- 0xFF00 - 2
-RAM_AL 0x00 A_SEC 
+RAM_AL 0x00 A_SEC
 RAM_NDX os_sec_pos
 MEM_A INCNDX MEM_AH INCNDX PUSHA -- os_sec
 MEM_A INCNDX MEM_AH INCNDX PUSHA -- stdlib_sec
 -- ^ stdlib_sec os_sec
-PEEKAR 0x04 A_SEC 
+PEEKAR 0x04 A_SEC
 RAM_NDX 0x07
 
-CALLR $get_16 PUSHA
+CALLR $get_16 PUSHA PUSHA
 RAM_BL 0x00 PUSHB
 -- fall-through
 copy_code:
-  -- ^ mar code_size stdlib_sec os_sec
-  CALLR $get_16
-  POPB A_rB
-  PEEKA SUB INCA INCA JMPRNN $copied -- if (mar + 2 - code_size >= 0) goto copied
-  B_A INCA INCA PUSHA
+  -- ^ mar size code_size stdlib_sec os_sec
+  CALLR $get_16 POPB A_rB -- *mar = get_16
+  POPA DECA DECA JMPRZ $copied PUSHA -- if ((size -= 2) == 0) goto copied
+  B_A INCA INCA PUSHA -- mar += 2
   JMPR $copy_code
 
 copied:
   -- ^ os_size stdlib_sec os_sec
   CALLR $get_16 SHL SHL -- reloc_count * 4
-  A_B NDX_A SUM A_NDX -- ndx += reloc_count * 4
+reloc:
+  PUSHA CALLR $get_8 POPA DECA JMPRNZ $reloc
 
   CALLR $get_16 DECA JMPRNZ $not_stdlib -- dynamic_count
   CALLR $get_16 RAM_B 0x0101 SUB JMPRNZ $not_stdlib -- file_name len and filename == 0x01 0x01
   CALLR $get_8
 dynamic_reloc:
-  PUSHA 
+  PUSHA
   -- ^ dynamic_reloc_count os_size stdlib_sec os_sec
   CALLR $get_16 PUSHA
   -- ^ where dynamic_reloc_count os_size stdlib_sec os_sec
@@ -83,23 +83,31 @@ reloced_stdlib:
   RAM_AL 0x00 JMPA
 
 not_stdlib:
-  RAM_A 0xFFFF
-  RAM_B 0xFFFF
+  RAM_A 0xFFFF A_B
   HLT
 
-get_8:
-  NDX_A CMPA JMPRZ $get_8_next_subsector
-  A_B
-  -- if ndx - maxndx - 1 >= 0 { goto nextsec }
-  RAM_NDX max_index MEM_A SUB DECA JMPRNN $get_8_next_subsector
-  B_A A_NDX MEM_A INCNDX
-  RET
+--get_8:
+--  NDX_A A_B
+--  RAM_NDX max_index MEM_A SUB JMPRNN $get_8_next_subsector
+--  B_A A_NDX MEM_A INCNDX
+--  RET
+--
+--get_8_next_subsector:
+--  B_A A_NDX MEM_A PUSHA
+--  RAM_NDX next_index MEM_A INCNDX MEM_AH A_SEC
+--  RAM_NDX data_start
+--  POPA RET
 
-get_8_next_subsector:
-  RAM_NDX next_index
-  MEM_A INCNDX MEM_AH A_SEC
-  RAM_NDX data_start MEM_A INCNDX
-  RET
+get_8:
+  MEM_A PUSHA
+  NDX_A A_B RAM_NDX max_index MEM_A SUB JMPRN $no_next_subsec
+  -- if next subsec
+  RAM_NDX next_index MEM_A INCNDX MEM_AH A_SEC
+  RAM_BL 0x03 -- data-start - 1
+  -- fall-through
+no_next_subsec:
+  B_A A_NDX INCNDX
+  POPA RET
 
 get_16:
   CALLR $get_8 PUSHA
