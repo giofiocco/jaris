@@ -232,7 +232,7 @@ The sector 1 is the root directory.
 
 The `next dir sector` is 0xFFFF if the dir fit in the sector.
 The `parent dir sector` is 0xFFFF if the dir is the root.
-The `head dir sector` is 0xFFFF if the dir is not the `next dir sector` of anyother sector.
+The `head dir sector` is itself if the dir is not the `next dir sector` of any other sector.
 
 | size [B] | description       |
 | :------- | :---------------- |

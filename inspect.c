@@ -90,8 +90,8 @@ void inspect_mem(char *filename) {
   assert(fclose(file) == 0);
 
   printf("0 BOOTLOADER:\n");
-  printf("\tOS SEC: %04X\n", sectors[0][252] | (sectors[0][253] << 8));
-  printf("\tSTDLIB SEC: %04X\n", sectors[0][254] | (sectors[0][255] << 8));
+  printf("\tOS SEC: %d\n", sectors[0][252] | (sectors[0][253] << 8));
+  printf("\tSTDLIB SEC: %d\n", sectors[0][254] | (sectors[0][255] << 8));
 
   for (int i = 1; sectors[i][0] != 0; ++i) {
     uint8_t *sector = sectors[i];

@@ -1,7 +1,5 @@
 bss section
 
-font file magic number FONT
-
 remove some micro flags
 
 emit graph
@@ -20,8 +18,6 @@ and obj things in assemble
 - warn if extern not used
 
 # Sim
-
-- test with a fixed mem.bin
 
 - step mode add commands
   - `read 0010` to read from ram

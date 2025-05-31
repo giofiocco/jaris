@@ -716,10 +716,14 @@ typedef struct {
   int16_t test_ram[1 << 16]; // negative if undef
 } test_t;
 
+void test_encode_mem(uint8_t *mem) {
+  assert(mem);
+}
+
 void test_init(test_t *test) {
   assert(test);
   *test = (test_t){0};
-  cpu_init(&test->cpu, "mem.bin");
+  cpu_init(&test->cpu, "test.mem.bin");
   memset(test->test_ram, -1, (1 << 16) * sizeof(test->test_ram[0]));
 }
 
