@@ -66,17 +66,20 @@ decodemem: decodemem.c
 inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)
 
-sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) $(ERRORS_LIB) mem.bin
+sim: sim.c $(ARG_PARSER_LIB) $(SIM_DEP) $(ERRORS_LIB) mem.bin test.mem.bin
 	cc $(CFLAGS) -o $@ $(filter %.c, $^) -lraylib
 
 encodefont: encodefont.c
 	cc $(CFLAGS) -o $@ $<
+
+test.mem.bin: encodemem test.mem
+	./encodemem -f test.mem
 
 docsold.pdf: docsold.roff
 	groff -p -t -ms $^ -Tpdf > $@
 
 .PHONY: clean
 clean:
-	rm -r $(TARGETS) mem.bin $(STDLIB_DOCS)
+	rm -r $(TARGETS) *.bin $(STDLIB_DOCS)
 	rm -rf asm/build/
 

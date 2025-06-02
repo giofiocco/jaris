@@ -3,6 +3,7 @@
 #set par(justify: true)
 #set text(10pt)
 #set page(numbering: "1", columns:2, margin:1cm)
+#show heading: smallcaps
 
 #{
   set text(35pt)
@@ -10,7 +11,7 @@
     top + center,
     scope: "parent",
     float: true,
-    [*Jaris*]
+    [*$aleph$ #smallcaps("aleph")*]
   )
 }
 #outline()

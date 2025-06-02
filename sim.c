@@ -23,6 +23,8 @@
 #define ZOOM          2
 #define SCREEN_PAD    10
 
+#define TEST_MEM_PATH "test.mem.bin"
+
 // clang-format off
 typedef enum {
   _HLT,
@@ -714,6 +716,9 @@ symbol_t *find_sybol(symbol_t *symbols, int count, char *name) {
 typedef struct {
   cpu_t cpu;
   int16_t test_ram[1 << 16]; // negative if undef
+
+  char stdout[2048];
+  int stdout_size;
 } test_t;
 
 void test_encode_mem(uint8_t *mem) {
@@ -723,7 +728,7 @@ void test_encode_mem(uint8_t *mem) {
 void test_init(test_t *test) {
   assert(test);
   *test = (test_t){0};
-  cpu_init(&test->cpu, "test.mem.bin");
+  cpu_init(&test->cpu, TEST_MEM_PATH);
   memset(test->test_ram, -1, (1 << 16) * sizeof(test->test_ram[0]));
 }
 
@@ -828,6 +833,41 @@ void test_print_ram_range(test_t *test, uint16_t from, uint16_t to) {
   }
   printf("%04X %05d |\n", to, to);
 }
+
+void test_set_stdout(test_t *test, uint16_t stdout_pos, char *str) {
+  assert(test);
+  assert(str);
+
+  assert(test->stdout_size + strlen(str) < 2048);
+  strcat(test->stdout, str);
+  test->stdout_size += strlen(str);
+
+  test_set_u16(test, stdout_pos, 128 - test->stdout_size);
+  test_set_u16(test, stdout_pos + 2, stdout_pos + 4 + test->stdout_size);
+  test_set_range(test, stdout_pos + 4, test->stdout_size, (uint8_t *)test->stdout);
+}
+
+#define test_sh_command(__command, __output)                                                       \
+  printf("\tInput `%s`\n", __command);                                                             \
+  load_input_string(cpu, __command "\n");                                                          \
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_ptr)) { \
+    tick(cpu, &running);                                                                           \
+  }                                                                                                \
+  test_assert(running);                                                                            \
+  test_set_stdout(test, stdout_pos, "$ " __command "\n");                                          \
+  test_set_range(test, sh_input, strlen(__command) + 1, (uint8_t *)__command);                     \
+  test_check(test);                                                                                \
+  printf("\tRun `%s`\n", __command);                                                               \
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_ptr)) {    \
+    tick(cpu, &running);                                                                           \
+  }                                                                                                \
+  test_assert(running);                                                                            \
+  while (running && cpu->RAM[cpu->IP] != RET) {                                                    \
+    tick(cpu, &running);                                                                           \
+  }                                                                                                \
+  test_assert(running);                                                                            \
+  test_set_stdout(test, stdout_pos, __output);                                                     \
+  test_check(test);
 
 void test() {
   test_t test_ = {0};
@@ -963,38 +1003,11 @@ void test() {
   test_unset_range(test, 0xF80A, 2); // screen text row and col
   test_unset_range(test, 0xF834, 2); // process.SP
 
-  printf("\tInput 'ls'\n");
-
   symbol_t *sh_input_s = find_sybol(sh.symbols, sh.symbol_count, "input");
   test_assert(sh_input_s);
   uint16_t sh_input = sh_input_s->pos + 2048;
 
-  load_input_string(cpu, "ls\n");
-  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_ptr)) {
-    tick(cpu, &running);
-  }
-  test_assert(running);
-
-  test_set_u16(test, stdout_pos, 128 - 2 - 3);
-  test_set_u16(test, stdout_pos + 2, stdout_pos + 4 + 5);
-  test_unset_range(test, stdout_pos + 4, stdout_pos + 128 - 4); // TODO: test stdout
-  test_set_range(test, sh_input, 3, (uint8_t *)"ls\0");
-  test_check(test);
-
-  test_unset_range(test, stdout_pos, stdout_pos + 128); // TODO: test stdout
-
-  printf("\tRun ls command till exit\n");
-
-  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_ptr)) {
-    tick(cpu, &running);
-  }
-  test_assert(running);
-  while (running && cpu->RAM[cpu->IP] != RET) {
-    tick(cpu, &running);
-  }
-  test_assert(running);
-
-  test_check(test);
+  test_sh_command("ls", "cat cd font ls sh shutdown test_font __os __stdlib dir \n");
 
   printf("\tRun `cd dir`\n");
 
@@ -1011,7 +1024,7 @@ void test() {
   uint16_t dir_sec = 0;
   // TODO: put in decode_dir ... in file
   {
-    FILE *mem = fopen("mem.bin", "rb");
+    FILE *mem = fopen(TEST_MEM_PATH, "rb");
     test_assert(mem);
     test_assert(fseek(mem, 256, SEEK_SET) == 0);
     test_assert(fgetc(mem) == 'D');
@@ -1041,6 +1054,7 @@ void test() {
 
   test_set_range(test, sh_input, 7, (uint8_t *)"cd\0dir\0");
   test_set_u16(test, 0xF832, dir_sec);
+  test_set_stdout(test, stdout_pos, "$ cd dir\n");
   test_check(test);
 
   test_unset_range(test, sh_input, 128);
@@ -1057,10 +1071,11 @@ void test() {
   }
   test_assert(running);
 
-  // test success
+  // TODO: test success
+  test_set_stdout(test, stdout_pos, "$ /ls\nciao b \n");
   test_check(test);
 
-  printf("TODO: test load font");
+  printf("TODO: test load font\n");
 
   printf("End\n");
 }
@@ -1118,7 +1133,7 @@ void parse_range(char *range, int *start_out, int *end_out) {
 }
 
 int main(int argc, char **argv) {
-  (void)argc;
+  //(void)argc;
 
   set_control_rom();
 
