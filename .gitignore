@@ -3,7 +3,7 @@
 *.bin
 build/
 mem/
-mem.bin
+asm/oldasm/
 assembler
 linker
 encodemem

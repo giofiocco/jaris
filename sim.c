@@ -16,8 +16,6 @@
 #include "files.h"
 #include "instructions.h"
 
-// #define SCREEN_WIDTH  800
-// #define SCREEN_HEIGHT 60
 #define SCREEN_WIDTH  640
 #define SCREEN_HEIGHT 350
 #define ZOOM          2
@@ -388,7 +386,7 @@ static char scancodeset[256] = {
     '\'',
     '`',
     0 /*left shift*/,
-    0 /*backslash*/,
+    '\\',
     'z',
     'x',
     'c',
@@ -424,21 +422,21 @@ void load_input_string(cpu_t *cpu, char *string) {
   assert(string);
 
   for (; *string; ++string) {
-    if ('A' <= *string && *string <= 'Z') {
-      uint8_t code = find_scan_code(*string);
+    if (('A' <= *string && *string <= 'Z') || *string == '_') {
+      uint8_t code = find_scan_code(*string == '_' ? '-' : (*string - 'A' + 'a'));
       assert(code < 0x80);
-      assert(cpu->key_fifo_i + 4 < 1000);
-      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x2A; // left shift pressed
+      assert(cpu->key_fifo_i + 6 < 1000);
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0xE0;
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0xAA;
       cpu->KEY_FIFO[cpu->key_fifo_i++] = code;
-      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x2A + 0x80; // left shift released
       cpu->KEY_FIFO[cpu->key_fifo_i++] = code + 0x80;
-    } else if (*string == '\\' && *(string + 1) == 'n') {
-      ++string;
-      assert(cpu->key_fifo_i + 2 < 1000);
-      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x1C;
-
-      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x1C + 0x80;
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0xE0;
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x2A;
     } else {
+      if (*string == '\\' && *(string + 1) == 'n') {
+        string++;
+        *string = '\n';
+      }
       uint8_t code = find_scan_code(*string);
       assert(code < 0x80);
       assert(cpu->key_fifo_i + 2 < 1000);
@@ -1075,7 +1073,30 @@ void test() {
   test_set_stdout(test, stdout_pos, "$ /ls\nciao b \n");
   test_check(test);
 
-  printf("TODO: test load font\n");
+  printf("\tCheck Patterns loaded from font\n");
+
+  {
+    FILE *font = fopen("mem/font", "rb");
+    assert(font);
+    char magic_number[5] = {0};
+    assert(fread(magic_number, 1, 4, font) == 4);
+    assert(strcmp(magic_number, "FONT") == 0);
+    int count = 0;
+    assert(fread(&count, 2, 1, font) == 1);
+    assert(count >= 0 && count < 256);
+    for (int i = 0; i < count; ++i) {
+      uint8_t c = 0;
+      assert(fread(&c, 1, 1, font) == 1);
+
+      for (int j = 0; j < 8; ++j) {
+        uint8_t row = 0;
+        assert(fread(&row, 1, 1, font) == 1);
+
+        test_assert(row == cpu->PATTERN_RAM[(c << 3) + j]);
+      }
+    }
+    assert(fclose(font) == 0);
+  }
 
   printf("End\n");
 }
@@ -1133,7 +1154,7 @@ void parse_range(char *range, int *start_out, int *end_out) {
 }
 
 int main(int argc, char **argv) {
-  //(void)argc;
+  (void)argc;
 
   set_control_rom();
 

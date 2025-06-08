@@ -12,4 +12,4 @@ string: "ABCDEFGHIJKLMNOPQRSTUVWXYZ" 0x0A
         "abcdefghijklmnopqrstuvwxyz" 0x0A
         "0123456789" 0x0A
         "!" 0x22 "#$%&'()*+,-./:;<=>?@[\]^_`{|}"
-        0x00
+        0x0A 0x00
