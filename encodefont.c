@@ -520,12 +520,19 @@ int main(int argc, char **argv) {
   ++count;
   assert(putc('*', file) != -1);
   assert(putc(0, file) != -1);
+  // assert(putc(0b00000000, file) != -1);
+  // assert(putc(0b01000100, file) != -1);
+  // assert(putc(0b00101000, file) != -1);
+  // assert(putc(0b00010000, file) != -1);
+  // assert(putc(0b00101000, file) != -1);
+  // assert(putc(0b01000100, file) != -1);
+  //
   assert(putc(0b00000000, file) != -1);
-  assert(putc(0b01000100, file) != -1);
-  assert(putc(0b00101000, file) != -1);
-  assert(putc(0b00010000, file) != -1);
-  assert(putc(0b00101000, file) != -1);
-  assert(putc(0b01000100, file) != -1);
+  assert(putc(0b01010100, file) != -1);
+  assert(putc(0b00111000, file) != -1);
+  assert(putc(0b01010100, file) != -1);
+  assert(putc(0, file) != -1);
+  assert(putc(0, file) != -1);
   assert(putc(0, file) != -1);
 
   ++count;

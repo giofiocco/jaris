@@ -1,4 +1,4 @@
-TARGETS=assembler linker encodemem sim inspect decodemem docsold.pdf encodefont
+TARGETS=assembler linker encodemem sim inspect decodemem docs.pdf encodefont
 CFLAGS=-Wall -Wextra -std=c99 -g
 
 STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string
@@ -75,7 +75,7 @@ encodefont: encodefont.c
 test.mem.bin: encodemem test.mem
 	./encodemem -f test.mem
 
-docsold.pdf: docsold.roff
+docs.pdf: docs.roff
 	groff -p -t -ms $^ -Tpdf > $@
 
 .PHONY: clean

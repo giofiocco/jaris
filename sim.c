@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #define KEY_FIFO_COUNT 1024
@@ -191,7 +192,8 @@ void compute_screen(cpu_t *cpu) {
       int dy = y & 0b111;
       int dx = x & 0b111;
       uint8_t color = (cpu->PATTERN_RAM[pattern_index * 8 + dy] >> (7 - dx)) & 1;
-      DrawPixel(x, SCREEN_HEIGHT - y - 1, color ? WHITE : BLACK);
+      // DrawPixel(x, SCREEN_HEIGHT - y - 1, color ? (Color){0x88, 0xc0, 0x70, 0xFF} : (Color){0x08, 0x18, 0x20, 0xFF});
+      DrawPixel(x, SCREEN_HEIGHT - y - 1, color ? (Color){0x34, 0x68, 0x56, 0xFF} : (Color){0x08, 0x18, 0x20, 0xFF});
     }
   }
   EndTextureMode();
@@ -1120,7 +1122,6 @@ void help(int exitcode) {
          "2:0xFA)\n"
          " -t | --test                      run test and exit\n"
          " -s | --step                      enable step mode after the cpu is HLTed\n"
-         "      --real-time                 sleeps each tick to simulate a 4MHz clock\n"
          "      --mem <mem-path>            set the binary file for MEM [default mem.bin]\n"
          "      --screen                    enable screen\n"
          "      --stdout <start>:<end>      print ram from <start> to <end> as a stdout struct\n"
@@ -1171,7 +1172,6 @@ int main(int argc, char **argv) {
   set_control_rom();
 
   int step_mode = 0;
-  int real_time_mode = 0;
   char input[KEY_FIFO_COUNT] = {0};
   int inputi = 0;
   int ram_range_start = 0;
@@ -1189,8 +1189,6 @@ int main(int argc, char **argv) {
         help(0);
       } else if (strcmp(arg + 2, "step") == 0) {
         step_mode = 1;
-      } else if (strcmp(arg + 2, "real-time") == 0) {
-        real_time_mode = 1;
       } else if (strcmp(arg + 2, "input") == 0) {
         arg[1] = 'i';
         arg[2] = 0;
@@ -1289,9 +1287,6 @@ int main(int argc, char **argv) {
     }
     tick(&cpu, &running);
     ++ticks;
-    if (real_time_mode) {
-      sleep(1.0 / 4.0E6);
-    }
   }
   if (cpu.has_screen) {
     while (!WindowShouldClose()) {
