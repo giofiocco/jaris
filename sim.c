@@ -342,79 +342,86 @@ void tick(cpu_t *cpu, bool *running) {
 
 // look at https://www.vetra.com/scancodes.html
 // based on https://wiki.osdev.org/PS/2_Keyboard scan code set 1
-static char scancodeset[256] = {
-    0,
-    0 /*escape*/,
-    '1',
-    '2',
-    '3',
-    '4',
-    '5',
-    '6',
-    '7',
-    '8',
-    '9',
-    '0',
-    '-',
-    '=',
-    0 /*backspace*/,
-    '\t',
-    'q',
-    'w',
-    'e',
-    'r',
-    't',
-    'y',
-    'u',
-    'i',
-    'o',
-    'p',
-    '[',
-    ']',
-    '\n',
-    0 /*left ctrl*/,
-    'a',
-    's',
-    'd',
-    'f',
-    'g',
-    'h',
-    'j',
-    'k',
-    'l',
-    ';',
-    '\'',
-    '`',
-    0 /*left shift*/,
-    '\\',
-    'z',
-    'x',
-    'c',
-    'v',
-    'b',
-    'n',
-    'm',
-    ',',
-    '.',
-    '/',
-    0 /*right shift*/,
-    0 /*keypad * */,
-    0 /*left alt*/,
-    ' ',
-};
+int char_to_scancode[256] = {0};
+void set_char_to_scancode() {
+  char_to_scancode['1'] = 0x02;
+  char_to_scancode['2'] = 0x03;
+  char_to_scancode['3'] = 0x04;
+  char_to_scancode['4'] = 0x05;
+  char_to_scancode['5'] = 0x06;
+  char_to_scancode['6'] = 0x07;
+  char_to_scancode['7'] = 0x08;
+  char_to_scancode['8'] = 0x09;
+  char_to_scancode['9'] = 0x0A;
+  char_to_scancode['0'] = 0x0B;
+  char_to_scancode['-'] = 0x0C;
+  char_to_scancode['='] = 0x0D;
+  char_to_scancode['\t'] = 0x0F;
+  char_to_scancode['q'] = 0x10;
+  char_to_scancode['w'] = 0x11;
+  char_to_scancode['e'] = 0x12;
+  char_to_scancode['r'] = 0x13;
+  char_to_scancode['t'] = 0x14;
+  char_to_scancode['y'] = 0x15;
+  char_to_scancode['u'] = 0x16;
+  char_to_scancode['i'] = 0x17;
+  char_to_scancode['o'] = 0x18;
+  char_to_scancode['p'] = 0x19;
+  char_to_scancode['['] = 0x1A;
+  char_to_scancode[']'] = 0x1B;
+  char_to_scancode['\n'] = 0x1C;
+  char_to_scancode['a'] = 0x1E;
+  char_to_scancode['s'] = 0x1F;
+  char_to_scancode['d'] = 0x20;
+  char_to_scancode['f'] = 0x21;
+  char_to_scancode['g'] = 0x22;
+  char_to_scancode['h'] = 0x23;
+  char_to_scancode['j'] = 0x24;
+  char_to_scancode['k'] = 0x25;
+  char_to_scancode['l'] = 0x26;
+  char_to_scancode[';'] = 0x27;
+  char_to_scancode['\''] = 0x28;
+  char_to_scancode['`'] = 0x29;
+  char_to_scancode['\\'] = 0x2B;
+  char_to_scancode['z'] = 0x2C;
+  char_to_scancode['x'] = 0x2D;
+  char_to_scancode['c'] = 0x2E;
+  char_to_scancode['v'] = 0x2F;
+  char_to_scancode['b'] = 0x30;
+  char_to_scancode['n'] = 0x31;
+  char_to_scancode['m'] = 0x32;
+  char_to_scancode[','] = 0x33;
+  char_to_scancode['.'] = 0x34;
+  char_to_scancode['/'] = 0x35;
+  char_to_scancode[' '] = 0x39;
 
-uint8_t find_scan_code(char c) {
-  uint8_t code = 0;
-  for (int i = 0; i < 256; i++) {
-    if (scancodeset[i] == c) {
-      code = i;
-      break;
-    }
-  }
-  if (code == 0) {
-    eprintf("no scancode for '%c'\n", c);
-  }
-  return code;
+  char_to_scancode['Q'] = -0x10;
+  char_to_scancode['W'] = -0x11;
+  char_to_scancode['E'] = -0x12;
+  char_to_scancode['R'] = -0x13;
+  char_to_scancode['T'] = -0x14;
+  char_to_scancode['Y'] = -0x15;
+  char_to_scancode['U'] = -0x16;
+  char_to_scancode['I'] = -0x17;
+  char_to_scancode['O'] = -0x18;
+  char_to_scancode['P'] = -0x19;
+  char_to_scancode['A'] = -0x1E;
+  char_to_scancode['S'] = -0x1F;
+  char_to_scancode['D'] = -0x20;
+  char_to_scancode['F'] = -0x21;
+  char_to_scancode['G'] = -0x22;
+  char_to_scancode['H'] = -0x23;
+  char_to_scancode['J'] = -0x24;
+  char_to_scancode['K'] = -0x25;
+  char_to_scancode['L'] = -0x26;
+  char_to_scancode['Z'] = -0x2C;
+  char_to_scancode['X'] = -0x2D;
+  char_to_scancode['C'] = -0x2E;
+  char_to_scancode['V'] = -0x2F;
+  char_to_scancode['B'] = -0x30;
+  char_to_scancode['N'] = -0x31;
+  char_to_scancode['M'] = -0x32;
+  char_to_scancode['_'] = -0x0C;
 }
 
 void load_input_string(cpu_t *cpu, char *string) {
@@ -422,22 +429,26 @@ void load_input_string(cpu_t *cpu, char *string) {
   assert(string);
 
   for (; *string; ++string) {
-    if (('A' <= *string && *string <= 'Z') || *string == '_') {
-      uint8_t code = find_scan_code(*string == '_' ? '-' : (*string - 'A' + 'a'));
-      assert(code < 0x80);
+    if (*string == '\\' && *(string + 1) == 'n') {
+      ++string;
+      *string = '\n';
+    }
+
+    int code = char_to_scancode[(int)*string];
+    if (code == 0) {
+      eprintf("no scancode for '%c'", *string);
+    }
+
+    if (code < 0) {
+      assert(-code < 0x80);
       assert(cpu->key_fifo_i + 6 < 1000);
       cpu->KEY_FIFO[cpu->key_fifo_i++] = 0xE0;
       cpu->KEY_FIFO[cpu->key_fifo_i++] = 0xAA;
-      cpu->KEY_FIFO[cpu->key_fifo_i++] = code;
-      cpu->KEY_FIFO[cpu->key_fifo_i++] = code + 0x80;
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = -code;
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = -code + 0x80;
       cpu->KEY_FIFO[cpu->key_fifo_i++] = 0xE0;
       cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x2A;
     } else {
-      if (*string == '\\' && *(string + 1) == 'n') {
-        string++;
-        *string = '\n';
-      }
-      uint8_t code = find_scan_code(*string);
       assert(code < 0x80);
       assert(cpu->key_fifo_i + 2 < 1000);
       cpu->KEY_FIFO[cpu->key_fifo_i++] = code;
@@ -1156,6 +1167,7 @@ void parse_range(char *range, int *start_out, int *end_out) {
 int main(int argc, char **argv) {
   (void)argc;
 
+  set_char_to_scancode();
   set_control_rom();
 
   int step_mode = 0;
