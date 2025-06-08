@@ -17,7 +17,8 @@ _start:
   RAM_B 0xF820 RAM_A 0xFFFF A_rB -- ptr to parent process
   RAM_B 0xF822 RAM_A 0x0001 A_rB -- cwd sec
   RAM_B 0xF824 RAM_A 0xFFFE A_rB -- SP
-  RAM_B 0xF826 RAM_A stdout A_rB -- stdout redirect
+  RAM_B 0xF826 RAM_A 0xFFFF A_rB -- stdout unset
+  -- RAM_B 0xF826 RAM_A stdout A_rB -- stdout redirect
 
   -- stdout
   RAM_AL 0x80 RAM_B stdout A_rB
@@ -27,7 +28,7 @@ _start:
 
   RAM_A path RAM_BL 0x00 CALL execute
 
-  RAM_B 0x0000
+  RAM_B 0x1010
   HLT
 
 font_path: "font" 0x00

@@ -1,0 +1,18 @@
+newfile cat fromfile mem/cat
+newfile cd fromfile mem/cd
+newfile font fromfile mem/font
+newfile ls fromfile mem/ls
+newfile sh fromfile mem/sh
+newfile shutdown fromfile mem/shutdown
+newfile test_font fromfile mem/test_font
+newfile __os fromfile mem/__os
+newfile __stdlib fromfile mem/__stdlib
+newdir dir
+newfile ciao text
+ciao
+come va
+endtext
+newdir b
+enddir
+enddir
+setbootloader fromfile mem/__bootloader
