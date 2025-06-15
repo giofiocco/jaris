@@ -1,4 +1,4 @@
-TARGETS=assembler linker encodemem sim inspect decodemem docs.pdf encodefont
+TARGETS=assembler linker encodemem sim inspect docs.pdf encodefont
 CFLAGS=-Wall -Wextra -std=c99 -g
 
 STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string
@@ -59,9 +59,6 @@ linker: linker.c link.c $(FILES_DEP) $(INSTRUCTIONS_DEP) $(ARG_PARSER_LIB)
 
 encodemem: encodemem.c $(ARG_PARSER_LIB)
 	cc $(CFLAGS) -D_DEFAULT_SOURCE -o $@ $(filter %.c, $^)
-
-decodemem: decodemem.c
-	cc $(CFLAGS) -o $@ $<
 
 inspect: inspect.c $(FILES_DEP) $(ARG_PARSER_LIB) $(ERRORS_LIB)
 	cc $(CFLAGS) -o $@ $(filter %.c, $^)

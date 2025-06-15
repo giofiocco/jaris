@@ -1,5 +1,6 @@
 #import "@preview/cetz:0.3.4" as cetz: canvas, draw
 #import "@preview/circuiteria:0.2.0" as circuiteria: circuit
+#import "pictypst/PIC.typ": pic
 
 #set par(justify: true)
 #set text(10pt)
@@ -30,7 +31,24 @@ It consist of one 16bit bus, 2 general purpose registers, a non volatile memory,
 TODO: control, flags, alu
 ]
 
+#place(bottom+center, scope:"parent", float:true, figure(pic("
+IP: box \"IP\"; move
+A: box \"A\"; move
+B: box \"B\"; move
+SP: box \"SP\"; move
+X: box \"X\"; move;
+ALU: box \"+/-/>>\"; move
+Y: box \"Y\"; move
+IR: box \"IR\"; move
 
+move to ALU; move up; FR: box \"FR\"
+move to Y; move up; SC: box \"SC\"
+move; CROM: box \"CROM\"
+move to IP; move up; move; CLK: box \"CLK\"
+move to A; move up; move; box dashed \"BOOT\"
+"), caption:[Modules' diagram]))
+
+/*
 #place(bottom+center, scope:"parent", float:true, figure(canvas({
   import draw: *
   stroke(.5pt)
@@ -53,16 +71,17 @@ TODO: control, flags, alu
   line((2.5,1), (rel:(0,-5)))
 
 }), caption: [Modules diagram]))
+*/
 
 = Modules
 == RAM Module
-#figure(canvas({
-  import draw: *
-}))
 
 == Keyboard
 #link("https://wiki.osdev.org/PS/2_Keyboard")[SP/2 Keyboard], command `0xF0` with sub command `1` to set the scan code set 1,
 if response is `0xFE` means resend and `0xFA` means ACK (possibily limited to 3 retries before assume the command is not supported).
 
+== Control Flags
+#pic("
 
+")
 
