@@ -281,6 +281,12 @@ bytecode_t bytecode_with_string(bytecode_kind_t kind, instruction_t inst, char *
   return bc;
 }
 
+bytecode_t bytecode_with_sv(bytecode_kind_t kind, instruction_t inst, sv_t sv) {
+  bytecode_t bc = {kind, inst, {}};
+  memcpy(bc.arg.string, sv.start, sv.len * sizeof(char));
+  return bc;
+}
+
 void bytecode_to_asm(FILE *stream, bytecode_t bc) {
   switch (bc.kind) {
     case BNONE:

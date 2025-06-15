@@ -1,6 +1,6 @@
 #include "../argparse.h"
-#include "../files.h"
-#include "../link.h"
+#include "files.h"
+#include "link.h"
 
 void print_help() {
   printf("Usage: linker [options] -o <output> <files> ...\n\n"

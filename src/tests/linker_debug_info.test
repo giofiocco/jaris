@@ -1,0 +1,1 @@
+command: ./assembler -g tests/linker_file.asm && ./linker -g -o tests/linker_file -d tests/linker_file.asm.o && rm tests/linker_file.asm.o tests/linker_file

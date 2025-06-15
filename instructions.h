@@ -75,6 +75,7 @@ instruction_stat_t instruction_stat(instruction_t instruction);
 
 void bytecode_dump(bytecode_t bc);
 bytecode_t bytecode_with_string(bytecode_kind_t kind, instruction_t instruction, char *string);
+bytecode_t bytecode_with_sv(bytecode_kind_t kind, instruction_t instruction, sv_t sv);
 
 void bytecode_to_asm(FILE *stream, bytecode_t bc);
 

@@ -3,19 +3,7 @@
 
 #include "../../mystb/errors.h"
 #include "files.h"
-
-typedef struct {
-  exe_t exe;
-  uint8_t global_count;
-  uint16_t globals[GLOBAL_MAX_COUNT];
-  uint8_t extern_count;
-  uint16_t externs[EXTERN_MAX_COUNT];
-  int so_count;
-  char so_names[DYNAMIC_MAX_COUNT][FILE_NAME_MAX_LEN];
-  int so_global_counts[DYNAMIC_MAX_COUNT];
-  char so_gloabals_images[DYNAMIC_MAX_COUNT][GLOBAL_MAX_COUNT][LABEL_MAX_LEN];
-  uint16_t so_globals_pos[DYNAMIC_MAX_COUNT][GLOBAL_MAX_COUNT];
-} exe_state_t;
+#include "link.h"
 
 int exe_find_symbol(exe_t *exe, char *name) {
   assert(exe);
@@ -89,7 +77,6 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
       if (s->pos != 0xFFFF) {
         eprintf("label redefinition: '%s'", s->image);
       }
-
       assert(state->global_count + 1 < GLOBAL_MAX_COUNT);
       state->globals[state->global_count++] = index;
 
@@ -113,6 +100,11 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
       if (copied[i]) {
         continue;
       }
+
+      char new_image[LABEL_MAX_LEN];
+      snprintf(new_image, LABEL_MAX_LEN, "__%03.3d_%s", obj->symbol_count, obj->symbols[i].image);
+      strcpy(obj->symbols[i].image, new_image);
+
       exe_add_symbol_offset(exe, &obj->symbols[i], offset);
     }
   }
@@ -189,4 +181,27 @@ void exe_state_dump(exe_state_t *state) {
       printf("\t\t%s %04X\n", state->so_gloabals_images[i][j], state->so_globals_pos[i][j]);
     }
   }
+}
+
+so_t so_from_exe_state(exe_state_t *state) {
+  assert(state);
+
+  exe_t *exe = &state->exe;
+
+  so_t so = {0};
+
+  if (exe->dynamic_count != 0 || state->so_count != 0) {
+    eprintf("cannot encode so file with dynamic relocs\n");
+  }
+
+  so.code_size = exe->code_size;
+  memcpy(so.code, exe->code, exe->code_size);
+  so.reloc_count = exe->reloc_count;
+  memcpy(so.relocs, exe->relocs, exe->reloc_count * sizeof(reloc_entry_t));
+  so.symbol_count = exe->symbol_count;
+  memcpy(so.symbols, exe->symbols, exe->symbol_count * sizeof(symbol_t));
+  so.global_count = state->global_count;
+  memcpy(so.globals, state->globals, state->global_count * sizeof(uint16_t));
+
+  return so;
 }
