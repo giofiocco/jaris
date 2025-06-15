@@ -1,0 +1,14 @@
+command: tee file > /dev/null && ./assembler -d obj file && rm file.o file
+stdin:
+RAM_A 0xA0A0
+__endstdin
+exitcode: 0
+stdout:
+CODE: 4
+	00 07 A0 A0
+RELOCS: 0
+GLOBALS:
+EXTERNS:
+SYMBOLS: 0
+
+__endstdout

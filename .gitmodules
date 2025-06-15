@@ -4,3 +4,6 @@
 [submodule "argparse"]
 	path = argparse
 	url = https://github.com/cofyc/argparse.git
+[submodule "pictypst"]
+	path = pictypst
+	url = https://github.com/giofiocco/pictypst
