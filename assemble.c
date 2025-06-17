@@ -315,12 +315,14 @@ token_t preprocessor_token_expect(preprocessor_t *pre, token_kind_t kind) {
   return token;
 }
 
+/*
 bytecode_t bytecode_with_sv(bytecode_kind_t kind, instruction_t inst, sv_t sv) {
   bytecode_t b = {kind, inst, {}};
   assert(sv.len < LABEL_MAX_LEN);
   memcpy(b.arg.string, sv.start, sv.len);
   return b;
 }
+*/
 
 bytecode_t compile(preprocessor_t *pre) {
   assert(pre);

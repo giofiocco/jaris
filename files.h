@@ -115,6 +115,6 @@ void bin_encode_file(exe_t *exe, char *filename);
 void so_dump(so_t *so);
 so_t so_decode_file(char *filename);
 void so_encode_file(so_t *so, char *filename);
-so_t so_from_exe_state(exe_state_t *exes);
+so_t so_from_exe_state(exe_state_t *state);
 
 #endif // FILES_H__
