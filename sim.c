@@ -397,6 +397,18 @@ void set_char_to_scancode() {
   char_to_scancode['/'] = 0x35;
   char_to_scancode[' '] = 0x39;
 
+  char_to_scancode['!'] = -0x02;
+  char_to_scancode['@'] = -0x03;
+  char_to_scancode['#'] = -0x04;
+  char_to_scancode['$'] = -0x05;
+  char_to_scancode['%'] = -0x06;
+  char_to_scancode['^'] = -0x07;
+  char_to_scancode['&'] = -0x08;
+  char_to_scancode['*'] = -0x09;
+  char_to_scancode['('] = -0x0A;
+  char_to_scancode[')'] = -0x0B;
+  char_to_scancode['_'] = -0x0C;
+  char_to_scancode['+'] = -0x0D;
   char_to_scancode['Q'] = -0x10;
   char_to_scancode['W'] = -0x11;
   char_to_scancode['E'] = -0x12;
@@ -407,6 +419,8 @@ void set_char_to_scancode() {
   char_to_scancode['I'] = -0x17;
   char_to_scancode['O'] = -0x18;
   char_to_scancode['P'] = -0x19;
+  char_to_scancode['{'] = -0x1A;
+  char_to_scancode['}'] = -0x1B;
   char_to_scancode['A'] = -0x1E;
   char_to_scancode['S'] = -0x1F;
   char_to_scancode['D'] = -0x20;
@@ -416,6 +430,10 @@ void set_char_to_scancode() {
   char_to_scancode['J'] = -0x24;
   char_to_scancode['K'] = -0x25;
   char_to_scancode['L'] = -0x26;
+  char_to_scancode[':'] = -0x27;
+  char_to_scancode['"'] = -0x28;
+  char_to_scancode['~'] = -0x29;
+  char_to_scancode['|'] = -0x2B;
   char_to_scancode['Z'] = -0x2C;
   char_to_scancode['X'] = -0x2D;
   char_to_scancode['C'] = -0x2E;
@@ -423,7 +441,9 @@ void set_char_to_scancode() {
   char_to_scancode['B'] = -0x30;
   char_to_scancode['N'] = -0x31;
   char_to_scancode['M'] = -0x32;
-  char_to_scancode['_'] = -0x0C;
+  char_to_scancode['<'] = -0x33;
+  char_to_scancode['>'] = -0x34;
+  char_to_scancode['?'] = -0x35;
 }
 
 void load_input_string(cpu_t *cpu, char *string) {
