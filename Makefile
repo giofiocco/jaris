@@ -4,13 +4,13 @@ CFLAGS=-Wall -Wextra -std=c99 -g
 STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string
 PROGRAMS=shutdown ls sh cd cat test_font echo brainfuck
 MEM_FILES=__bootloader __os __stdlib font $(PROGRAMS)
-STDLIB_DOCS=stdlib_docs.md
+STDLIB_DOC=stdlibdoc.pdf
 
 .PHONY: all
-all: $(TARGETS) $(STDLIB_DOCS)
+all: $(TARGETS) $(STDLIB_DOC)
 
-$(STDLIB_DOCS): makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES))
-	perl makedocs.pl $(patsubst %,asm/%.asm,$(STDLIB_FILES)) > $@
+$(STDLIB_DOC): $(patsubst %.pdf,%.typ,$(STDLIB_DOC))
+	typst c $<
 
 mem.bin: $(patsubst %,mem/%,$(MEM_FILES)) encodemem mem/ | mem
 	./encodemem -d mem -o mem.bin
@@ -77,6 +77,6 @@ docs.pdf: docs.roff
 
 .PHONY: clean
 clean:
-	rm -r $(TARGETS) *.bin $(STDLIB_DOCS)
+	rm -r $(TARGETS) $(STDLIB_DOCS) *.bin
 	rm -rf asm/build/
 
