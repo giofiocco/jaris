@@ -22,6 +22,11 @@
 #define ZOOM          2
 #define SCREEN_PAD    10
 
+Color screen_palette[] = {
+    {0x34, 0x68, 0x56, 0xFF},
+    {0x08, 0x18, 0x20, 0xFF},
+};
+
 #define TEST_MEM_PATH "test.mem.bin"
 
 // clang-format off
@@ -182,21 +187,35 @@ void dumpsbit(uint32_t num, int bits) {
 void compute_screen(cpu_t *cpu) {
   assert(cpu);
 
+  int index = cpu->GPUA & 0x7FFF;
+  int x = 8 * (index & 0xFF);
+  int y = 8 * ((index >> 8) & 0xFF);
+  uint16_t attribute = cpu->ATTRIBUTE_RAM[index];
+  uint16_t pattern_index = attribute & 0x0FFF;
+
   BeginTextureMode(cpu->screen);
-  ClearBackground(WHITE);
-  for (int y = 0; y < SCREEN_HEIGHT; ++y) {
-    for (int x = 0; x < SCREEN_WIDTH; ++x) {
-      uint16_t attribute = cpu->ATTRIBUTE_RAM[((y / 8) << 8) + (x / 8)];
-      uint16_t pattern_index = attribute & 0x0FFF;
-      uint8_t palette_index = (attribute >> 12) & 0xF;
-      int dy = y & 0b111;
-      int dx = x & 0b111;
+  for (int dy = 0; dy < 8; ++dy) {
+    for (int dx = 0; dx < 8; ++dx) {
       uint8_t color = (cpu->PATTERN_RAM[pattern_index * 8 + dy] >> (7 - dx)) & 1;
-      // DrawPixel(x, SCREEN_HEIGHT - y - 1, color ? (Color){0x88, 0xc0, 0x70, 0xFF} : (Color){0x08, 0x18, 0x20, 0xFF});
-      DrawPixel(x, SCREEN_HEIGHT - y - 1, color ? (Color){0x34, 0x68, 0x56, 0xFF} : (Color){0x08, 0x18, 0x20, 0xFF});
+      DrawPixel(x + dx, SCREEN_HEIGHT - (y + dy) - 1, screen_palette[color]);
     }
   }
   EndTextureMode();
+
+  // BeginTextureMode(cpu->screen);
+  // ClearBackground(WHITE);
+  // for (int y = 0; y < SCREEN_HEIGHT; ++y) {
+  //   for (int x = 0; x < SCREEN_WIDTH; ++x) {
+  //     uint16_t attribute = cpu->ATTRIBUTE_RAM[((y / 8) << 8) + (x / 8)];
+  //     uint16_t pattern_index = attribute & 0x0FFF;
+  //     uint8_t palette_index = (attribute >> 12) & 0xF;
+  //     int dy = y & 0b111;
+  //     int dx = x & 0b111;
+  //     uint8_t color = (cpu->PATTERN_RAM[pattern_index * 8 + dy] >> (7 - dx)) & 1;
+  // DrawPixel(x, SCREEN_HEIGHT - y - 1, color ? SCREEN_FOREGROUND : SCREEN_BACKGROUND);
+  //   }
+  // }
+  // EndTextureMode();
 }
 
 bool check_microcode(microcode_t mc, microcode_flag_t flag) {
@@ -1296,6 +1315,10 @@ int main(int argc, char **argv) {
     SetTraceLogLevel(LOG_ERROR);
     InitWindow(SCREEN_WIDTH * ZOOM + SCREEN_PAD * 2, SCREEN_HEIGHT * ZOOM + SCREEN_PAD * 2, "Jaris screen");
     cpu.screen = LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT);
+
+    BeginTextureMode(cpu.screen);
+    ClearBackground(screen_palette[0]);
+    EndTextureMode();
   }
 
   bool running = true;
