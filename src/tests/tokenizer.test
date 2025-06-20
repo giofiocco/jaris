@@ -1,0 +1,13 @@
+command: tee tests/tokenizer.asm >/dev/null && ./assembler -d tok tests/tokenizer.asm
+stdin:
+GLOBAL _start
+EXTERN exit
+{ a 0x0101 }
+_start:
+  CALL exit
+__endstdin
+exitcode: 139
+stdout:
+
+
+__endstdout
