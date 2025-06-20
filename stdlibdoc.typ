@@ -22,7 +22,7 @@
         comment = ""
         is_collecting_comment = 1
       }
-      comment += m.captures.at(0) + "\n"
+      comment += m.captures.at(0).trim() + "\n"
     } else {
       is_collecting_comment = 0
     }
