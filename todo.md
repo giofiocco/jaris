@@ -1,4 +1,8 @@
-bss section
+bss section?
+
+allow label alone or hex2 as rel with @allow thing
+labels with dot as sublabels?
+conditional call?
 
 remove some micro flags
 

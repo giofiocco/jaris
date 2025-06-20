@@ -60,6 +60,7 @@ while ( $i <= $#ARGV ) {
             until ( eof($file) or ( $line = <$file> ) =~ /^__end$field\s*$/ ) {
                 $body .= $line;
             }
+            $body =~ s/"/\\"/g;
             eval "\$$field = \"$body\"";
         }
         else {
@@ -74,11 +75,16 @@ while ( $i <= $#ARGV ) {
         exit 1;
     }
 
-    $stdout = substr $stdout, -1;
+    my $escapedstdin = $stdin;
+    $escapedstdin =~ s/\n/\\n/g;
+    $escapedstdin =~ s/"/\\"/g;
 
-    print "\nRUNNING: $command\n";
-    my $actualstdout   = `printf "$stdin" | $command`;
+    # print "\nRUNNING: printf \"$escapedstdin\" | $command\n";
+    my $actualstdout   = `printf "$escapedstdin" | $command`;
     my $actualexitcode = $?;
+
+    $stdout       =~ s/\n$//g;
+    $actualstdout =~ s/\n$//g;
 
     if ($record) {
         open( my $file, ">", $filename );
@@ -99,20 +105,23 @@ while ( $i <= $#ARGV ) {
     }
     else {
         my $ok = 1;
-        unless ( $stdout eq $actualstdout ) {
-            $ok = 0;
-            print "\nOUTPUTS DIFFER\n";
-            open( my $file, ">", $filename . ".expected" );
-            print $file $stdout;
-            close $file;
-            open( $file, ">", $filename . ".output" );
-            print $file $actualstdout;
-            close $file;
-            system( "diff", "-y", "-d", "$filename.expected",
-                "$filename.output" );
-            `rm $filename.expected $filename.output`;
+
+        if ( $exitcode eq $actualexitcode ) {
+            unless ( $stdout eq $actualstdout ) {
+                $ok = 0;
+                print "\nOUTPUTS DIFFER\n";
+                open( my $file, ">", $filename . ".expected" );
+                print $file $stdout;
+                close $file;
+                open( $file, ">", $filename . ".output" );
+                print $file $actualstdout;
+                close $file;
+                system( "diff", "-y", "-d", "$filename.expected",
+                    "$filename.output" );
+                `rm $filename.expected $filename.output`;
+            }
         }
-        unless ( $exitcode eq $actualexitcode ) {
+        else {
             $ok = 0;
             print "\nEXPECTED EXIT CODE $exitcode, FOUND $actualexitcode\n";
         }

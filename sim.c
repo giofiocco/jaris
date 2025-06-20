@@ -516,10 +516,6 @@ void set_control_rom() {
   set_instruction_allflag(INCB, 3, micro(Xi));
   set_instruction_allflag(INCB, 4, micro(Ci) | micro(ALUo) | micro(Bi));
   set_instruction_allflag(INCB, 5, micro(SCr));
-  set_instruction_allflag(DECB, 2, micro(Bo) | micro(Yi));
-  set_instruction_allflag(DECB, 3, micro(Xi));
-  set_instruction_allflag(DECB, 4, micro(_SUB) | micro(ALUo) | micro(Bi));
-  set_instruction_allflag(DECB, 5, micro(SCr));
   set_instruction_allflag(RAM_AL, 2, micro(IPo) | micro(MARi));
   set_instruction_allflag(RAM_AL, 3, micro(RAM) | micro(RAMo) | micro(Ai) | micro(IPp));
   set_instruction_allflag(RAM_AL, 4, micro(SCr));
@@ -658,6 +654,10 @@ void set_control_rom() {
   set_instruction_flags(JMPRNC, 5, 0b100, true, micro(SCr));
   set_instruction_allflag(JMPA, 2, micro(Ao) | micro(IPi));
   set_instruction_allflag(JMPA, 3, micro(SCr));
+  set_instruction_allflag(JMPAR, 2, micro(IPo) | micro(MARi) | micro(Yi));
+  set_instruction_allflag(JMPAR, 3, micro(Ao) | micro(Xi));
+  set_instruction_allflag(JMPAR, 4, micro(ALUo) | micro(IPi));
+  set_instruction_allflag(JMPAR, 5, micro(SCr));
   set_instruction_allflag(A_B, 2, micro(Ao) | micro(Bi));
   set_instruction_allflag(A_B, 3, micro(SCr));
   set_instruction_allflag(B_A, 2, micro(Bo) | micro(Ai));

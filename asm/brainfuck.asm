@@ -28,6 +28,7 @@ boundcheck:
   INCA RAM_BL len SUB JMPRN $error
   RET
 
+-- TODO: error
 error_string: "ERROR: out of boundaries" 0x0A 0x00
 error:
   RAM_A error_string CALL print
