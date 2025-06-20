@@ -19,6 +19,7 @@ typedef struct {
 void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info);
 void exe_link_so(exe_state_t *state, so_t *so, char *name);
 void exe_link_boilerplate(exe_state_t *state, int debug_info);
+void exe_state_check_exe(exe_state_t *state);
 void exe_state_dump(exe_state_t *state);
 so_t so_from_exe_state(exe_state_t *state);
 

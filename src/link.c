@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <string.h>
 
+#define ERRORS_IMPLEMENTATION
 #include "../../mystb/errors.h"
 #include "files.h"
 #include "link.h"
@@ -16,6 +17,31 @@ int exe_find_symbol(exe_t *exe, char *name) {
   }
 
   return -1;
+}
+
+uint16_t exe_state_find_global(exe_state_t *state, char *name) {
+  assert(state);
+  assert(name);
+
+  for (int i = 0; i < state->global_count; ++i) {
+    if (strcmp(state->exe.symbols[state->globals[i]].image, name) == 0) {
+      return state->exe.symbols[state->globals[i]].pos;
+    }
+  }
+
+  return 0xFFFF;
+}
+
+uint16_t exe_state_find_so_global(exe_state_t *state, int so_index, char *name) {
+  assert(state);
+  assert(name);
+
+  for (int k = 0; k < state->so_global_counts[so_index]; ++k) {
+    if (strcmp(state->so_gloabals_images[so_index][k], name) == 0) {
+      return state->so_globals_pos[so_index][k];
+    }
+  }
+  return 0xFFFF;
 }
 
 void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
@@ -102,7 +128,7 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
       }
 
       char new_image[LABEL_MAX_LEN];
-      snprintf(new_image, LABEL_MAX_LEN, "__%03.3d_%s", obj->symbol_count, obj->symbols[i].image);
+      snprintf(new_image, LABEL_MAX_LEN, "_%03d_%-s", obj->symbol_count, obj->symbols[i].image);
       strcpy(obj->symbols[i].image, new_image);
 
       exe_add_symbol_offset(exe, &obj->symbols[i], offset);
@@ -153,6 +179,90 @@ void exe_link_boilerplate(exe_state_t *state, int debug_info) {
   };
 
   exe_link_obj(state, &boilerplate, debug_info);
+}
+
+void exe_state_check_exe(exe_state_t *state) {
+  assert(state);
+
+  int done[state->extern_count];
+  memset(done, 0, state->extern_count * sizeof(int));
+
+  for (int i = 0; i < state->so_count; ++i) {
+    int file_used = 0;
+    dynamic_entry_t *de = NULL;
+
+    for (int j = 0; j < state->extern_count; ++j) {
+      if (done[j]) {
+        continue;
+      }
+      symbol_t *s = &state->exe.symbols[state->externs[j]];
+
+      if (s->pos != 0xFFFF) {
+        continue;
+      }
+
+      uint16_t pos = exe_state_find_so_global(state, i, s->image);
+      if (pos == 0xFFFF) {
+        continue;
+      }
+      done[j] = 1;
+
+      if (file_used == 0) {
+        file_used = 1;
+        de = &state->exe.dynamics[state->exe.dynamic_count++];
+        strncpy(de->file_name, state->so_names[i], FILE_NAME_MAX_LEN);
+      }
+      assert(de != NULL);
+
+      for (int k = 0; k < s->reloc_count; ++k) {
+        assert(de->reloc_count + 1 < INTERN_RELOC_MAX_COUNT);
+        de->relocs[de->reloc_count++] = (reloc_entry_t){s->relocs[k], pos};
+      }
+    }
+  }
+
+  for (int i = 0; i < state->extern_count; ++i) {
+    if (done[i]) {
+      continue;
+    }
+    symbol_t *s = &state->exe.symbols[state->externs[i]];
+
+    s->pos = exe_state_find_global(state, s->image);
+    if (s->pos == 0xFFFF) {
+      eprintf("global unset: %s", s->image);
+    }
+  }
+
+  for (int i = 0; i < state->extern_count; ++i) {
+    symbol_t *s = &state->exe.symbols[state->externs[i]];
+    if (s->pos == 0xFFFF) {
+      continue;
+    }
+
+    for (int j = 0; j < s->reloc_count; ++j) {
+      assert(state->exe.reloc_count + 1 < RELOC_MAX_COUNT);
+      state->exe.relocs[state->exe.reloc_count++] = (reloc_entry_t){s->relocs[j], s->pos};
+    }
+  }
+
+  /*
+  for (int i = 0; i < state->exe.symbol_count; ++i) {
+    symbol_t *s = &state->exe.symbols[i];
+    if (s->pos == 0xFFFF) {
+      continue;
+    }
+    for (int j = 0; j < s->reloc_count; ++j) {
+      assert(state->exe.reloc_count + 1 < RELOC_MAX_COUNT);
+      state->exe.relocs[state->exe.reloc_count++] = (reloc_entry_t){s->relocs[j], s->pos};
+    }
+  }
+  */
+
+  for (int i = 0; i < state->exe.reloc_count; ++i) {
+    reloc_entry_t *reloc = &state->exe.relocs[i];
+    state->exe.code[reloc->where] = reloc->what & 0xFF;
+    state->exe.code[reloc->where + 1] = (reloc->what >> 8) & 0xFF;
+  }
 }
 
 void exe_state_dump(exe_state_t *state) {

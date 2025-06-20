@@ -1,1 +1,32 @@
-command: ./assembler -g tests/linker_file.asm && ./linker -g -o tests/linker_file -d tests/linker_file.asm.o && rm tests/linker_file.asm.o tests/linker_file
+command: ./assembler -g tests/linker_file.asm && ./linker -d -g -o tests/linker_file{,.asm.o} && rm tests/linker_file{.asm.o,}
+exitcode: 0
+stdout:
+EXE:
+CODE: 10
+	00 19 00 00 00 00 00 00 3F 00
+RELOCS: 0
+DYNAMIC LINKING: 0
+SYMBOLS: 3
+00) _start: 0008
+	0002 
+01) a: 0004
+02) _003_b: 0006
+GLOBALS: 0 1
+EXTERNS: 0
+SOS: 1
+(STDLIB):
+		div 0000
+		mul 0044
+		solve_path 0066
+		open_file 010C
+		read_u8 013E
+		read_u16 01A6
+		execute 01CE
+		exit 039E
+		print 042C
+		put_char 0440
+		print_int 04AF
+		get_char 04D6
+		str_find_char 0600
+
+__endstdout

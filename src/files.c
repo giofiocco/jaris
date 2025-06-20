@@ -430,3 +430,122 @@ void exe_add_symbol_offset(exe_t *exe, symbol_t *from, uint16_t offset) {
     s->relrelocs[j] += offset;
   }
 }
+
+void exe_encode_file(exe_t *exe, char *filename) {
+  assert(exe);
+  assert(filename);
+
+  FILE *file = fopen(filename, "wb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  assert(fwrite("EXE", 1, 3, file) == 3);
+  assert(fwrite(&exe->code_size, 2, 1, file) == 1);
+  assert(fwrite(&exe->code, 1, exe->code_size, file) == exe->code_size);
+  assert(fwrite(&exe->reloc_count, 2, 1, file) == 1);
+  for (int i = 0; i < exe->reloc_count; ++i) {
+    assert(fwrite(&exe->relocs[i].where, 2, 1, file) == 1);
+    assert(fwrite(&exe->relocs[i].what, 2, 1, file) == 1);
+  }
+  assert(fwrite(&exe->dynamic_count, 2, 1, file) == 1);
+  for (int i = 0; i < exe->dynamic_count; ++i) {
+    dynamic_entry_t *dt = &exe->dynamics[i];
+    uint8_t len = strlen(dt->file_name);
+    assert(fwrite(&len, 1, 1, file) == 1);
+    assert(fwrite(dt->file_name, 1, len, file) == len);
+    assert(fwrite(&dt->reloc_count, 1, 1, file) == 1);
+    for (int j = 0; j < dt->reloc_count; ++j) {
+      assert(fwrite(&dt->relocs[j].where, 2, 1, file) == 1);
+      assert(fwrite(&dt->relocs[j].what, 2, 1, file) == 1);
+    }
+  }
+  symbols_list_encode(exe->symbols, exe->symbol_count, file);
+
+  assert(fclose(file) == 0);
+}
+
+void bin_encode_file(exe_t *exe, char *filename) {
+  assert(exe);
+  assert(filename);
+
+  if (exe->reloc_count != 0) {
+    eprintf("cannot encode bin file with relocations\n");
+  }
+
+  FILE *file = fopen(filename, "wb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  assert(fwrite(&exe->code, 1, exe->code_size, file) == exe->code_size);
+
+  assert(fclose(file) == 0);
+}
+
+void so_dump(so_t *so) {
+  assert(so);
+
+  code_dump(so->code, so->code_size);
+  relocs_dump(so->relocs, so->reloc_count);
+  printf("GLOBALS:");
+  for (int i = 0; i < so->global_count; ++i) {
+    printf(" %d", so->globals[i]);
+  }
+  printf("\n");
+  symbol_list_dump(so->symbols, so->symbol_count);
+}
+
+so_t so_decode_file(char *filename) {
+  assert(filename);
+
+  so_t so = {0};
+
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  char magic_number[3] = {0};
+  assert(fread(magic_number, 1, 2, file) == 2);
+  if (strcmp(magic_number, "SO") != 0) {
+    eprintf("%s: expected magic number to be 'SO': found '%s'", filename, magic_number);
+  }
+  assert(fread(&so.code_size, 2, 1, file) == 1);
+  assert(fread(so.code, 1, so.code_size, file) == so.code_size);
+  assert(fread(&so.reloc_count, 2, 1, file) == 1);
+  for (int i = 0; i < so.reloc_count; ++i) {
+    assert(fread(&so.relocs[i].where, 2, 1, file) == 1);
+    assert(fread(&so.relocs[i].what, 2, 1, file) == 1);
+  }
+  assert(fread(&so.global_count, 1, 1, file) == 1);
+  assert(fread(so.globals, 2, so.global_count, file) == so.global_count);
+  symbols_list_decode(so.symbols, &so.symbol_count, file);
+
+  assert(fclose(file) == 0);
+
+  return so;
+}
+
+void so_encode_file(so_t *so, char *filename) {
+  assert(so);
+  assert(filename);
+
+  FILE *file = fopen(filename, "wb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+  assert(fwrite("SO", 1, 2, file) == 2);
+  assert(fwrite(&so->code_size, 2, 1, file) == 1);
+  assert(fwrite(&so->code, 1, so->code_size, file) == so->code_size);
+  assert(fwrite(&so->reloc_count, 2, 1, file) == 1);
+  for (int i = 0; i < so->reloc_count; ++i) {
+    assert(fwrite(&so->relocs[i].where, 2, 1, file) == 1);
+    assert(fwrite(&so->relocs[i].what, 2, 1, file) == 1);
+  }
+  assert(fwrite(&so->global_count, 1, 1, file) == 1);
+  assert(fwrite(so->globals, 2, so->global_count, file) == so->global_count);
+  symbols_list_encode(so->symbols, so->symbol_count, file);
+
+  assert(fclose(file) == 0);
+}

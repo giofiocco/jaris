@@ -49,6 +49,8 @@ int main(int argc, char **argv) {
         debug_tok = 1;
         debug_byt = 1;
         debug_obj = 1;
+      } else {
+        ARG_ERROR_("unexpected arg from '-d'");
       }
     }
     else {

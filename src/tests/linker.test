@@ -1,4 +1,4 @@
-command: ./assembler tests/linker_file.asm && ./linker -o tests/linker_file -d tests/linker_file.asm.o && rm tests/linker_file.asm.o tests/linker_file
+command: ./assembler tests/linker_file.asm && ./linker -d -o tests/linker_file{,.asm.o} && rm tests/linker_file{.asm.o,}
 exitcode: 0
 stdout:
 EXE:

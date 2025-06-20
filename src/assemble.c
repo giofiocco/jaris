@@ -161,6 +161,7 @@ asm_token_t asm_token_next(asm_tokenizer_t *tok) {
       while (tok->buffer[i] && tok->buffer[i] != '"') {
         i++;
       }
+      i++;
       return asm_new_token_and_consume(tok, ASMT_STRING, i, 0, 0);
     }
     case '-':
