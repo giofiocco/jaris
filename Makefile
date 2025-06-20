@@ -2,7 +2,7 @@ TARGETS=assembler linker encodemem sim inspect docs.pdf encodefont
 CFLAGS=-Wall -Wextra -std=c99 -g
 
 STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string
-PROGRAMS=shutdown ls sh cd cat test_font echo brainfuck
+PROGRAMS=shutdown ls sh cd cat test_font echo brainfuck expr
 MEM_FILES=__bootloader __os __stdlib font $(PROGRAMS)
 STDLIB_DOC=stdlibdoc.pdf
 
