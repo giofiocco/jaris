@@ -31,10 +31,11 @@ int main(int argc, char **argv) {
   int debug_info = 0;
 
   ARG_PARSE {
-    ARG_PARSE_HELP_ARG
-    ARG_PARSE_STRING_ARG_(ARG_SFLAG("o"), output)
-    else ARG_PARSE_FLAG_(ARG_SFLAG("g"), debug_info) //
+    ARG_PARSE_HELP_ARG                                     //
+        else ARG_PARSE_STRING_ARG_(ARG_SFLAG("o"), output) //
+        else ARG_PARSE_FLAG_(ARG_SFLAG("g"), debug_info)   //
         else if (ARG_SFLAG("d")) {
+      printf("current:'%s'\n", *argv);
       if (*(argv + 1) == NULL) {
         ARG_ERROR("expected string: '%s'", *argv);
       }
@@ -55,7 +56,7 @@ int main(int argc, char **argv) {
     }
     else {
       if (path != NULL) {
-        eprintf("file already provided");
+        eprintf("file already provided: %s", path);
       }
       path = *argv;
     }

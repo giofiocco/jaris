@@ -141,6 +141,7 @@ asm_token_t asm_token_next(asm_tokenizer_t *tok) {
       return asm_new_token_and_consume(tok, ASMT_REL, 1, 0, 0);
     case '{':
     {
+      tok->buffer++;
       asm_token_t name = asm_token_next(tok);
       if (name.kind != ASMT_SYM) {
         eprintfloc(name.loc, "expected SYM as macro name found %s", asm_token_kind_to_string(name.kind));
