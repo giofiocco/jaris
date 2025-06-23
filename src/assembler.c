@@ -13,13 +13,13 @@ extern obj_t assemble(char *buffer, char *buffer_name, int debug_info, int debug
 void print_help() {
   printf("Usage: assembler [options] <file>\n\n"
          "Options:\n"
-         " -o <str>   output name\n"
-         " -g         include debug info in obj\n"
-         " -d <str>   print debug info of:\n"
-         "              tok      tokens\n"
-         "              byt      bytecodes\n"
-         "              obj      obj produced\n"
-         "              all      all the above\n");
+         "  -o <str>   output name\n"
+         "  -g         include debug info in obj\n"
+         "  -d <str>   print debug info of:\n"
+         "               tok      tokens\n"
+         "               byt      bytecodes\n"
+         "               obj      obj produced\n"
+         "               all      all the above\n");
 }
 
 int main(int argc, char **argv) {
@@ -35,7 +35,6 @@ int main(int argc, char **argv) {
         else ARG_PARSE_STRING_ARG_(ARG_SFLAG("o"), output) //
         else ARG_PARSE_FLAG_(ARG_SFLAG("g"), debug_info)   //
         else if (ARG_SFLAG("d")) {
-      printf("current:'%s'\n", *argv);
       if (*(argv + 1) == NULL) {
         ARG_ERROR("expected string: '%s'", *argv);
       }

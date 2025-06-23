@@ -191,8 +191,8 @@ asm_token_t asm_token_next(asm_tokenizer_t *tok) {
         return asm_new_token_and_consume(tok, i == 6 ? ASMT_HEX2 : ASMT_HEX, i, asint, 0);
       } else if (tok->buffer[1] == 'b' || tok->buffer[1] == 'B') {
         int i = 2;
-        while (tok->buffer[i] == 1
-               || tok->buffer[i] == 0) {
+        while (tok->buffer[i] == '1'
+               || tok->buffer[i] == '0') {
           i++;
         }
         if (i != 10) {
