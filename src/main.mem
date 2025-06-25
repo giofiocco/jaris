@@ -1,0 +1,12 @@
+newos os fromfile asm/bin/os
+newstdlib stdlib fromfile asm/bin/stdlib
+setbootloader asm/bin/bootloader
+newfile shutdown fromfile asm/bin/shutdown
+newfile ls fromfile asm/bin/ls
+newfile sh fromfile asm/bin/sh
+newfile cd fromfile asm/bin/cd
+newfile cat fromfile asm/bin/cat
+newfile test_font fromfile asm/bin/test_font
+newfile echo fromfile asm/bin/echo
+newfile brainfuck fromfile asm/bin/brainfuck
+newfile expr fromfile asm/bin/expr
