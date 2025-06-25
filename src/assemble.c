@@ -109,7 +109,7 @@ asm_token_t asm_token_next(asm_tokenizer_t *tok) {
     assert(0 <= tok->current_macro && tok->current_macro < tok->macro_count);
     asm_macro_t *macro = &tok->macros[tok->current_macro];
     assert(0 <= tok->current_macro_token && tok->current_macro_token <= macro->token_count);
-    if (tok->current_macro_token == macro->token_count) {
+    if (tok->current_macro_token >= macro->token_count) {
       tok->current_macro = -1;
     } else {
       return macro->tokens[tok->current_macro_token++];
@@ -220,6 +220,7 @@ asm_token_t asm_token_next(asm_tokenizer_t *tok) {
         if (kind == ASMT_SYM) {
           for (int j = 0; j < tok->macro_count; ++j) {
             if (sv_eq(tok->macros[j].name, image)) {
+              asm_new_token_and_consume(tok, kind, i, 0, asinst);
               tok->current_macro = j;
               tok->current_macro_token = 0;
               return asm_token_next(tok);
