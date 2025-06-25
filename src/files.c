@@ -431,6 +431,49 @@ void exe_add_symbol_offset(exe_t *exe, symbol_t *from, uint16_t offset) {
   }
 }
 
+exe_t exe_decode_file(char *filename) {
+  assert(filename);
+
+  exe_t exe = {0};
+
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+  }
+
+  char magic_number[4] = {0};
+  assert(fread(magic_number, 1, 3, file) == 3);
+  if (strcmp(magic_number, "EXE") != 0) {
+    eprintf("%s: expected magic number to be 'EXE': found '%s'", filename, magic_number);
+  }
+
+  assert(fread(&exe.code_size, 2, 1, file) == 1);
+  assert(fread(exe.code, 1, exe.code_size, file) == exe.code_size);
+  assert(fread(&exe.reloc_count, 2, 1, file) == 1);
+  for (int i = 0; i < exe.reloc_count; ++i) {
+    assert(fread(&exe.relocs[i].where, 2, 1, file) == 1);
+    assert(fread(&exe.relocs[i].what, 2, 1, file) == 1);
+  }
+  assert(fread(&exe.dynamic_count, 2, 1, file) == 1);
+  for (int i = 0; i < exe.dynamic_count; ++i) {
+    dynamic_entry_t *de = &exe.dynamics[i];
+    size_t len = 0;
+    assert(fread(&len, 1, 1, file) == 1);
+    assert(len > 0);
+    assert(fread(de->file_name, 1, len, file) == len);
+    assert(fread(&de->reloc_count, 1, 1, file) == 1);
+    for (int j = 0; j < de->reloc_count; ++j) {
+      assert(fread(&de->relocs[j].where, 2, 1, file) == 1);
+      assert(fread(&de->relocs[j].what, 2, 1, file) == 1);
+    }
+  }
+  symbols_list_decode(exe.symbols, &exe.symbol_count, file);
+
+  assert(fclose(file) == 0);
+
+  return exe;
+}
+
 void exe_encode_file(exe_t *exe, char *filename) {
   assert(exe);
   assert(filename);
