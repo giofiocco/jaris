@@ -89,8 +89,8 @@
     argv++;                                        \
     str__ = *argv;                                 \
   }
-#define ARG_PARSE_STRING_ARG(short__, long__, str__)                            \
-  ARG_PARSE_STRING_ARG_(ARG_SFLAG(short__) || ARG_LFLAG(long__), long__, str__)
+#define ARG_PARSE_STRING_ARG(short__, long__, str__)                    \
+  ARG_PARSE_STRING_ARG_(ARG_SFLAG(short__) || ARG_LFLAG(long__), str__)
 #define ARG_PARSE_FLAG_(cond__, flag__) \
   if (cond__) {                         \
     flag__ = 1;                         \
