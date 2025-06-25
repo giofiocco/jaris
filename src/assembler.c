@@ -13,13 +13,14 @@ extern obj_t assemble(char *buffer, char *buffer_name, int debug_info, int debug
 void print_help() {
   printf("Usage: assembler [options] <file>\n\n"
          "Options:\n"
-         "  -o <str>   output name\n"
-         "  -g         include debug info in obj\n"
-         "  -d <str>   print debug info of:\n"
-         "               tok      tokens\n"
-         "               byt      bytecodes\n"
-         "               obj      obj produced\n"
-         "               all      all the above\n");
+         "  -o <str>     output name\n"
+         "  -g           include debug info in obj\n"
+         "  -d <str>     print debug info of:\n"
+         "                 tok      tokens\n"
+         "                 byt      bytecodes\n"
+         "                 obj      obj produced\n"
+         "                 all      all the above\n"
+         "  -h | --help  show help message\n");
 }
 
 int main(int argc, char **argv) {

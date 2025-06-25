@@ -5,14 +5,15 @@
 void print_help() {
   printf("Usage: linker [options] -o <output> <files> ...\n\n"
          "Options:\n"
-         " -o <str>              output name\n"
-         " -g                    include debug info in exe\n"
-         " -l <file>             link dynamically \n"
-         " --stdlib-path <str>   set path of stdlib\n"
-         " --nostdlib            do not link with stdlib\n"
-         " --bin                 output bin file\n"
-         " --so                  output so file\n"
-         " -d                    print debug info of exe_state\n");
+         " -o <str>             output name\n"
+         " -g                   include debug info in exe\n"
+         " -l <file>            link dynamically \n"
+         " --stdlib-path <str>  set path of stdlib\n"
+         " --nostdlib           do not link with stdlib\n"
+         " --bin                output bin file\n"
+         " --so                 output so file\n"
+         " -d                   print debug info of exe_state\n"
+         "  -h | --help         show help message\n");
 }
 
 int main(int argc, char **argv) {
@@ -20,7 +21,7 @@ int main(int argc, char **argv) {
   int debug_info = 0;
   int debug_exe_state = 0;
   int no_stdlib = 0;
-  char *stdlib_path = "../mem/__stdlib";
+  char *stdlib_path = "asm/bin/__stdlib";
   int output_bin = 0;
   int output_so = 0;
 
