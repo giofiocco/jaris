@@ -278,7 +278,8 @@ int main() {
     printf("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\n");
   }
 
-  printf("TODO: test of encodemem\n");
+  printf("TODO: test encodemem\n");
+  printf("TODO: test inspect\n");
 
   return 0;
 }

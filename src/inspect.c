@@ -1,8 +1,11 @@
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 
 #define ERRORS_IMPLEMENTATION
+#define SV_IMPLEMENTATION
 #include "../argparse.h"
+#include "../instructions.h"
 #include "../mystb/errors.h"
 #include "files.h"
 
@@ -15,7 +18,7 @@ typedef enum {
   KBIN,
 } kind_t;
 
-void disassemble(uint8_t *code, uint16_t code_size);
+void disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count);
 
 void inspect_obj(char *filename, int disassemble_flag) {
   assert(filename);
@@ -23,7 +26,7 @@ void inspect_obj(char *filename, int disassemble_flag) {
   obj_t obj = obj_decode_file(filename);
   obj_dump(&obj);
   if (disassemble_flag) {
-    disassemble(obj.code, obj.code_size);
+    disassemble(obj.code, obj.code_size, obj.symbols, obj.symbol_count);
   }
 }
 
@@ -33,7 +36,7 @@ void inspect_exe(char *filename, int disassemble_flag) {
   exe_t exe = exe_decode_file(filename);
   exe_dump(&exe);
   if (disassemble_flag) {
-    disassemble(exe.code, exe.code_size);
+    disassemble(exe.code, exe.code_size, exe.symbols, exe.symbol_count);
   }
 }
 void inspect_so(char *filename, int disassemble_flag) {
@@ -42,7 +45,7 @@ void inspect_so(char *filename, int disassemble_flag) {
   so_t so = so_decode_file(filename);
   so_dump(&so);
   if (disassemble_flag) {
-    disassemble(so.code, so.code_size);
+    disassemble(so.code, so.code_size, so.symbols, so.symbol_count);
   }
 }
 
@@ -69,7 +72,7 @@ void inspect_bin(char *filename, int disassemble_flag) {
   }
   printf("\n");
   if (disassemble_flag) {
-    disassemble(buffer, size);
+    disassemble(buffer, size, NULL, 0);
   }
 }
 
@@ -222,8 +225,103 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-void disassemble(uint8_t *code, uint16_t code_size) {
-  (void)code;
-  (void)code_size;
-  assert(0 && "TODO");
+int compare_symbols(const void *a, const void *b) {
+  assert(a);
+  assert(b);
+  return ((symbol_t *)a)->pos - ((symbol_t *)b)->pos;
+}
+
+void disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count) {
+  char *set_labels[code_size];
+  memset(set_labels, 0, code_size * sizeof(char *));
+  char *labels[code_size];
+  memset(labels, 0, code_size * sizeof(char *));
+  char *rellabels[code_size];
+  memset(rellabels, 0, code_size * sizeof(char *));
+
+  for (int i = 0; i < symbols_count; ++i) {
+    if (symbols[i].pos != 0xFFFF) {
+      assert(symbols[i].pos < code_size);
+      set_labels[symbols[i].pos] = symbols[i].image;
+    }
+    for (int j = 0; j < symbols[i].reloc_count; ++j) {
+      assert(symbols[i].relocs[j] < code_size);
+      labels[symbols[i].relocs[j]] = symbols[i].image;
+    }
+    for (int j = 0; j < symbols[i].relreloc_count; ++j) {
+      assert(symbols[i].relrelocs[j] < code_size);
+      rellabels[symbols[i].relrelocs[j]] = symbols[i].image;
+    }
+  }
+
+  bytecode_t bcs[code_size];
+  uint16_t bc_count = 0;
+
+  printf("DISASSEMBLE:\n");
+  for (int i = 0; i < code_size;) {
+    if (set_labels[i] != NULL) {
+      bcs[bc_count++] = bytecode_with_string(BSETLABEL, 0, set_labels[i]);
+      // if (code[i] == 0 && i + 1 < code_size && code[i] == 0) {
+      //   int j = i + 1;
+      //   while (j < code_size && code[j] == 0 && set_labels[j] == NULL) {
+      //     j++;
+      //   }
+      //    bcs[bc_count++] = (bytecode_t){BDB, 0, {.num = j - i}};
+      //    i = j;
+      //    continue;
+      // }
+    }
+    if (instruction_to_string(code[i]) != NULL) {
+      switch (instruction_stat(code[i]).arg) {
+        case INST_NO_ARGS:
+          bcs[bc_count++] = (bytecode_t){BINST, code[i], {}};
+          i++;
+          break;
+        case INST_8BITS_ARG:
+          assert(i + 1 < code_size);
+          bcs[bc_count++] = (bytecode_t){BINSTHEX, code[i], {.num = code[i + 1]}};
+          i += 2;
+          break;
+        case INST_16BITS_ARG:
+          assert(i + 2 < code_size);
+          if (code[i] == JMP) {
+            assert(labels[i + 1]);
+            bcs[bc_count++] = bytecode_with_string(BINSTLABEL, code[i], labels[i + 1]);
+          } else {
+            bcs[bc_count++] = (bytecode_t){BINSTHEX2, code[i], {.num = code[i + 1] | (code[i + 2] << 8)}};
+          }
+          i += 3;
+          break;
+        case INST_LABEL_ARG:
+          assert(i + 2 < code_size);
+          assert(labels[i + 1]);
+          bcs[bc_count++] = bytecode_with_string(BINSTLABEL, code[i], labels[i + 1]);
+          i += 3;
+          break;
+        case INST_RELLABEL_ARG:
+          assert(i + 2 < code_size);
+          assert(rellabels[i + 1]);
+          bcs[bc_count++] = bytecode_with_string(BINSTRELLABEL, code[i], rellabels[i + 1]);
+          i += 3;
+          break;
+      }
+    } else if (isprint(code[i])) {
+      int j = i + 1;
+      while (j < code_size && code[j] != 0) {
+        assert(set_labels[j] == NULL);
+        j++;
+      }
+      assert(code[j] == 0);
+      bcs[bc_count++] = bytecode_with_sv(BSTRING, 0, (sv_t){(char *)(code + i), j - i});
+      bcs[bc_count++] = (bytecode_t){BHEX, 0, {.num = 0}};
+      i = j + 1;
+    } else {
+      bcs[bc_count++] = (bytecode_t){BHEX, 0, {.num = code[i]}};
+      i++;
+    }
+  }
+
+  for (int i = 0; i < bc_count; ++i) {
+    bytecode_dump(bcs[i]);
+  }
 }

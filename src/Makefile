@@ -1,9 +1,10 @@
+TARGETS=assembler linker encodemem inspect test sim main.mem.bin
 CFLAGS=-Wall -Wextra -g -std=c99
 
 # TODO: add errors, argparse, sv ... dep
 
 .PHONY: all asm clean
-all: asm assembler linker encodemem inspect test main.mem.bin
+all: asm $(TARGETS)
 asm:
 	make -C asm all
 
@@ -16,15 +17,18 @@ linker: linker.c link.c link.h files.c files.h
 encodemem: encodemem.c
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
-inspect: inspect.c files.c files.h
+inspect: inspect.c files.c files.h ../instructions.c ../instructions.h
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
 test: test.c assembler linker
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
+sim: sim.c files.c files.h ../instructions.c ../instructions.h
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) -lraylib
+
 %.mem.bin: %.mem encodemem
 	./encodemem $<
 
 clean:
-	rm assembler linker encodemem test main.mem.bin
+	rm $(TARGETS)
 	make -C asm clean

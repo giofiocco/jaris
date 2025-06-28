@@ -255,7 +255,7 @@ void bytecode_dump(bytecode_t bc) {
       printf("HEX2         0x%04X\n", bc.arg.num);
       break;
     case BSTRING:
-      printf("STRING       %s\n", bc.arg.string);
+      printf("STRING       \"%s\"\n", bc.arg.string);
       break;
     case BSETLABEL:
       printf("SETLABEL     %s\n", bc.arg.string);

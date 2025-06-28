@@ -128,7 +128,7 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
       }
 
       char new_image[LABEL_MAX_LEN];
-      snprintf(new_image, LABEL_MAX_LEN, "_%03d_%-s", obj->symbol_count, obj->symbols[i].image);
+      snprintf(new_image, LABEL_MAX_LEN, "_%03d_%-s", exe->symbol_count, obj->symbols[i].image);
       strcpy(obj->symbols[i].image, new_image);
 
       exe_add_symbol_offset(exe, &obj->symbols[i], offset);
