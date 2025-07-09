@@ -13,7 +13,7 @@ void print_help() {
          " --bin                output bin file\n"
          " --so                 output so file\n"
          " -d                   print debug info of exe_state\n"
-         "  -h | --help         show help message\n");
+         " -h | --help          show help message\n");
 }
 
 int main(int argc, char **argv) {
@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   int debug_info = 0;
   int debug_exe_state = 0;
   int no_stdlib = 0;
-  char *stdlib_path = "asm/bin/__stdlib";
+  char *stdlib_path = "asm/bin/stdlib";
   int output_bin = 0;
   int output_so = 0;
 

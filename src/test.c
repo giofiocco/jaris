@@ -1,4 +1,7 @@
+#define _DEFAULT_SOURCE
+
 #include <assert.h>
+#include <dirent.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
