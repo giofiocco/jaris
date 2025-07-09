@@ -216,9 +216,8 @@ instruction_stat_t instruction_stat(instruction_t instruction) {
     case RAM_DRW:
       return (instruction_stat_t){INST_8BITS_ARG};
     case RAM_A: case RAM_B:
-    case JMP:
       return (instruction_stat_t){INST_16BITS_ARG};
-    case CALL:
+    case JMP: case CALL:
       return (instruction_stat_t){INST_LABEL_ARG};
     case JMPR: case JMPRZ: case JMPRN: case JMPRC: case JMPRNZ: case JMPRNN: case JMPRNC:
     case CALLR:

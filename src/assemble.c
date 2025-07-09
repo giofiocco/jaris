@@ -3,10 +3,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "../files.h"
 #include "../instructions.h"
 #include "../mystb/errors.h"
 #include "../mystb/sv.h"
+#include "assemble.h"
 
 #define ASM_TOKENS_MACRO_MAX 32
 #define ASM_MACROS_MAX       32
@@ -51,6 +51,7 @@ typedef struct {
   int macro_count;
   int current_macro;
   int current_macro_token;
+  int allowed_flags;
 } asm_tokenizer_t;
 
 char *asm_token_kind_to_string(asm_token_kind_t kind) {
@@ -82,13 +83,14 @@ void asm_token_dump(asm_token_t token) {
          SV_UNPACK(token.image));
 }
 
-void asm_tokenizer_init(asm_tokenizer_t *tok, char *buffer, char *buffer_name) {
+void asm_tokenizer_init(asm_tokenizer_t *tok, char *buffer, char *buffer_name, int allowed_flags) {
   assert(tok);
   assert(buffer);
   *tok = (asm_tokenizer_t){0};
   tok->buffer = buffer;
   tok->loc = (location_t){buffer_name, buffer, 1, 1, 0};
   tok->current_macro = -1;
+  tok->allowed_flags = allowed_flags;
 }
 
 asm_token_t asm_new_token_and_consume(asm_tokenizer_t *tok, asm_token_kind_t kind, int count, uint16_t asint, instruction_t asinst) {
@@ -279,9 +281,13 @@ bytecode_t asm_parse_bytecode(asm_tokenizer_t *tok) {
           } else if (arg.kind == ASMT_STRING && arg.image.len == 3) {
             bc = (bytecode_t){BINSTHEX, token.asinst, {.num = arg.image.start[1]}};
           } else {
-            eprintfloc(arg.kind == ASMT_NONE ? token.loc : arg.loc,
-                       "expected HEX, BIN or STRING with len 1, found %s",
-                       asm_token_kind_to_string(arg.kind));
+            if ((tok->allowed_flags >> ASM_ALLOWED_INST_AS_ARG & 1) && arg.kind == ASMT_INST) {
+              bc = (bytecode_t){BINSTHEX, token.asinst, {.num = arg.asinst}};
+            } else {
+              eprintfloc(arg.kind == ASMT_NONE ? token.loc : arg.loc,
+                         "expected HEX, BIN or STRING with len 1, found %s",
+                         asm_token_kind_to_string(arg.kind));
+            }
           }
           if ((token.asinst == PEEKAR || token.asinst == PUSHAR) && bc.arg.num % 2 != 0) {
             eprintfloc(arg.loc, "expected even number");
@@ -348,31 +354,31 @@ bytecode_t asm_parse_bytecode(asm_tokenizer_t *tok) {
   return bc;
 }
 
-obj_t assemble(char *buffer, char *buffer_name, int debug_info, int debug_tok, int debug_byt, int debug_obj) {
+obj_t assemble(char *buffer, char *buffer_name, int debug_info, int debug_flags, int allowed_flags) {
   assert(buffer);
 
   asm_tokenizer_t tok = {0};
-  asm_tokenizer_init(&tok, buffer, buffer_name);
+  asm_tokenizer_init(&tok, buffer, buffer_name, allowed_flags);
 
-  if (debug_tok) {
+  if (debug_flags >> ASM_DEBUG_TOK & 1) {
     asm_token_t t = {0};
     while ((t = asm_token_next(&tok)).kind != ASMT_NONE) {
       asm_token_dump(t);
     }
-    asm_tokenizer_init(&tok, buffer, buffer_name);
+    asm_tokenizer_init(&tok, buffer, buffer_name, allowed_flags);
   }
 
   obj_t obj = {0};
   bytecode_t bc = {0};
   while ((bc = asm_parse_bytecode(&tok)).kind != BNONE) {
-    if (debug_byt) {
+    if (debug_flags >> ASM_DEBUG_BYT & 1) {
       bytecode_dump(bc);
     }
 
     obj_compile_bytecode(&obj, bc);
   }
 
-  if (debug_obj) {
+  if (debug_flags >> ASM_DEBUG_OBJ & 1) {
     obj_dump(&obj);
   }
 

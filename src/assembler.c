@@ -7,8 +7,7 @@
 #include "../argparse.h"
 #include "../files.h"
 #include "../mystb/errors.h"
-
-extern obj_t assemble(char *buffer, char *buffer_name, int debug_info, int debug_tok, int debug_byt, int debug_obj);
+#include "assemble.h"
 
 void print_help() {
   printf("Usage: assembler [options] <file>\n\n"
@@ -16,20 +15,21 @@ void print_help() {
          "  -o <str>     output name\n"
          "  -g           include debug info in obj\n"
          "  -d <str>     print debug info of:\n"
-         "                 tok      tokens\n"
-         "                 byt      bytecodes\n"
-         "                 obj      obj produced\n"
-         "                 all      all the above\n"
+         "                 tok    tokens\n"
+         "                 byt    bytecodes\n"
+         "                 obj    obj produced\n"
+         "                 all    all the above\n"
+         "  -a <str>     allow special cases that usually are considered mistakes, <str> can be:\n"
+         "                 inst-as-arg    allow insts mnemonics as argument of 8bit inst\n"
          "  -h | --help  show help message\n");
 }
 
 int main(int argc, char **argv) {
   char *output = NULL;
   char *path = NULL;
-  int debug_tok = 0;
-  int debug_byt = 0;
-  int debug_obj = 0;
   int debug_info = 0;
+  int debug_flags = 0;
+  int allowed = 0;
 
   ARG_PARSE {
     ARG_PARSE_HELP_ARG                                     //
@@ -41,17 +41,26 @@ int main(int argc, char **argv) {
       }
       ++argv;
       if (strcmp(*argv, "tok") == 0) {
-        debug_tok = 1;
+        debug_flags |= 1 << ASM_DEBUG_TOK;
       } else if (strcmp(*argv, "byt") == 0) {
-        debug_byt = 1;
+        debug_flags |= 1 << ASM_DEBUG_BYT;
       } else if (strcmp(*argv, "obj") == 0) {
-        debug_obj = 1;
+        debug_flags |= 1 << ASM_DEBUG_OBJ;
       } else if (strcmp(*argv, "all") == 0) {
-        debug_tok = 1;
-        debug_byt = 1;
-        debug_obj = 1;
+        debug_flags = (1 << ASM_DEBUG_MAX) - 1;
       } else {
-        ARG_ERROR_("unexpected arg from '-d'");
+        ARG_ERROR_("unexpected arg for '-d'");
+      }
+    }
+    else if (ARG_SFLAG("a")) {
+      if (*(argv + 1) == NULL) {
+        ARG_ERROR("expected string: '%s'", *argv);
+      }
+      ++argv;
+      if (strcmp(*argv, "inst-as-arg") == 0) {
+        allowed |= 1 << ASM_ALLOWED_INST_AS_ARG;
+      } else {
+        ARG_ERROR_("unexpected arg for '-a'");
       }
     }
     else {
@@ -79,7 +88,7 @@ int main(int argc, char **argv) {
   buffer[size] = 0;
   assert(fclose(file) == 0);
 
-  obj_t obj = assemble(buffer, path, debug_info, debug_tok, debug_byt, debug_obj);
+  obj_t obj = assemble(buffer, path, debug_info, debug_flags, allowed);
 
   if (output == NULL) {
     int len = strlen(path);
