@@ -11,6 +11,7 @@
 #include "../argparse.h"
 #include "../instructions.h"
 #include "../mystb/errors.h"
+#include "files.h"
 
 #define TEST_MEM_PATH "test.mem.bin"
 
@@ -88,7 +89,7 @@ void cpu_init(cpu_t *cpu, char *mem_path) {
 
   FILE *file = fopen(mem_path, "rb");
   if (!file) {
-    eprintf("cannot open file: 'mem.bin': %s\n", strerror(errno));
+    eprintf("cannot open file: '%s': %s\n", mem_path, strerror(errno));
   }
   assert(fread(cpu->MEM, 1, 1 << 19, file) == 1 << 19);
   assert(fclose(file) == 0);
@@ -168,6 +169,37 @@ void cpu_dump_stdout(cpu_t *cpu, uint16_t pos) {
 }
 
 void compute_screen(cpu_t *cpu) {
+  assert(cpu);
+
+  int index = cpu->GPUA & 0x7FFF;
+  int x = 8 * (index & 0xFF);
+  int y = 8 * ((index >> 8) & 0xFF);
+  uint16_t attribute = cpu->ATTRIBUTE_RAM[index];
+  uint16_t pattern_index = attribute & 0x0FFF;
+
+  BeginTextureMode(cpu->screen);
+  for (int dy = 0; dy < 8; ++dy) {
+    for (int dx = 0; dx < 8; ++dx) {
+      uint8_t color = (cpu->PATTERN_RAM[pattern_index * 8 + dy] >> (7 - dx)) & 1;
+      DrawPixel(x + dx, SCREEN_HEIGHT - (y + dy) - 1, screen_palette[color]);
+    }
+  }
+  EndTextureMode();
+
+  // BeginTextureMode(cpu->screen);
+  // ClearBackground(WHITE);
+  // for (int y = 0; y < SCREEN_HEIGHT; ++y) {
+  //   for (int x = 0; x < SCREEN_WIDTH; ++x) {
+  //     uint16_t attribute = cpu->ATTRIBUTE_RAM[((y / 8) << 8) + (x / 8)];
+  //     uint16_t pattern_index = attribute & 0x0FFF;
+  //     uint8_t palette_index = (attribute >> 12) & 0xF;
+  //     int dy = y & 0b111;
+  //     int dx = x & 0b111;
+  //     uint8_t color = (cpu->PATTERN_RAM[pattern_index * 8 + dy] >> (7 - dx)) & 1;
+  // DrawPixel(x, SCREEN_HEIGHT - y - 1, color ? SCREEN_FOREGROUND : SCREEN_BACKGROUND);
+  //   }
+  // }
+  // EndTextureMode();
 }
 
 void set_instruction_flags(instruction_t inst, uint8_t step, uint8_t flags, bool invert, microcode_t code) {
@@ -696,11 +728,258 @@ void tick(cpu_t *cpu, bool *running) {
   cpu->SC = (cpu->SC + 1) % 16;
 }
 
-void test() {
+// TODO: test mem
+typedef struct {
+  cpu_t cpu;
+  int16_t test_ram[1 << 16]; // negative if undef
+
+  char stdout[2048];
+  int stdout_size;
+} test_t;
+
+void test_init(test_t *test) {
+  assert(test);
+  *test = (test_t){0};
+  cpu_init(&test->cpu, TEST_MEM_PATH);
+  memset(test->test_ram, -1, (1 << 16) * sizeof(test->test_ram[0]));
 }
 
-// TODO: test
-// TODO: screen stuff
+void test_check(test_t *test) {
+  assert(test);
+  int fail = 0;
+
+  // for (int i = 0; i < 1 << 16; ++i) {
+  //   if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
+  //     int j = i;
+  //     while (
+  //         j + 1 < 1 << 16
+  //         && ((test->test_ram[j] >= 0 && test->test_ram[j] != test->cpu.RAM[j])
+  //             || (test->test_ram[j + 1] >= 0 && test->test_ram[j + 1] != test->cpu.RAM[j + 1]))) {
+  //       ++j;
+  //     }
+  //     if (!fail) {
+  //       printf("ERROR:\n");
+  //       fail = 1;
+  //     }
+  //     printf("- %04X |", i - i % 2);
+  //     for (int k = i - i % 2; k < j; k += 2) {
+  //       printf(" %04X", cpu_read16(&test->cpu, k));
+  //     }
+  //     printf("\n+ %04X |", i - i % 2);
+  //     for (int k = i - i % 2; k < j; k += 2) {
+  //       printf(" %04X", test->test_ram[k] | (test->test_ram[k + 1] << 8));
+  //     }
+  //     printf("\n\n");
+  //     i = j;
+  //   }
+  // }
+  // if (fail) {
+  //   exit(1);
+  // }
+  // return;
+
+  for (int i = 0; i < 1 << 16; ++i) {
+    if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
+      if (!fail) {
+        fprintf(stderr, "ERROR:\n");
+      }
+      fail = 1;
+      fprintf(stderr, "  at 0x%04X %05d expected %02X,   found %02X\n", i, i, test->test_ram[i], test->cpu.RAM[i]);
+      if (i % 2 == 0) {
+        fprintf(stderr, "                  expected %04X, found %04X\n", test->test_ram[i] | (test->test_ram[i + 1] << 8), cpu_read16(&test->cpu, i));
+      }
+    }
+  }
+  if (fail) {
+    exit(1);
+  }
+}
+
+#define test_assert(cond__)               \
+  do {                                    \
+    if (!(cond__)) {                      \
+      eprintf("failed assert: " #cond__); \
+    }                                     \
+  } while (0);
+
+uint16_t test_find_symbol(symbol_t *symbols, uint16_t count, char *image) {
+  assert(symbols);
+  assert(image);
+  for (int i = 0; i < count; i++) {
+    if (strcmp(symbols[i].image, image) == 0) {
+      return symbols[i].pos;
+    }
+  }
+  eprintf("image not found: %s", image);
+  assert(0 && "UNREACHABLE");
+}
+
+void test_set_range(test_t *test, int ram_start, int count, uint8_t *data) {
+  assert(test);
+  assert(data);
+  assert(count);
+  for (int i = 0; i < count; ++i) {
+    test->test_ram[i + ram_start] = data[i];
+  }
+}
+
+void test_set_u16(test_t *test, uint16_t at, uint16_t num) {
+  assert(test);
+  assert(at % 2 == 0);
+  test->test_ram[at] = num & 0xFF;
+  test->test_ram[at + 1] = (num >> 8) & 0xFF;
+}
+
+void test_print_ram_range(test_t *test, uint16_t from, uint16_t to) {
+  assert(test);
+  printf("TEST RAM %d-%d:\n", from, to);
+  int L = 32;
+  from -= from % L;
+  for (int i = from; i < to; i += L) {
+    printf("%04X %05d |", i, i);
+    for (int j = 0; j < L; ++j) {
+      if (j % 8 == 0) {
+        printf(" ");
+      }
+      if (test->test_ram[i + j] >= 0) {
+        printf("%02X", test->test_ram[i + j]);
+      } else {
+        printf("  ");
+      }
+    }
+    printf(" |\n");
+  }
+  printf("%04X %05d |\n", to, to);
+}
+
+void test_set_stdout(test_t *test, uint16_t stdout_pos, char *str) {
+  assert(test);
+  assert(str);
+
+  assert(test->stdout_size + strlen(str) < 2048);
+  strcat(test->stdout, str);
+  test->stdout_size += strlen(str);
+
+  test_set_u16(test, stdout_pos, 128 - test->stdout_size);
+  test_set_u16(test, stdout_pos + 2, stdout_pos + 4 + test->stdout_size);
+  test_set_range(test, stdout_pos + 4, test->stdout_size, (uint8_t *)test->stdout);
+}
+
+void exe_reloc(exe_t *exe, uint16_t start_pos, uint16_t stdlib_pos) {
+  assert(exe);
+
+  assert(exe->dynamic_count == 1);
+  assert(strcmp(exe->dynamics[0].file_name, "\001") == 0);
+
+  for (int i = 0; i < exe->reloc_count; ++i) {
+    reloc_entry_t entry = exe->relocs[i];
+    entry.what += start_pos;
+    exe->code[entry.where] = entry.what & 0xFF;
+    exe->code[entry.where + 1] = (entry.what >> 8) & 0xFF;
+  }
+
+  for (int i = 0; i < exe->dynamics[0].reloc_count; ++i) {
+    reloc_entry_t entry = exe->dynamics[0].relocs[i];
+    entry.what += stdlib_pos;
+    exe->code[entry.where] = entry.what & 0xFF;
+    exe->code[entry.where + 1] = (entry.what >> 8) & 0xFF;
+  }
+}
+
+void step_mode(cpu_t *cpu) {
+  assert(cpu);
+
+  bool running = true;
+  microcode_flag_t mc = 0;
+
+  char input[100] = {0};
+
+  cpu_dump(cpu);
+  printf("> ");
+  while (fgets(input, 100, stdin)) {
+    cpu_dump(cpu);
+
+    if (strcmp(input, "end\n") == 0 || strcmp(input, "quit\n") == 0 || strcmp(input, "exit\n") == 0) {
+      break;
+    } else if (strcmp(input, "help\n") == 0 || strcmp(input, "?\n") == 0) {
+      printf("commands\n"
+             "  end | quit | exit   end step mode\n"
+             "  help | ?            print help\n"
+             "if no command, next instruction is run\n");
+    } else {
+      running = true;
+      do {
+        tick(cpu, &running);
+        mc = control_rom[cpu->IR | (cpu->SC << 6) | (cpu->FR << (6 + 4))];
+      } while (running && !(mc & (1 << SCr)));
+    }
+    printf("> ");
+  }
+}
+
+void test() {
+  test_t test_ = {0};
+  test_t *test = &test_;
+  test_init(test);
+  cpu_t *cpu = &test->cpu;
+  bool running = true;
+
+  printf("TEST:\n");
+
+  printf("  BOOTLOADER LOADED\n");
+  test_set_range(test, 0xFF00, 256, cpu->MEM);
+  test_check(test);
+
+  printf("  BOOTLOADER RUN\n");
+  while (running && !(cpu->IR == JMPA && cpu->A == 0)) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+
+  printf("  OS LOADED\n");
+  exe_t os = exe_decode_file("asm/bin/os");
+  exe_reloc(&os, 0, os.code_size);
+  test_set_range(test, 0, os.code_size, os.code);
+  test_check(test);
+
+  printf("  STDLIB LOADED\n");
+  so_t stdlib = so_decode_file("asm/bin/stdlib");
+  for (int i = 0; i < stdlib.reloc_count; ++i) {
+    reloc_entry_t entry = stdlib.relocs[i];
+    entry.what += os.code_size;
+    stdlib.code[entry.where] = entry.what & 0xFF;
+    stdlib.code[entry.where + 1] = (entry.what >> 8) & 0xFF;
+  }
+  test_set_range(test, os.code_size, stdlib.code_size, stdlib.code);
+  test_check(test);
+
+  uint16_t execute_ptr = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "execute") + os.code_size;
+
+  printf("  OS SETUP\n");
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_ptr)) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+  test_assert(cpu->RAM[cpu->A] == 's');
+  test_assert(cpu->RAM[cpu->A + 1] == 'h');
+  test_assert(cpu->RAM[cpu->A + 2] == 0);
+
+  printf("TODO STDOUT\n");
+  // os struct:
+  test_set_u16(test, 0xF800, os.code_size); // stdlib
+  test_set_u16(test, 0xF802, 0xF820);       // current process
+  test_set_u16(test, 0xF804, 0x8000);       // used process map
+  test_set_u16(test, 0xF806, 0x8000);       // used page map
+  test_set_u16(test, 0xF808, 0);            // used page map
+  test_set_u16(test, 0xF80A, 0);            // screen text row - col
+  //  os process:
+  test_set_u16(test, 0xF820, 0xFFFF); // parent process
+  test_set_u16(test, 0xF822, 1);      // cwd sec
+  test_set_u16(test, 0xF824, 0xFFFE); //  SP
+  // test_set_u16(test, 0xF826, stdout_pos); // stdout redirect
+
+  printf("END\n");
+}
 
 void print_help() {
   printf("Usage: sim [options]\n\n"
@@ -716,7 +995,9 @@ void print_help() {
 }
 
 int main(int argc, char **argv) {
-  char *input = NULL;
+  set_control_rom();
+
+  char *input = "";
   char *mempath = "main.mem.bin";
   int step_mode = 0;
   int screen = 0;
@@ -748,6 +1029,47 @@ int main(int argc, char **argv) {
   if (step_mode) {
     eprintf("TODO step mode");
   }
+
+  cpu_t cpu = {0};
+  cpu_init(&cpu, mempath);
+  cpu.has_screen = screen;
+
+  load_input_string(&cpu, input);
+
+  if (cpu.has_screen) {
+    SetTraceLogLevel(LOG_ERROR);
+    InitWindow(SCREEN_WIDTH * SCREEN_ZOOM + SCREEN_PAD * 2, SCREEN_HEIGHT * SCREEN_ZOOM + SCREEN_PAD * 2, "Jaris screen");
+    cpu.screen = LoadRenderTexture(SCREEN_WIDTH, SCREEN_HEIGHT);
+
+    BeginTextureMode(cpu.screen);
+    ClearBackground(screen_palette[0]);
+    EndTextureMode();
+  }
+
+  bool running = true;
+  int ticks = 0;
+  while (running) {
+    PollInputEvents();
+    if (cpu.has_screen && WindowShouldClose()) {
+      break;
+    }
+    tick(&cpu, &running);
+    ++ticks;
+  }
+  if (cpu.has_screen) {
+    while (!WindowShouldClose()) {
+      PollInputEvents();
+    }
+    UnloadRenderTexture(cpu.screen);
+    CloseWindow();
+  }
+
+  printf("ticks: %.3fE3 (%.3f ms @ 4 MHz, %.3f ms @ 10 MHz)\n",
+         (float)ticks / 1E3,
+         (float)ticks * 1E3 / 4E6,
+         (float)ticks * 1E3 / 10E6);
+
+  cpu_dump(&cpu);
 
   return 0;
 }

@@ -1,4 +1,4 @@
-PROGRAMS=os shutdown ls sh cd cat test_font echo brainfuck expr
+PROGRAMS=os shutdown ls sh cd cat test_font echo brainfuck expr jit
 STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string
 STDLIB=bin/stdlib
 STDLIB_LOC=$(STDLIB)
@@ -14,13 +14,16 @@ build:
 bin:
 	mkdir -p $@
 
+build/jit.o: jit.asm ../assembler | build
+	../assembler $(ASSEMBLER_FLAGS) -a inst-as-arg -o $@ $<
+
 build/%.o: %.asm ../assembler | build
 	../assembler $(ASSEMBLER_FLAGS) -o $@ $<
 
 $(STDLIB): $(patsubst %,build/%.o,$(STDLIB_FILES)) ../linker | bin
 	../linker $(LINKER_FLAGS) --so --nostdlib -o $@ $(filter %.o,$^)
 
-bin/os: build/os.o build/load_font.o $(STDLIB) ../linker | bin
+bin/os: build/os.o build/load_font.o ../font $(STDLIB) ../linker | bin
 	../linker $(LINKER_FLAGS) -o $@ $(filter %.o,$^)
 
 bin/bootloader: build/bootloader.o ../linker | bin
@@ -30,6 +33,8 @@ bin/bootloader: build/bootloader.o ../linker | bin
 bin/%: build/%.o ../linker $(STDLIB) | bin
 	../linker $(LINKER_FLAGS) -o $@ $<
 
+../font:
+	make -C .. font
 
 ../linker:
 	make -C .. linker
