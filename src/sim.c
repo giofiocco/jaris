@@ -1034,6 +1034,7 @@ int main(int argc, char **argv) {
   cpu_init(&cpu, mempath);
   cpu.has_screen = screen;
 
+  set_char_to_scancode();
   load_input_string(&cpu, input);
 
   if (cpu.has_screen) {
