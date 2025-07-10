@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "../instructions.h"
+#include "instructions.h"
 
 #define GLOBAL_MAX_COUNT       32
 #define EXTERN_MAX_COUNT       32

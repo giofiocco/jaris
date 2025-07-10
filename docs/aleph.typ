@@ -1,6 +1,5 @@
 #import "@preview/cetz:0.3.4" as cetz: canvas, draw
 #import "@preview/circuiteria:0.2.0" as circuiteria: circuit
-#import "pictypst/PIC.typ": pic
 
 #set par(justify: true)
 #set text(10pt)
@@ -31,6 +30,7 @@ It consist of one 16bit bus, 2 general purpose registers, a non volatile memory,
 TODO: control, flags, alu
 ]
 
+/*
 #place(bottom+center, scope:"parent", float:true, figure(pic("
 IP: box \"IP\"; move
 A: box \"A\"; move
@@ -47,6 +47,7 @@ move; CROM: box \"CROM\"
 move to IP; move up; move; CLK: box \"CLK\"
 move to A; move up; move; box dashed \"BOOT\"
 "), caption:[Modules' diagram]))
+*/
 
 /*
 #place(bottom+center, scope:"parent", float:true, figure(canvas({
@@ -81,7 +82,4 @@ move to A; move up; move; box dashed \"BOOT\"
 if response is `0xFE` means resend and `0xFA` means ACK (possibily limited to 3 retries before assume the command is not supported).
 
 == Control Flags
-#pic("
-
-")
 

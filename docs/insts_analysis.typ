@@ -2,7 +2,7 @@
 
 #let mis = (:)
 #let braces = 1
-#for (i,line) in read("sim.c").split("void set_control_rom() {").at(1).split("\n").enumerate() {
+#for (i,line) in read("../src/sim.c").split("void set_control_rom() {").at(1).split("\n").enumerate() {
   braces += line.matches("{").len()
   braces -= line.matches("}").len()
   if braces == 0 {

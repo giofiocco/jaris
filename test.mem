@@ -1,18 +1,14 @@
-newfile cat fromfile mem/cat
-newfile cd fromfile mem/cd
-newfile font fromfile mem/font
-newfile ls fromfile mem/ls
-newfile sh fromfile mem/sh
-newfile shutdown fromfile mem/shutdown
-newfile test_font fromfile mem/test_font
-newfile __os fromfile mem/__os
-newfile __stdlib fromfile mem/__stdlib
-newdir dir
-newfile ciao text
-ciao
-come va
-endtext
-newdir b
-enddir
-enddir
-setbootloader fromfile mem/__bootloader
+newos os fromfile asm/bin/os
+newstdlib stdlib fromfile asm/bin/stdlib
+setbootloader asm/bin/bootloader
+newfile font fromfile font
+newfile shutdown fromfile asm/bin/shutdown
+newfile ls fromfile asm/bin/ls
+newfile sh fromfile asm/bin/sh
+newfile cd fromfile asm/bin/cd
+newfile cat fromfile asm/bin/cat
+newfile test_font fromfile asm/bin/test_font
+newfile echo fromfile asm/bin/echo
+newfile brainfuck fromfile asm/bin/brainfuck
+newfile expr fromfile asm/bin/expr
+newfile jit fromfile asm/bin/jit

@@ -3,10 +3,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "../instructions.h"
 #include "../mystb/errors.h"
 #include "../mystb/sv.h"
 #include "assemble.h"
+#include "instructions.h"
 
 #define ASM_TOKENS_MACRO_MAX 32
 #define ASM_MACROS_MAX       32

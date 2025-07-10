@@ -1,4 +1,4 @@
-#let file_list = read("Makefile").match(regex("STDLIB_FILES\s*=\s*([a-zA-Z0-9_ ]+)\s*\n")).captures.at(0).split(" ").map(x => "asm/" + x + ".asm")
+#let file_list = read("../asm/Makefile").match(regex("STDLIB_FILES=([a-zA-Z0-9_ ]+)\s*\n")).captures.at(0).split(" ").map(x => "../asm/" + x + ".asm")
 
 #place(
   top+center,
@@ -6,6 +6,7 @@
   scope:"parent",
   text(30pt)[*Standard Library*]
 )
+
 
 #for file in file_list {
   let symbols = (:)
@@ -36,7 +37,9 @@
 
   }
 
-  align(center)[*#file*]
+  let filename = file.split("/").last()
+
+  align(center)[*#filename*]
   for (k,v) in symbols.pairs() {
     [/ #raw(k):] + raw(v)
   }

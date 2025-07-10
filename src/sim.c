@@ -9,9 +9,9 @@
 #define ERRORS_IMPLEMENTATION
 #define SV_IMPLEMENTATION
 #include "../argparse.h"
-#include "../instructions.h"
 #include "../mystb/errors.h"
 #include "files.h"
+#include "instructions.h"
 
 #define TEST_MEM_PATH "test.mem.bin"
 

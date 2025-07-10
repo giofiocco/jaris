@@ -1,15 +1,9 @@
-*.o
-*.pdf
 *.bin
-build/
-mem/
-asm/oldasm/
 assembler
 linker
 encodemem
 inspect
 sim
-decodemem
 encodefont
-bin/
 test
+font

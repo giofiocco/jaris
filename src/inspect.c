@@ -6,9 +6,9 @@
 #define ERRORS_IMPLEMENTATION
 #define SV_IMPLEMENTATION
 #include "../argparse.h"
-#include "../instructions.h"
 #include "../mystb/errors.h"
 #include "files.h"
+#include "instructions.h"
 
 typedef enum {
   KUNSET,

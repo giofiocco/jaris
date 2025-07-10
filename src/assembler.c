@@ -5,9 +5,9 @@
 #define SV_IMPLEMENTATION
 
 #include "../argparse.h"
-#include "../files.h"
 #include "../mystb/errors.h"
 #include "assemble.h"
+#include "files.h"
 
 void print_help() {
   printf("Usage: assembler [options] <file>\n\n"

@@ -80,7 +80,7 @@ reloced_stdlib:
   -- ^ os_size stdlib_sec os_sec
   POPA RAM_B ptr_to_stdlib_ptr A_rB
 
-  RAM_AL 0x00 JMPA
+  RAM_AL 0x00 JMPA -- TODO: JMP 0x0000
 
 not_stdlib:
   RAM_A 0xFFFF A_B
