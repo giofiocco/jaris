@@ -17,6 +17,7 @@ typedef enum {
   KSO,
   KMEM,
   KBIN,
+  KFONT,
 } kind_t;
 
 void disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count);
@@ -84,7 +85,7 @@ void inspect_mem(char *filename) {
 
   FILE *file = fopen(filename, "rb");
   if (!file) {
-    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
+    eprintf("cannot open file '%s': %s", filename, strerror(errno));
   }
   assert(fread(sectors, 1, 1 << 19, file) == 1 << 19);
   assert(fclose(file) == 0);
@@ -122,6 +123,68 @@ void inspect_mem(char *filename) {
   }
 }
 
+void inspect_font(char *filename) {
+  assert(filename);
+
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    eprintf("cannot open file '%s': %s", filename, strerror(errno));
+  }
+
+  char magic_number[5] = {0};
+  assert(fread(magic_number, 1, 4, file) == 4);
+  if (strcmp(magic_number, "FONT") != 0) {
+    eprintf("%s: expected magic number to be 'FONT': found '%s'", filename, magic_number);
+  }
+
+  int count = 0;
+  assert(fread(&count, 2, 1, file) == 1);
+  assert(count > 0);
+
+  printf("PATTERNS COUNT: %d\n", count);
+
+  char patterns[count][9];
+  assert(fread(patterns, 1, 9 * count, file) == (unsigned int)9 * count);
+
+#define INSPECT_FONT_WRAPPING 8
+
+  for (int i = 0; i < count - INSPECT_FONT_WRAPPING + 1; i += INSPECT_FONT_WRAPPING) {
+    for (int d = 0; d < INSPECT_FONT_WRAPPING; ++d) {
+      char c = patterns[i + d][0];
+      printf("%-3d '%c'   ", c, isprint(c) ? c : ' ');
+    }
+    putchar('\n');
+
+    for (int j = 0; j < 8; ++j) {
+      for (int d = 0; d < INSPECT_FONT_WRAPPING; ++d) {
+        for (int k = 0; k < 8; ++k) {
+          putchar(patterns[i + d][j + 1] >> (7 - k) & 1 ? '#' : ' ');
+        }
+        putchar('|');
+        putchar(' ');
+      }
+      putchar('\n');
+    }
+  }
+
+  for (int i = 0; i < count % INSPECT_FONT_WRAPPING; ++i) {
+    char c = patterns[count - count % INSPECT_FONT_WRAPPING + i][0];
+    printf("%-3d '%c'   ", c, isprint(c) ? c : ' ');
+  }
+  putchar('\n');
+
+  for (int j = 0; j < 8; ++j) {
+    for (int i = 0; i < count % INSPECT_FONT_WRAPPING; ++i) {
+      for (int k = 0; k < 8; ++k) {
+        putchar(patterns[count - count % INSPECT_FONT_WRAPPING + i][j + 1] >> (7 - k) & 1 ? '#' : ' ');
+      }
+      putchar('|');
+      putchar(' ');
+    }
+    putchar('\n');
+  }
+}
+
 void print_help() {
   printf("Usage: inspect [kind] [options] <input>\n\n"
          "Options:\n"
@@ -129,11 +192,12 @@ void print_help() {
          "  -h | --help  show help message\n"
          "\nKinds:\n"
          "if the kind is not specified it's deduced from the file extension\n\n"
-         "  --obj  analyse the input as an obj\n"
-         "  --exe  analyse the input as an exe\n"
-         "  --so   analyse the input as a so\n"
-         "  --mem  analyse the input as a memory bin\n"
-         "  --bin  analyse the input as a bin (just plain code)\n");
+         "  --obj   analyse the input as an obj\n"
+         "  --exe   analyse the input as an exe\n"
+         "  --so    analyse the input as a so\n"
+         "  --mem   analyse the input as a memory bin\n"
+         "  --bin   analyse the input as a bin (just plain code)\n"
+         "  --font  analyse the input as a font\n");
 }
 
 int main(int argc, char **argv) {
@@ -159,6 +223,9 @@ int main(int argc, char **argv) {
     else if (ARG_LFLAG("bin")) {
       kind = KBIN;
     }
+    else if (ARG_LFLAG("font")) {
+      kind = KFONT;
+    }
     else {
       if (path != NULL) {
         eprintf("file already provided: %s", path);
@@ -176,23 +243,27 @@ int main(int argc, char **argv) {
       kind = KEXE;
     } else if (strcmp(path + len - 3, ".so") == 0) {
       kind = KSO;
-    } else if (strcmp(path, "mem.bin") == 0) {
-      kind = KMEM;
+    } else if (strcmp(path + len - 5, ".font") == 0) {
+      kind = KFONT;
     } else {
       FILE *file = fopen(path, "rb");
       if (!file) {
         eprintf("cannot open file '%s': '%s'", path, strerror(errno));
       }
-      char magic_number[4] = {0};
-      assert(fread(magic_number, 1, 3, file) == 3);
+
+#define MAGIC_NUMBER_MAX_LEN 5
+      char magic_number[MAGIC_NUMBER_MAX_LEN + 1] = {0};
+      assert(fread(magic_number, 1, MAGIC_NUMBER_MAX_LEN, file) == MAGIC_NUMBER_MAX_LEN);
       assert(fclose(file) == 0);
 
-      if (strcmp(magic_number, "EXE") == 0) {
+      if (sv_eq((sv_t){magic_number, 3}, sv_from_cstr("EXE"))) {
         kind = KEXE;
-      } else if (strcmp(magic_number, "OBJ") == 0) {
+      } else if (sv_eq((sv_t){magic_number, 3}, sv_from_cstr("OBJ"))) {
         kind = KOBJ;
-      } else if (magic_number[0] == 'S' && magic_number[1] == 'O') {
+      } else if (sv_eq((sv_t){magic_number, 2}, sv_from_cstr("SO"))) {
         kind = KSO;
+      } else if (sv_eq((sv_t){magic_number, 4}, sv_from_cstr("FONT"))) {
+        kind = KFONT;
       } else {
         fprintf(stderr, "ERROR: cannot deduce file kind from '%s'\n", path);
         exit(1);
@@ -218,6 +289,9 @@ int main(int argc, char **argv) {
       break;
     case KBIN:
       inspect_bin(path, disassemble);
+      break;
+    case KFONT:
+      inspect_font(path);
       break;
     default:
       assert(0 && "UNREACHABLE");
