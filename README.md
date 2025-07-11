@@ -285,8 +285,6 @@ The first process struct is the os-process
 | 2        | ptr to current process struct |
 | 2        | used process map              |
 | 4        | used page map                 |
-| 1        | screen text row               |
-| 1        | screen text col               |
 
 ### Process Struct
 

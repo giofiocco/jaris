@@ -6,8 +6,12 @@ EXTERN div
 
   { current_process_ptr 0xF802 }
   { stdout_offset 0x06 }
-  { screen_text_row_ptr 0xF80A }
-  { screen_text_col_ptr 0xF80B }
+  { max_cols 0x4A }
+
+ALIGN
+pos_ptr:
+col_ptr: 0x00
+row_ptr: 0x00
 
 -- [cstr ptr, _] -> [_, _]
 print:
@@ -31,20 +35,18 @@ put_char:
   INCA JMPRNZ $ridirect
 
   PEEKA RAM_BL 0x0A SUB JMPRNZ $no_new_line
-  RAM_B screen_text_col_ptr RAM_AL 0x00 AL_rB
-  RAM_B screen_text_row_ptr rB_AL INCA AL_rB
+
+  RAM_B col_ptr RAM_AL 0x00 AL_rB
+  RAM_B row_ptr rB_AL INCA AL_rB
   INCSP RET
 no_new_line:
-
-  RAM_B screen_text_row_ptr rB_AL PUSHA
-  RAM_B screen_text_col_ptr rB_AL POPB B_AH
-
+  RAM_B pos_ptr rB_A
   A_B POPA DRW
 
-  RAM_B screen_text_col_ptr rB_AL INCA AL_rB
-  RAM_BL 0x64 SUB JMPRNZ $end_new_line
-  RAM_B screen_text_col_ptr RAM_AL 0x00 AL_rB
-  RAM_B screen_text_row_ptr rB_AL INCA AL_rB
+  RAM_B col_ptr rB_AL INCA AL_rB
+  RAM_BL max_cols SUB JMPRNN $end_new_line
+  RAM_B col_ptr RAM_AL 0x00 AL_rB
+  RAM_B row_ptr rB_AL INCA AL_rB
 end_new_line:
   RET
 
