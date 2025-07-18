@@ -1,13 +1,11 @@
 #include <assert.h>
 #include <errno.h>
 
-#define ERRORS_IMPLEMENTATION
-#define SV_IMPLEMENTATION
-
 #include "../argparse.h"
-#include "../mystb/errors.h"
 #include "assemble.h"
 #include "files.h"
+#define ERRORS_IMPLEMENTATION
+#include "../mystb/errors.h"
 
 void print_help() {
   printf("Usage: assembler [options] <file>\n\n"

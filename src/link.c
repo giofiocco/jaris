@@ -4,6 +4,7 @@
 #define ERRORS_IMPLEMENTATION
 #include "../../mystb/errors.h"
 #include "files.h"
+#define SV_IMPLEMENTATION
 #include "link.h"
 
 int exe_find_symbol(exe_t *exe, char *name) {

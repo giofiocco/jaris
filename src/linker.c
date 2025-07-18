@@ -1,4 +1,5 @@
 #include "../argparse.h"
+#define SV_IMPLEMENTATION
 #include "files.h"
 #include "link.h"
 

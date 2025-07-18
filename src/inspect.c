@@ -20,8 +20,6 @@ typedef enum {
   KFONT,
 } kind_t;
 
-void disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count);
-
 void inspect_obj(char *filename, int disassemble_flag) {
   assert(filename);
 
@@ -234,6 +232,10 @@ int main(int argc, char **argv) {
     }
   }
 
+  if (!path) {
+    eprintf("file not provided");
+  }
+
   unsigned int len = strlen(path);
 
   if (kind == KUNSET) {
@@ -304,168 +306,4 @@ int compare_symbols(const void *a, const void *b) {
   assert(a);
   assert(b);
   return ((symbol_t *)a)->pos - ((symbol_t *)b)->pos;
-}
-
-void disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count) {
-  char *set_labels[code_size];
-  memset(set_labels, 0, code_size * sizeof(char *));
-  char *labels[code_size];
-  memset(labels, 0, code_size * sizeof(char *));
-  char *rellabels[code_size];
-  memset(rellabels, 0, code_size * sizeof(char *));
-
-  // char line_labels[code_size][10];
-  // memset(line_labels, 0, sizeof(line_labels));
-  // for (int i = 0; i < code_size; ++i) {
-  //   snprintf(line_labels[i], 10, "%dL", i);
-  //   set_labels[i] = line_labels[i];
-  // }
-
-  for (int i = 0; i < symbols_count; ++i) {
-    if (symbols[i].pos != 0xFFFF) {
-      assert(symbols[i].pos < code_size);
-      set_labels[symbols[i].pos] = symbols[i].image;
-    }
-    for (int j = 0; j < symbols[i].reloc_count; ++j) {
-      assert(symbols[i].relocs[j] < code_size);
-      labels[symbols[i].relocs[j]] = symbols[i].image;
-    }
-    for (int j = 0; j < symbols[i].relreloc_count; ++j) {
-      assert(symbols[i].relrelocs[j] < code_size);
-      rellabels[symbols[i].relrelocs[j]] = symbols[i].image;
-    }
-  }
-
-  char *strings[128][LABEL_MAX_LEN] = {0};
-  int stringi = 0;
-
-  int uli = symbols_count;
-  for (int i = 0; i < code_size; i++) {
-    if (instruction_to_string(code[i])) {
-      switch (instruction_stat(code[i]).arg) {
-        case INST_NO_ARGS: break;
-        case INST_8BITS_ARG:
-          assert(i + 1 < code_size);
-          i += 1;
-          break;
-        case INST_16BITS_ARG:
-          assert(i + 2 < code_size);
-          if (labels[i + 1] == NULL) {
-            int num = (int16_t)(code[i + 1] + (code[i + 2] << 8));
-            if (set_labels[i + num]) {
-              labels[i + 1] = set_labels[i + num];
-            }
-          }
-          i += 2;
-          break;
-        case INST_LABEL_ARG:
-          assert(i + 2 < code_size);
-          if (labels[i + 1] == NULL) {
-            int num = (int16_t)(code[i + 1] + (code[i + 2] << 8));
-            assert(i + num >= 0 && i + num < code_size);
-            if (set_labels[i + num]) {
-              labels[i + 1] = set_labels[i + num];
-            }
-          }
-          i += 2;
-          break;
-        case INST_RELLABEL_ARG:
-          assert(i + 2 < code_size);
-          if (rellabels[i + 1] == NULL) {
-            int num = (int16_t)(code[i + 1] + (code[i + 2] << 8));
-            assert(i + num >= 0 && i + num < code_size);
-            if (set_labels[i + num] == NULL) {
-              assert(stringi + 1 < 128);
-              snprintf((char *)strings[stringi++], LABEL_MAX_LEN, "%d", uli++);
-              rellabels[i + 1] = (char *)strings[stringi - 1];
-              set_labels[i + num + 1] = (char *)strings[stringi - 1];
-            } else {
-              rellabels[i + 1] = set_labels[i + num];
-            }
-          }
-          i += 2;
-          break;
-      }
-    }
-  }
-
-  for (int i = 0; i < code_size; ++i) {
-    if (set_labels[i] != NULL) {
-      printf(">%d %s %d\n", i, set_labels[i], code[i]);
-    }
-  }
-
-  bytecode_t bcs[code_size];
-  uint16_t bc_count = 0;
-
-  printf("DISASSEMBLE:\n");
-  for (int i = 0; i < code_size;) {
-    if (set_labels[i] != NULL) {
-      bcs[bc_count++] = bytecode_with_string(BSETLABEL, 0, set_labels[i]);
-
-      if (code[i] == 0 && i + 1 < code_size && code[i + 1] == 0) {
-        int j = i + 1;
-        while (j < code_size && code[j] == 0) {
-          j++;
-        }
-        bcs[bc_count++] = (bytecode_t){BDB, 0, {.num = j - i}};
-        i = j;
-        continue;
-      }
-    }
-    if (instruction_to_string(code[i]) != NULL) {
-      switch (instruction_stat(code[i]).arg) {
-        case INST_NO_ARGS:
-          bcs[bc_count++] = (bytecode_t){BINST, code[i], {}};
-          i++;
-          break;
-        case INST_8BITS_ARG:
-          assert(i + 1 < code_size);
-          bcs[bc_count++] = (bytecode_t){BINSTHEX, code[i], {.num = code[i + 1]}};
-          i += 2;
-          break;
-        case INST_16BITS_ARG:
-          assert(i + 2 < code_size);
-          if (labels[i + 1]) {
-            bcs[bc_count++] = bytecode_with_string(BINSTLABEL, code[i], labels[i + 1]);
-          } else {
-            bcs[bc_count++] = (bytecode_t){BINSTHEX2, code[i], {.num = code[i + 1] | (code[i + 2] << 8)}};
-          }
-          i += 3;
-          break;
-        case INST_LABEL_ARG:
-          assert(i + 2 < code_size);
-          assert(labels[i + 1]);
-          bcs[bc_count++] = bytecode_with_string(BINSTLABEL, code[i], labels[i + 1]);
-          i += 3;
-          break;
-        case INST_RELLABEL_ARG:
-          assert(i + 2 < code_size);
-          assert(rellabels[i + 1]);
-          bcs[bc_count++] = bytecode_with_string(BINSTRELLABEL, code[i], rellabels[i + 1]);
-          i += 3;
-          break;
-      }
-    } else if (isprint(code[i])) {
-      int j = i + 1;
-      while (j < code_size && code[j] != 0 && code[j] != '\n') {
-        j++;
-      }
-      bcs[bc_count++] = bytecode_with_sv(BSTRING, 0, (sv_t){(char *)(code + i), j - i});
-      if (code[j] == '\n') {
-        bcs[bc_count++] = (bytecode_t){BHEX, 0, {.num = '\n'}};
-        j++;
-      }
-      assert(code[j] == 0);
-      bcs[bc_count++] = (bytecode_t){BHEX, 0, {.num = 0}};
-      i = j + 1;
-    } else {
-      bcs[bc_count++] = (bytecode_t){BHEX, 0, {.num = code[i]}};
-      i++;
-    }
-  }
-
-  for (int i = 0; i < bc_count; ++i) {
-    bytecode_to_asm(stdout, bcs[i]);
-  }
 }
