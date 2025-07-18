@@ -33,8 +33,8 @@ inspect: src/inspect.c $(FILES) $(INSTRUCTIONS)
 sim: src/sim.c main.mem.bin test.mem.bin $(FILES) $(INSTRUCTIONS)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) -lraylib
 
-code_analyzer: src/code_analyzer.c $(ASSEMBLE)
-	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+code_analyzer: src/code_analyzer.c $(ASSEMBLE) $(FILES)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) -L./src/build/ -lassemble
 
 font: encodefont
 	./encodefont $@

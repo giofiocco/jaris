@@ -288,47 +288,19 @@ bytecode_t bytecode_with_sv(bytecode_kind_t kind, instruction_t inst, sv_t sv) {
 
 void bytecode_to_asm(FILE *stream, bytecode_t bc) {
   switch (bc.kind) {
-    case BNONE:
-      assert(0);
-      break;
-    case BINST:
-      fprintf(stream, "%s ", instruction_to_string(bc.inst));
-      break;
-    case BINSTHEX:
-      fprintf(stream, "%s 0x%02X ", instruction_to_string(bc.inst), bc.arg.num);
-      break;
-    case BINSTHEX2:
-      fprintf(stream, "%s 0x%04X ", instruction_to_string(bc.inst), bc.arg.num);
-      break;
-    case BINSTLABEL:
-      fprintf(stream, "%s %s ", instruction_to_string(bc.inst), bc.arg.string);
-      break;
-    case BINSTRELLABEL:
-      fprintf(stream, "%s $%s ", instruction_to_string(bc.inst), bc.arg.string);
-      break;
-    case BHEX:
-      fprintf(stream, "0x%02X ", bc.arg.num);
-      break;
-    case BHEX2:
-      fprintf(stream, "0x%04X ", bc.arg.num);
-      break;
-    case BSTRING:
-      fprintf(stream, "\"%s\" ", bc.arg.string);
-      break;
-    case BSETLABEL:
-      fprintf(stream, "\n%s:\n\t", bc.arg.string);
-      break;
-    case BGLOBAL:
-      fprintf(stream, "GLOBAL %s\n", bc.arg.string);
-      break;
-    case BEXTERN:
-      fprintf(stream, "EXTERN %s\n", bc.arg.string);
-      break;
-    case BALIGN:
-      fprintf(stream, "ALIGN ");
-      break;
-    case BDB:
-      fprintf(stream, "db %d\n", bc.arg.num);
-      break;
+    case BNONE: assert(0); break;
+    case BINST: fprintf(stream, "%s", instruction_to_string(bc.inst)); break;
+    case BINSTHEX: fprintf(stream, "%s 0x%02X", instruction_to_string(bc.inst), bc.arg.num); break;
+    case BINSTHEX2: fprintf(stream, "%s 0x%04X", instruction_to_string(bc.inst), bc.arg.num); break;
+    case BINSTLABEL: fprintf(stream, "%s %s", instruction_to_string(bc.inst), bc.arg.string); break;
+    case BINSTRELLABEL: fprintf(stream, "%s $%s", instruction_to_string(bc.inst), bc.arg.string); break;
+    case BHEX: fprintf(stream, "0x%02X", bc.arg.num); break;
+    case BHEX2: fprintf(stream, "0x%04X", bc.arg.num); break;
+    case BSTRING: fprintf(stream, "\"%s\"", bc.arg.string); break;
+    case BSETLABEL: fprintf(stream, "%s:", bc.arg.string); break;
+    case BGLOBAL: fprintf(stream, "GLOBAL %s", bc.arg.string); break;
+    case BEXTERN: fprintf(stream, "EXTERN %s", bc.arg.string); break;
+    case BALIGN: fprintf(stream, "ALIGN"); break;
+    case BDB: fprintf(stream, "db %d", bc.arg.num); break;
   }
 }

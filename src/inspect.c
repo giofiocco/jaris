@@ -20,13 +20,21 @@ typedef enum {
   KFONT,
 } kind_t;
 
+void print_disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count) {
+  int count = 0;
+  bytecode_t *bcs = disassemble(code, code_size, symbols, symbols_count, &count);
+  for (int i = 0; i < count; ++i) {
+    bytecode_dump(bcs[i]);
+  }
+}
+
 void inspect_obj(char *filename, int disassemble_flag) {
   assert(filename);
 
   obj_t obj = obj_decode_file(filename);
   obj_dump(&obj);
   if (disassemble_flag) {
-    disassemble(obj.code, obj.code_size, obj.symbols, obj.symbol_count);
+    print_disassemble(obj.code, obj.code_size, obj.symbols, obj.symbol_count);
   }
 }
 
@@ -36,7 +44,7 @@ void inspect_exe(char *filename, int disassemble_flag) {
   exe_t exe = exe_decode_file(filename);
   exe_dump(&exe);
   if (disassemble_flag) {
-    disassemble(exe.code, exe.code_size, exe.symbols, exe.symbol_count);
+    print_disassemble(exe.code, exe.code_size, exe.symbols, exe.symbol_count);
   }
 }
 void inspect_so(char *filename, int disassemble_flag) {
@@ -45,7 +53,7 @@ void inspect_so(char *filename, int disassemble_flag) {
   so_t so = so_decode_file(filename);
   so_dump(&so);
   if (disassemble_flag) {
-    disassemble(so.code, so.code_size, so.symbols, so.symbol_count);
+    print_disassemble(so.code, so.code_size, so.symbols, so.symbol_count);
   }
 }
 
@@ -72,7 +80,7 @@ void inspect_bin(char *filename, int disassemble_flag) {
   }
   printf("\n");
   if (disassemble_flag) {
-    disassemble(buffer, size, NULL, 0);
+    print_disassemble(buffer, size, NULL, 0);
   }
 }
 
