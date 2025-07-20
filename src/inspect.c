@@ -23,9 +23,18 @@ typedef enum {
 void print_disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count) {
   int count = 0;
   bytecode_t *bcs = disassemble(code, code_size, symbols, symbols_count, &count);
+  printf("DISASSEMBLE:\n");
   for (int i = 0; i < count; ++i) {
-    bytecode_dump(bcs[i]);
+    if (bcs[i].kind == BSETLABEL) {
+      printf("\n");
+      bytecode_to_asm(stdout, bcs[i]);
+      printf("\n\t");
+    } else {
+      bytecode_to_asm(stdout, bcs[i]);
+      printf(" ");
+    }
   }
+  printf("\n");
 }
 
 void inspect_obj(char *filename, int disassemble_flag) {
