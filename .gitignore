@@ -1,4 +1,5 @@
 *.bin
+build/
 assembler
 linker
 encodemem
@@ -7,3 +8,4 @@ sim
 encodefont
 test
 font
+code_analyzer
