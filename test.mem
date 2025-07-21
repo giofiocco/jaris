@@ -11,4 +11,4 @@ newfile test_font fromfile asm/bin/test_font
 newfile echo fromfile asm/bin/echo
 newfile brainfuck fromfile asm/bin/brainfuck
 newfile expr fromfile asm/bin/expr
-newfile jit fromfile asm/bin/jit
+newfile bfjit fromfile asm/bin/bfjit

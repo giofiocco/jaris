@@ -1,4 +1,4 @@
-PROGRAMS=os shutdown ls sh cd cat test_font echo brainfuck expr jit bfjit
+PROGRAMS=os shutdown ls sh cd cat test_font echo brainfuck expr bfjit
 STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string
 STDLIB=bin/stdlib
 STDLIB_LOC=$(STDLIB)
@@ -15,9 +15,6 @@ build:
 
 bin:
 	mkdir -p $@
-
-build/jit.o: jit.asm $(ASSEMBLER) | build
-	$(ASSEMBLER) $(ASSEMBLER_FLAGS) -a inst-as-arg -o $@ $<
 
 build/bfjit.o: bfjit.asm $(ASSEMBLER) | build
 	$(ASSEMBLER) $(ASSEMBLER_FLAGS) -a inst-as-arg -o $@ $<

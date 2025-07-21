@@ -816,6 +816,11 @@ uint16_t test_find_symbol(symbol_t *symbols, uint16_t count, char *image) {
       return symbols[i].pos;
     }
   }
+  for (int i = 0; i < count; i++) {
+    if (strlen(symbols[i].image) > 4 && strcmp(symbols[i].image + 4, image) == 0) {
+      return symbols[i].pos;
+    }
+  }
   eprintf("image not found: %s", image);
   assert(0 && "UNREACHABLE");
 }
@@ -834,6 +839,11 @@ void test_set_u16(test_t *test, uint16_t at, uint16_t num) {
   assert(at % 2 == 0);
   test->test_ram[at] = num & 0xFF;
   test->test_ram[at + 1] = (num >> 8) & 0xFF;
+}
+
+void test_unset_range(test_t *test, uint16_t from, uint16_t count) {
+  assert(test);
+  memset(test->test_ram + from, -1, count * sizeof(test->test_ram[0]));
 }
 
 void test_print_ram_range(test_t *test, uint16_t from, uint16_t to) {
@@ -930,6 +940,8 @@ void test() {
   cpu_t *cpu = &test->cpu;
   bool running = true;
 
+  uint16_t page_size = 2048;
+
   printf("TEST:\n");
 
   printf("  BOOTLOADER LOADED\n");
@@ -948,18 +960,34 @@ void test() {
   test_set_range(test, 0, os.code_size, os.code);
   test_check(test);
 
+  uint16_t stdlib_pos = os.code_size;
+
+  {
+    uint16_t font_file_ptr = test_find_symbol(os.symbols, os.symbol_count, "file");
+    test_unset_range(test, font_file_ptr, 4);
+
+    uint16_t stdout_ptr = test_find_symbol(os.symbols, os.symbol_count, "stdout");
+    test_unset_range(test, stdout_ptr, 128);
+    printf("TODO STDOUT\n");
+  }
+
   printf("  STDLIB LOADED\n");
   so_t stdlib = so_decode_file("asm/bin/stdlib");
   for (int i = 0; i < stdlib.reloc_count; ++i) {
     reloc_entry_t entry = stdlib.relocs[i];
-    entry.what += os.code_size;
+    entry.what += stdlib_pos;
     stdlib.code[entry.where] = entry.what & 0xFF;
     stdlib.code[entry.where + 1] = (entry.what >> 8) & 0xFF;
   }
-  test_set_range(test, os.code_size, stdlib.code_size, stdlib.code);
+  test_set_range(test, stdlib_pos, stdlib.code_size, stdlib.code);
   test_check(test);
 
-  uint16_t execute_ptr = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "execute") + os.code_size;
+  uint16_t execute_ptr = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "execute") + stdlib_pos;
+
+  {
+    uint16_t file_ptr = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "file") + stdlib_pos;
+    test_unset_range(test, file_ptr, 4);
+  }
 
   printf("  OS SETUP\n");
   while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_ptr)) {
@@ -970,20 +998,46 @@ void test() {
   test_assert(cpu->RAM[cpu->A + 1] == 'h');
   test_assert(cpu->RAM[cpu->A + 2] == 0);
 
-  printf("TODO STDOUT\n");
   // os struct:
-  test_set_u16(test, 0xF800, os.code_size); // stdlib
-  test_set_u16(test, 0xF802, 0xF820);       // current process
-  test_set_u16(test, 0xF804, 0x8000);       // used process map
-  test_set_u16(test, 0xF806, 0x8000);       // used page map
-  test_set_u16(test, 0xF808, 0);            // used page map
-  test_set_u16(test, 0xF80A, 0);            // screen text row - col
+  test_set_u16(test, 0xF800, stdlib_pos); // stdlib
+  test_set_u16(test, 0xF802, 0xF820);     // current process
+  test_set_u16(test, 0xF804, 0x8000);     // used process map
+  test_set_u16(test, 0xF806, 0x8000);     // used page map
+  test_set_u16(test, 0xF808, 0);          // used page map
   //  os process:
   test_set_u16(test, 0xF820, 0xFFFF); // parent process
   test_set_u16(test, 0xF822, 1);      // cwd sec
   test_set_u16(test, 0xF824, 0xFFFE); //  SP
   // test_set_u16(test, 0xF826, stdout_pos); // stdout redirect
   test_check(test);
+
+  printf("  LOAD AND EXECUTE SH\n");
+  while (running && cpu->IR != JMPA) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+
+  exe_t sh = exe_decode_file("asm/bin/sh");
+  exe_reloc(&sh, page_size, stdlib_pos);
+  test_set_range(test, page_size, sh.code_size, sh.code);
+  // os struct:
+  test_set_u16(test, 0xF802, 0xF830);
+  test_set_u16(test, 0xF804, 0xC000);
+  test_set_u16(test, 0xF806, 0xC000);
+  // os process:
+  test_unset_range(test, 0xF824, 2);
+  // sh process:
+  test_set_u16(test, 0xF830, 0xF820);
+  test_set_u16(test, 0xF832, 1);
+  test_set_u16(test, 0xF834, 0);
+  // test_set_u16(test, 0xF836, stdout_pos);
+  test_check(test);
+
+  uint16_t sh_input_pos = test_find_symbol(sh.symbols, sh.symbol_count, "input") + page_size;
+
+  printf("  RUN `ls`\n");
+  load_input_string(cpu, "ls\n");
+  test_assert(running);
 
   printf("END\n");
 }

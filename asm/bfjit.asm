@@ -5,6 +5,7 @@ EXTERN put_char
 EXTERN print_int
 EXTERN get_char
 
+
 ALIGN
 mem: db 16
 mem_end:
@@ -29,16 +30,27 @@ ALIGN jmp_head_ptr: 0x0000
 { OP_POINT "." }
 
 check_and_push:
-  -- ^ ptr times lastop [op, _]
+  -- ^ ptr times lastop [op, opposite_op]
   PUSHA
-  -- ^ op ptr times lastop [op, _]
+  -- ^ op ptr times lastop [op, opposite_op]
+  PEEKAR 0x08 SUB JMPRNZ $not_opposite_op
+  -- TODO: doesnt arrive here
+  INCSP
+  -- ^ ptr times lastop
+  PEEKAR 0x06 DECA PUSHAR 0x06
+  CMPA JMPRNZ $found_op
+  PUSHAR 0x06 -- [0x00, _] lastop = OP_NONE
+  JMPR $found_op
+not_opposite_op:
+  -- ^ op ptr times lastop
   PEEKAR 0x08 A_B PEEKA SUB JMPRZ $equal_op
   PEEKAR 0x06 CALLR $push_op
-  PEEKA PUSHAR 0x08
+  POPA PUSHAR 0x08
   RAM_AL 0x00 PUSHAR 0x06
 equal_op:
-  PEEKAR 0x06 INCA PUSHAR 0x06
-  INCSP JMPR $found_op
+  -- ^ ptr times lastop
+  PEEKAR 0x04 INCA PUSHAR 0x04
+  JMPR $found_op
 
 -- Usage: bfjit program
 _start:
@@ -62,40 +74,16 @@ loop:
 
   -- ^ prg times lastop [_, char]
   RAM_AL "+" SUB JMPRNZ $not_plus
-  PEEKAR 0x06 RAM_BL OP_MINUS SUB JMPRNZ $not_minus_to_plus
-  PEEKAR 0x04 DECA PUSHAR 0x04
-  CMPA JMPRNZ $found_op
-  PUSHAR 0x06 -- [0x00, _]
-  JMPR $found_op
-not_minus_to_plus:
-  RAM_AL OP_PLUS JMPR $check_and_push
+  RAM_AL OP_PLUS RAM_BL OP_MINUS JMPR $check_and_push
 not_plus:
   RAM_AL "-" SUB JMPRNZ $not_minus
-  PEEKAR 0x06 RAM_BL OP_PLUS SUB JMPRNZ $not_plus_to_minus
-  PEEKAR 0x04 DECA PUSHAR 0x04
-  CMPA JMPRNZ $found_op
-  PUSHAR 0x06 -- [0x00, _]
-  JMPR $found_op
-not_plus_to_minus:
-  RAM_AL OP_MINUS JMPR $check_and_push
+  RAM_AL OP_MINUS RAM_BL OP_PLUS JMPR $check_and_push
 not_minus:
   RAM_AL "<" SUB JMPRNZ $not_left
-  PEEKAR 0x06 RAM_BL OP_RIGHT SUB JMPRNZ $not_right_to_left
-  PEEKAR 0x04 DECA PUSHAR 0x04
-  CMPA JMPRNZ $found_op
-  PUSHAR 0x06 -- [0x00, _]
-  JMPR $found_op
-not_right_to_left:
-  RAM_AL OP_LEFT JMPR $check_and_push
+  RAM_AL OP_LEFT RAM_BL OP_RIGHT JMPR $check_and_push
 not_left:
   RAM_AL ">" SUB JMPRNZ $not_right
-  PEEKAR 0x06 RAM_BL OP_LEFT SUB JMPRNZ $not_left_to_right
-  PEEKAR 0x04 DECA PUSHAR 0x04
-  CMPA JMPRNZ $found_op
-  PUSHAR 0x06 -- [0x00, _]
-  JMPR $found_op
-not_left_to_right:
-  RAM_AL OP_RIGHT JMPR $check_and_push
+  RAM_AL OP_RIGHT RAM_BL OP_LEFT JMPR $check_and_push
 not_right:
   RAM_AL "[" SUB JMPRNZ $not_open
   PEEKAR 0x06 A_B PEEKAR 0x04 CALLR $push_op

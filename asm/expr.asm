@@ -12,7 +12,8 @@ EXTERN is_digit
 { T_MAX   0x03 }
 
 -- Grammar:
--- {...} 0 or more times
+-- {...}: 0 or more times
+-- a | b: a or b
 --
 -- E -> F { T_MUL F  | T_DIV F }
 -- F -> T { T_PLUS T | T_MINUS T }
