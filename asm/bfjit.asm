@@ -116,6 +116,8 @@ end_loop:
   RAM_AL INCSP CALLR $push_inst
   RAM_AL RET CALLR $push_inst
 
+  RAM_B jmp_head_ptr rB_A RAM_B jmp_stack SUB JMPRNZ $error_unmatched
+
   CALL code
 
   -- print_mem
@@ -144,7 +146,7 @@ push_op:
   CMPA JMPRZ $end_push_op
   CMPB JMPRZ $end_push_op
 
-  PUSHB B_A CALL put_char PEEKAR 0x04 CALL print_int POPB
+  -- PUSHB B_A CALL put_char PEEKAR 0x04 CALL print_int POPB
 
   RAM_AL OP_PLUS SUB JMPRNZ $push_not_plus
   PEEKA CMPA JMPRZ $end_push_op
@@ -230,10 +232,10 @@ push_not_right:
   RAM_AL JMPRZ CALLR $push_inst
   RAM_B code_ptr rB_A INCA INCA A_rB
 
-  -- TODO: check overflow
   RAM_B jmp_head_ptr rB_A PUSHA
   RAM_B code_ptr rB_A POPB A_rB
   B_A INCA INCA RAM_B jmp_head_ptr A_rB
+  DECA DECA SUB JMPRZ $error_many_nesting
 
   JMPR $end_push_op
 
@@ -245,7 +247,8 @@ push_not_open:
   RAM_AL CMPA CALLR $push_inst
   RAM_AL JMPRNZ CALLR $push_inst
 
-  -- TODO: check underflow
+  RAM_B jmp_head_ptr rB_A RAM_B jmp_stack SUB JMPRZ $error_unmatched
+
   RAM_B jmp_head_ptr rB_A DECA DECA A_rB
   A_B rB_A PUSHA
   RAM_B code_ptr rB_A
@@ -296,3 +299,16 @@ code_exceeding_string: "ERROR: code exceeding" 0x0A 0x00
 code_exceeding:
   RAM_A code_exceeding_string CALL print
   RAM_AL 0x01 CALL exit
+
+error_many_nesting_string: "ERROR: too many nested loops, max: " 0x00
+error_many_nesting:
+  RAM_A error_many_nesting_string CALL print
+  RAM_B jmp_head_ptr RAM_A jmp_stack SUB SHR CALL print_int
+  RAM_AL 0x0A CALL put_char
+  RAM_AL 0x01 CALL exit
+
+error_unmatched_string: "ERROR: unmatched parenthesis" 0x0A 0x00
+error_unmatched:
+  RAM_A error_unmatched_string CALL print
+  RAM_AL 0x01 CALL exit
+
