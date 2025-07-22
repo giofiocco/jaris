@@ -52,16 +52,12 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
   exe_t *exe = &state->exe;
 
   uint16_t offset = exe->code_size;
-  uint16_t zeroed_offset = exe->zeroed_count;
-
-  exe->zeroed_count += obj->zeroed_count;
 
   memcpy(exe->code + offset, obj->code, obj->code_size);
   exe->code_size += obj->code_size + obj->code_size % 2;
 
   for (int i = 0; i < obj->reloc_count; ++i) {
     assert(exe->reloc_count + 1 < RELOC_MAX_COUNT);
-    reloc_entry_t entry = obj->relocs[i];
     exe->relocs[exe->reloc_count++] = (reloc_entry_t){obj->relocs[i].where + offset, obj->relocs[i].what + offset};
   }
 

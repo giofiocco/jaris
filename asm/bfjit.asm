@@ -34,23 +34,22 @@ check_and_push:
   PUSHA
   -- ^ op ptr times lastop [op, opposite_op]
   PEEKAR 0x08 SUB JMPRNZ $not_opposite_op
-  -- TODO: doesnt arrive here
   INCSP
   -- ^ ptr times lastop
-  PEEKAR 0x06 DECA PUSHAR 0x06
+  PEEKAR 0x04 DECA PUSHAR 0x04
   CMPA JMPRNZ $found_op
-  PUSHAR 0x06 -- [0x00, _] lastop = OP_NONE
+  PUSHAR 0x04 -- [0x00, _] lastop = OP_NONE
   JMPR $found_op
 not_opposite_op:
   -- ^ op ptr times lastop
   PEEKAR 0x08 A_B PEEKA SUB JMPRZ $equal_op
   PEEKAR 0x06 CALLR $push_op
-  POPA PUSHAR 0x08
+  PEEKA PUSHAR 0x08
   RAM_AL 0x00 PUSHAR 0x06
 equal_op:
-  -- ^ ptr times lastop
-  PEEKAR 0x04 INCA PUSHAR 0x04
-  JMPR $found_op
+  -- ^ op ptr times lastop
+  PEEKAR 0x06 INCA PUSHAR 0x06
+  INCSP JMPR $found_op
 
 -- Usage: bfjit program
 _start:
@@ -145,7 +144,7 @@ push_op:
   CMPA JMPRZ $end_push_op
   CMPB JMPRZ $end_push_op
 
-  -- PUSHB B_A CALL put_char PEEKAR 0x04 CALL print_int RAM_AL 0x0A CALL put_char POPB
+  PUSHB B_A CALL put_char PEEKAR 0x04 CALL print_int POPB
 
   RAM_AL OP_PLUS SUB JMPRNZ $push_not_plus
   PEEKA CMPA JMPRZ $end_push_op

@@ -98,7 +98,6 @@ IMAGE
 | size [B] | description             |
 | :------- | :---------------------- |
 | 3        | 'EXE'                   |
-| 2        | zeroed count            |
 | 2        | code size               |
 |          | code                    |
 | 2        | relocs count            |
@@ -131,7 +130,6 @@ The reloc `where` is relative to the `exe` code the reloc `what` is relative to 
 | size [B] | description           |
 | :------- | :-------------------- |
 | 3        | 'OBJ'                 |
-| 2        | zeroed count          |
 | 2        | code size             |
 |          | code                  |
 | 2        | relocs count          |
@@ -157,7 +155,6 @@ Include all symbols in symbols, all relreloc info
 | size [b] | description           |
 | :------- | :-------------------- |
 | 2        | 'SO'                  |
-| 2        | zeroed count          |
 | 2        | code size             |
 |          | code                  |
 | 2        | relocs count          |
