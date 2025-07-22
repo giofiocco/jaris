@@ -18,17 +18,12 @@
 #outline()
 
 = Introduction
-#alephzero is the project for a 16bit TTL computer designed to be simple hardware-wise but yet complex enought to be used to explore and implement many features of modern computers.
+This is the design for a 16bit TTL computer (#alephzero) designed to be simple hardware-wise but yet complex enought to be used to explore and implement many features of modern computers.
 
-/ Meaning of the name: $aleph_0$ in math is the cardinality of the set of natural numbers, the smallest infinity, similarly this project aims to be the smallest computer capable of infinite computations, or at least a good compromise of power and simplicity.
+/ The meaning of the name: $aleph_0$ in math is the cardinality of the set of natural numbers, the smallest infinity, similarly this project aims to be the smallest computer capable of infinite computations, or at least a good compromise of power and simplicity.
 
 The core design is heavly inspired by #link("https://eater.net/8bit")[Ben Eater's 8bit computer], and the successive redesign by #link("https://www.youtube.com/@weirdboyjim")[James Sharman] and #link("https://www.youtube.com/@slu467")[Slu4] (especially for the graphics).
 
-#text(blue)[
-It consist of one 16bit bus, 2 general purpose registers, a non volatile memory, keyboard input, VGA graphics, #text(red)[(SPI, parallel thing?)].
-
-TODO: control, flags, alu
-]
 
 /*
 #place(bottom+center, scope:"parent", float:true, figure(pic("
@@ -75,6 +70,7 @@ move to A; move up; move; box dashed \"BOOT\"
 */
 
 = Modules
+
 == RAM Module
 
 == Keyboard
@@ -83,3 +79,36 @@ if response is `0xFE` means resend and `0xFA` means ACK (possibily limited to 3 
 
 == Control Flags
 
+== File System
+The non-volatile memory is subdivided in 256 bytes wide sectors, the first one is reserved for bootloader, the second one is for the root directory.
+The memory is accessible through a sector register and an index register.
+Sectors can be eighter a directory one or a file one.
+
+/ Directory sector:
+#table(
+  columns:3,
+  stroke:.5pt,
+  [*offset [`B`]*], [*size [`B`]*], [*description*],
+  [`00`], [1], [`"D"`],
+  [`01`], [2], [next dir sector],
+  [`03`], [3], [`"..\0"`],
+  [`06`], [2], [parent dir sector],
+  [`08`], [2], [`".\0"`],
+  [`0A`], [2], [head dir sector],
+  [`0C`], [], [other entries],
+)
+
+Entries is composed by the entry name (null terminated) followed by 2 bytes of the entry sector.
+The last entry is just a byte `0`, an empty name.
+If entries exceed the sector size 
+
+/ File sector:
+#table(
+  columns:3,
+  stroke:.5pt,
+  [*offset [`B`]*], [*size [`B`]*], [*description*],
+  [`00`], [1], [`"F"`],
+  [`01`], [2], [next file sector],
+  [`03`], [1], [max index],
+  [`04`], [], [data],
+)

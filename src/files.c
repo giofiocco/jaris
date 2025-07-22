@@ -101,6 +101,7 @@ void relocs_dump(reloc_entry_t *relocs, uint16_t reloc_count) {
 void obj_dump(obj_t *obj) {
   assert(obj);
 
+  printf("ZEROED: %d\n", obj->zeroed_count);
   code_dump(obj->code, obj->code_size);
   relocs_dump(obj->relocs, obj->reloc_count);
   printf("GLOBALS:");
@@ -263,7 +264,7 @@ void obj_compile_bytecode(obj_t *obj, bytecode_t bc) {
         obj_add_instruction(obj, NOP);
       }
       obj_add_instruction(obj, bc.inst);
-      obj_add_symbol_reloc(obj, bc.arg.string, obj->code_size);
+      obj_add_symbol_reloc(obj, bc.arg.string, obj->code_size + obj->zeroed_count);
       obj->code_size += 2;
       break;
     case BINSTRELLABEL:
@@ -271,7 +272,7 @@ void obj_compile_bytecode(obj_t *obj, bytecode_t bc) {
         obj_add_instruction(obj, NOP);
       }
       obj_add_instruction(obj, bc.inst);
-      obj_add_symbol_relreloc(obj, bc.arg.string, obj->code_size);
+      obj_add_symbol_relreloc(obj, bc.arg.string, obj->code_size + obj->zeroed_count);
       obj->code_size += 2;
       break;
     case BHEX:
@@ -289,7 +290,7 @@ void obj_compile_bytecode(obj_t *obj, bytecode_t bc) {
       if (obj_find_symbol_pos(obj, bc.arg.string) != 0xFFFF) {
         eprintf("label redefinition %s", bc.arg.string);
       }
-      obj_add_symbol(obj, bc.arg.string, obj->code_size);
+      obj_add_symbol(obj, bc.arg.string, obj->code_size + obj->zeroed_count);
       break;
     case BGLOBAL:
     {
@@ -309,7 +310,11 @@ void obj_compile_bytecode(obj_t *obj, bytecode_t bc) {
       }
       break;
     case BDB:
-      obj->code_size += bc.arg.num;
+      if (obj->code_size == 0) {
+        obj->zeroed_count += bc.arg.num + bc.arg.num % 2;
+      } else {
+        obj->code_size += bc.arg.num;
+      }
       break;
   }
 }
@@ -349,6 +354,7 @@ obj_t obj_decode_file(char *filename) {
     eprintf("%s: expected magic number to be 'OBJ': found '%s'", filename, magic_number);
   }
 
+  assert(fread(&obj.zeroed_count, 2, 1, file) == 1);
   assert(fread(&obj.code_size, 2, 1, file) == 1);
   assert(fread(obj.code, 1, obj.code_size, file) == obj.code_size);
   assert(fread(&obj.reloc_count, 2, 1, file) == 1);
@@ -377,6 +383,7 @@ void obj_encode_file(obj_t *obj, char *filename) {
   }
 
   assert(fwrite("OBJ", 1, 3, file) == 3);
+  assert(fwrite(&obj->zeroed_count, 2, 1, file) == 1);
   assert(fwrite(&obj->code_size, 2, 1, file) == 1);
   assert(fwrite(&obj->code, 1, obj->code_size, file) == obj->code_size);
   assert(fwrite(&obj->reloc_count, 2, 1, file) == 1);
@@ -396,6 +403,7 @@ void obj_encode_file(obj_t *obj, char *filename) {
 void exe_dump(exe_t *exe) {
   assert(exe);
 
+  printf("ZEROED: %d\n", exe->zeroed_count);
   code_dump(exe->code, exe->code_size);
   relocs_dump(exe->relocs, exe->reloc_count);
   printf("DYNAMIC LINKING: %d\n", exe->dynamic_count);
@@ -448,6 +456,7 @@ exe_t exe_decode_file(char *filename) {
     eprintf("%s: expected magic number to be 'EXE': found '%s'", filename, magic_number);
   }
 
+  assert(fread(&exe.zeroed_count, 2, 1, file) == 1);
   assert(fread(&exe.code_size, 2, 1, file) == 1);
   assert(fread(exe.code, 1, exe.code_size, file) == exe.code_size);
   assert(fread(&exe.reloc_count, 2, 1, file) == 1);
@@ -485,6 +494,7 @@ void exe_encode_file(exe_t *exe, char *filename) {
   }
 
   assert(fwrite("EXE", 1, 3, file) == 3);
+  assert(fwrite(&exe->zeroed_count, 2, 1, file) == 1);
   assert(fwrite(&exe->code_size, 2, 1, file) == 1);
   assert(fwrite(&exe->code, 1, exe->code_size, file) == exe->code_size);
   assert(fwrite(&exe->reloc_count, 2, 1, file) == 1);
@@ -516,6 +526,9 @@ void bin_encode_file(exe_t *exe, char *filename) {
   if (exe->reloc_count != 0) {
     eprintf("cannot encode bin file with relocations\n");
   }
+  if (exe->zeroed_count != 0) {
+    eprintf("TODO encode bin file with zeroed\n");
+  }
 
   FILE *file = fopen(filename, "wb");
   if (!file) {
@@ -530,6 +543,7 @@ void bin_encode_file(exe_t *exe, char *filename) {
 void so_dump(so_t *so) {
   assert(so);
 
+  printf("ZEROED: %d\n", so->zeroed_count);
   code_dump(so->code, so->code_size);
   relocs_dump(so->relocs, so->reloc_count);
   printf("GLOBALS:");
@@ -555,6 +569,7 @@ so_t so_decode_file(char *filename) {
   if (strcmp(magic_number, "SO") != 0) {
     eprintf("%s: expected magic number to be 'SO': found '%s'", filename, magic_number);
   }
+  assert(fread(&so.zeroed_count, 2, 1, file) == 1);
   assert(fread(&so.code_size, 2, 1, file) == 1);
   assert(fread(so.code, 1, so.code_size, file) == so.code_size);
   assert(fread(&so.reloc_count, 2, 1, file) == 1);
@@ -580,6 +595,7 @@ void so_encode_file(so_t *so, char *filename) {
     eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
   }
   assert(fwrite("SO", 1, 2, file) == 2);
+  assert(fwrite(&so->zeroed_count, 2, 1, file) == 1);
   assert(fwrite(&so->code_size, 2, 1, file) == 1);
   assert(fwrite(&so->code, 1, so->code_size, file) == so->code_size);
   assert(fwrite(&so->reloc_count, 2, 1, file) == 1);

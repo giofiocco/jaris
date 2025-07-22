@@ -35,6 +35,7 @@ typedef struct {
 } symbol_t;
 
 typedef struct {
+  uint16_t zeroed_count;
   uint16_t code_size;
   uint8_t code[1 << 16];
   uint16_t reloc_count;
@@ -48,6 +49,7 @@ typedef struct {
 } obj_t;
 
 typedef struct {
+  uint16_t zeroed_count;
   uint16_t code_size;
   uint8_t code[1 << 16];
   uint16_t reloc_count;
@@ -59,6 +61,7 @@ typedef struct {
 } so_t;
 
 typedef struct {
+  uint16_t zeroed_count;
   uint16_t code_size;
   uint8_t code[1 << 16];
   uint16_t reloc_count;
