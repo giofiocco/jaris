@@ -1,6 +1,6 @@
 -- expects in the last 4 bytes of sec 0 the ptr to os and stdlib sec
--- [0xFFFE, _] if os + stdlib is more than one page
 -- [0xFFFF, 0xFFFF] if os is dynamically linked with not the stdlib
+-- when jumping to 0x0000 in B there is the tot_size of os code + stdlib code
 
 { os_sec_pos 0xFC }
 { next_index 0x01 }
@@ -8,6 +8,7 @@
 { data_start 0x04 }
 { page_size 0x0800 }
 { ptr_to_stdlib_ptr 0xF800 }
+{ ptr_to_used_pages_map 0xF806 }
 
 RAM_A 0xFEFE A_SP -- 0xFF00 - 2
 RAM_AL 0x00 A_SEC
@@ -51,8 +52,6 @@ dynamic_reloc:
   RAM_NDX 0x06 -- 4 + 2
   CALLR $get_16 PUSHA -- stdlib code_size
 
-  A_B PEEKAR 0x04 SUM RAM_B page_size SUB JMPRN $too_big
-
   -- ^ code_size os_size stdlib_sec os_sec
   PEEKAR 0x04 A_B POPA
 copy_stdlib:
@@ -64,39 +63,29 @@ copy_stdlib:
   B_A INCA INCA A_B
   POPA DECA DECA JMPRNZ $copy_stdlib
 
-  -- ^ dynamic_reloc_count os_size stdlib_sec os_sec 
+  PUSHB
+  -- ^ tot_size os_size stdlib_sec os_sec
+
   CALLR $get_16
   CMPA JMPRZ $reloced_stdlib
 reloc_stdlib:
   PUSHA
-  -- ^ count os_size stdlib_sec os_sec
-  CALLR $get_16 A_B PEEKAR 0x04 SUM PUSHA -- where += os_size
-  -- ^ where count os_size stdlib_sec os_sec 
-  CALLR $get_16 A_B PEEKAR 0x06 SUM -- what += os_size
+  -- ^ count tot_size os_size stdlib_sec os_sec
+  CALLR $get_16 A_B PEEKAR 0x06 SUM PUSHA -- where += os_size
+  -- ^ where count tot_size os_size stdlib_sec os_sec 
+  CALLR $get_16 A_B PEEKAR 0x08 SUM -- what += os_size
   POPB A_rB
   POPA DECA JMPRNZ $reloc_stdlib
   -- fall-throuh
 reloced_stdlib:
-  -- ^ os_size stdlib_sec os_sec
-  POPA RAM_B ptr_to_stdlib_ptr A_rB
+  -- ^ tot_size os_size stdlib_sec os_sec
+  PEEKAR 0x04 RAM_B ptr_to_stdlib_ptr A_rB
 
-  RAM_AL 0x00 JMPA -- TODO: JMP 0x0000
+  POPB RAM_AL 0x00 JMPA -- TODO: JMP 0x0000
 
 not_stdlib:
   RAM_A 0xFFFF A_B
   HLT
-
---get_8:
---  NDX_A A_B
---  RAM_NDX max_index MEM_A SUB JMPRNN $get_8_next_subsector
---  B_A A_NDX MEM_A INCNDX
---  RET
---
---get_8_next_subsector:
---  B_A A_NDX MEM_A PUSHA
---  RAM_NDX next_index MEM_A INCNDX MEM_AH A_SEC
---  RAM_NDX data_start
---  POPA RET
 
 get_8:
   MEM_A PUSHA
@@ -113,7 +102,3 @@ get_16:
   CALLR $get_8 PUSHA
   CALLR $get_8 A_B POPA B_AH
   RET
-
-too_big:
-  RAM_A 0xFFFE
-  HLT
