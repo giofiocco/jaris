@@ -118,6 +118,9 @@ asm_token_t asm_token_next(asm_tokenizer_t *tok) {
         i++;
       }
       i++;
+      if (!isspace(tok->buffer[i])) {
+        eprintfloc(tok->loc, "expected space after STRING");
+      }
       return asm_new_token_and_consume(tok, ASMT_STRING, i, 0, 0);
     }
     case '-':
@@ -141,6 +144,9 @@ asm_token_t asm_token_next(asm_tokenizer_t *tok) {
         if (i != 6 && i != 4) {
           tok->loc.len = i;
           eprintfloc(tok->loc, "invalid HEX");
+        }
+        if (!isspace(tok->buffer[i])) {
+          eprintfloc(tok->loc, "expected space after HEX");
         }
         uint16_t asint = strtol(tok->buffer + 2, NULL, 16);
         return asm_new_token_and_consume(tok, i == 6 ? ASMT_HEX2 : ASMT_HEX, i, asint, 0);
