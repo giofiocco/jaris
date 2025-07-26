@@ -253,9 +253,9 @@ uint16_t encode_dir_from_file(char **_buffer, uint16_t parent, uint16_t head) {
 
         char *start = token.start + token.len + 1;
         char *nl = start;
-        do {
+        while (!sv_eq((sv_t){nl, 9}, sv_from_cstr("__endtext"))) {
           nl = strchr(nl, '\n') + 1;
-        } while (!sv_eq((sv_t){nl, 9}, sv_from_cstr("__endtext")));
+        }
 
         sv_t text = {start, nl - start};
 
@@ -266,7 +266,9 @@ uint16_t encode_dir_from_file(char **_buffer, uint16_t parent, uint16_t head) {
         sector_push_u8(&sector, 'F');
         sector_push_u16(&sector, 0xFFFF);
         sector_push_u8(&sector, text.len + 3);
-        sector_push(&sector, text.start, text.len);
+        if (text.len > 0) {
+          sector_push(&sector, text.start, text.len);
+        }
 
         *_buffer = text.start + text.len + 9;
 
