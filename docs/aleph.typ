@@ -24,54 +24,13 @@ This is the design for a 16bit TTL computer (#alephzero) designed to be simple h
 
 The core design is heavly inspired by #link("https://eater.net/8bit")[Ben Eater's 8bit computer], and the successive redesign by #link("https://www.youtube.com/@weirdboyjim")[James Sharman] and #link("https://www.youtube.com/@slu467")[Slu4] (especially for the graphics).
 
-
-/*
-#place(bottom+center, scope:"parent", float:true, figure(pic("
-IP: box \"IP\"; move
-A: box \"A\"; move
-B: box \"B\"; move
-SP: box \"SP\"; move
-X: box \"X\"; move;
-ALU: box \"+/-/>>\"; move
-Y: box \"Y\"; move
-IR: box \"IR\"; move
-
-move to ALU; move up; FR: box \"FR\"
-move to Y; move up; SC: box \"SC\"
-move; CROM: box \"CROM\"
-move to IP; move up; move; CLK: box \"CLK\"
-move to A; move up; move; box dashed \"BOOT\"
-"), caption:[Modules' diagram]))
-*/
-
-/*
-#place(bottom+center, scope:"parent", float:true, figure(canvas({
-  import draw: *
-  stroke(.5pt)
-
-  let w = 2
-  let h = 1
-  let mark = (end:">", fill:black, scale:.75)
-
-  let box(x,y,t) = {
-    rect((x,y), (rel:(w,h)))
-    content((x + w/2,y + h/2), t)
-  }
-
-  box(0,0,"IP"); line((2.5,0.5),(rel:(-0.5,0)), mark:mark)
-  box(0,-1.5,"RAM"); line((2.5,0.5),(rel:(0.5,0)), mark:mark)
-
-  box(3,0,"A")
-  box(3,-1.5,"B")
-
-  line((2.5,1), (rel:(0,-5)))
-
-}), caption: [Modules diagram]))
-*/
-
 = Modules
+#figure(image("aleph_images/modules_diagram.png", height:20%), caption:[Modules diagram])
 
 == RAM Module
+#figure(image("aleph_images/ram_module_diagram.png", height:20%), caption:[RAM module diagram])
+
+The RAM module contains the two SRAM and the MAR (memory address register)
 
 == Keyboard
 #link("https://wiki.osdev.org/PS/2_Keyboard")[SP/2 Keyboard], command `0xF0` with sub command `1` to set the scan code set 1,
@@ -111,4 +70,21 @@ If entries exceed the sector size
   [`01`], [2], [next file sector],
   [`03`], [1], [max index],
   [`04`], [], [data],
+)
+
+= Components
+
+#table(
+  columns:3,
+  stroke:.5pt,
+  [*Component*], [*Quantity*], [*DigiKey Part Number*],
+  [SRAM], [2+], [1450-AS7C256C-15PCN-ND],
+)
+
+#table(
+  columns:3,
+  stroke:.5pt,
+  [*From*], [*To*], [*Time* [ns]],
+  [RAM adress set], [data valid], [10 - 20]
+
 )
