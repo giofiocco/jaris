@@ -1,10 +1,8 @@
 .PHONY: all clean
 all: aleph.pdf aleph_images.pdf stdlibdoc.pdf insts_analysis.pdf
 
-aleph.pdf: aleph.typ aleph_images
+aleph.pdf: aleph.typ aleph_images.pl aleph_images.roff
 	typst c $< --root ..
-
-aleph_images: aleph_images.pl aleph_images.roff
 	perl aleph_images.pl
 
 %.pdf: %.typ

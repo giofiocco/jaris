@@ -7,6 +7,24 @@
   text(30pt)[*Standard Library*]
 )
 
+#{
+  let file = "../asm/bootloader.asm"
+
+  let filename = file.split("/").last()
+  align(center)[*#filename*]
+
+  let comment = ""
+  for line in read(file).split("\n") {
+    let m = line.match(regex("^\s*--(.+)$"))
+    if m != none {
+      comment += m.captures.at(0).trim() + "\n"
+    } else {
+      break
+    }
+  }
+
+  raw(comment)
+}
 
 #for file in file_list {
   let symbols = (:)

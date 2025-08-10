@@ -14,31 +14,34 @@ my $body     = -1;
 my $collect  = 0;
 my $i        = 0;
 while (<$file>) {
-    if ( $_ =~ /\.PS\s*\n/ ) {
-        $body    = "";
-        $collect = 1;
-    }
-    elsif ( $_ =~ /\.PE\s*\n/ ) {
-        $filename =~ s/\n//;
-        $filename =~ tr/A-Z /a-z_/;
-        $filename =~ s/[^a-z0-9_]//g;
-        my $filename = "$out_dir/$filename.png";
-        printf "$filename:\n";
-        printf "$body\n";
-        $body =~ s/"/\\"/g;
-        $body =~ s/\n/\\n/g;
-        $body =~ s/\$/\\\$/g;
-        system
-"printf \".PS\n$body.PE\" | groff -p -ms -Tps | magick -density 300 - -quality 100 -trim $filename";
-        $i += 1;
+  if ( $_ =~ /\.PS\s*\n/ ) {
+    $body    = "";
+    $collect = 1;
+  }
+  elsif ( $_ =~ /\.PE\s*\n/ ) {
+    $filename =~ s/\n//;
+    $filename =~ tr/A-Z /a-z_/;
+    $filename =~ s/[^a-z0-9_]//g;
+    $filename = "$out_dir/$filename.png";
 
-        $collect = 0;
-    }
-    elsif ( $collect == 1 ) {
-        $body .= "$_";
-    }
-    elsif ( $collect == 0 ) {
-        $filename = $_;
-    }
+    printf "$filename\n";
+
+    $body =~ s/"/\\"/g;
+    $body =~ s/\n/\\n/g;
+    $body =~ s/\$/\\\$/g;
+
+    system "printf \".PS\n$body.PE\" | \
+    groff -p -ms -Tps | \
+    magick -density 250 - -colorspace Gray -trim -strip $filename";
+    $i += 1;
+
+    $collect = 0;
+  }
+  elsif ( $collect == 1 ) {
+    $body .= "$_";
+  }
+  elsif ( $collect == 0 ) {
+    $filename = $_;
+  }
 }
 close $file;
