@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <raylib.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -21,6 +22,8 @@
 #define SCREEN_HEIGHT 350
 #define SCREEN_ZOOM   2
 #define SCREEN_PAD    10
+
+#define PAGE_SIZE 2048
 
 Color screen_palette[] = {
     {0x34, 0x68, 0x56, 0xFF},
@@ -92,6 +95,8 @@ typedef struct {
 
 void cpu_init(cpu_t *cpu, char *mem_path) {
   assert(cpu);
+
+  *cpu = (cpu_t){0};
 
   FILE *file = fopen(mem_path, "rb");
   if (!file) {
@@ -423,6 +428,8 @@ void set_control_rom() {
   set_instruction_allflag(MEM_A, 3, micro(SCr));
   set_instruction_allflag(MEM_AH, 2, micro(MEMo) | micro(AHi));
   set_instruction_allflag(MEM_AH, 3, micro(SCr));
+  set_instruction_allflag(AL_MEM, 2, micro(Ao) | micro(MEMi));
+  set_instruction_allflag(AL_MEM, 3, micro(SCr));
   set_instruction_allflag(CALL, 2, micro(SPo) | micro(MARi));
   set_instruction_allflag(
       CALL, 3, micro(IPo) | micro(RAM) | micro(RAM16) | micro(SPu) | micro(SPm));
@@ -710,7 +717,7 @@ void tick(cpu_t *cpu, bool *running) {
     cpu->NDX = bus;
   }
   if (check_microcode(mc, MEMi)) {
-    assert(0);
+    cpu->MEM[cpu->NDX | (cpu->SEC << 8)] = bus & 0xFF;
   }
   if (check_microcode(mc, GPUAi)) {
     cpu->GPUA = bus;
@@ -747,13 +754,12 @@ void test_init(test_t *test) {
   assert(test);
   *test = (test_t){0};
   cpu_init(&test->cpu, TEST_MEM_PATH);
-  memset(test->test_ram, -1, (1 << 16) * sizeof(test->test_ram[0]));
+  memset(test->test_ram, 0, sizeof(test->test_ram));
 }
 
 void test_check(test_t *test) {
   assert(test);
   int fail = 0;
-
   // for (int i = 0; i < 1 << 16; ++i) {
   //   if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
   //     int j = i;
@@ -790,9 +796,9 @@ void test_check(test_t *test) {
         fprintf(stderr, "ERROR:\n");
       }
       fail = 1;
-      fprintf(stderr, "  at 0x%04X %05d expected %02X,   found %02X\n", i, i, test->test_ram[i], test->cpu.RAM[i]);
+      fprintf(stderr, "  at 0x%04X %05d [%2d] expected %02X,   found %02X\n", i, i, i / PAGE_SIZE, test->test_ram[i], test->cpu.RAM[i]);
       if (i % 2 == 0) {
-        fprintf(stderr, "                  expected %04X, found %04X\n", test->test_ram[i] | (test->test_ram[i + 1] << 8), cpu_read16(&test->cpu, i));
+        fprintf(stderr, "                       expected %04X, found %04X\n", test->test_ram[i] | (test->test_ram[i + 1] << 8), cpu_read16(&test->cpu, i));
       }
     }
   }
@@ -908,20 +914,37 @@ void step_mode(cpu_t *cpu) {
   bool running = true;
   microcode_flag_t mc = 0;
 
-  char input[100] = {0};
+  char input[512] = {0};
 
   cpu_dump(cpu);
   printf("> ");
-  while (fgets(input, 100, stdin)) {
+  while (fgets(input, 512, stdin)) {
     cpu_dump(cpu);
 
-    if (strcmp(input, "end\n") == 0 || strcmp(input, "quit\n") == 0 || strcmp(input, "exit\n") == 0) {
+    char *arg1 = input;
+    strsep(&arg1, " \n");
+    // for new args: arg1 += strlen(arg1) + 1; strsep(arg1, " \n"); more or less
+
+    if (strcmp(input, "end") == 0 || strcmp(input, "quit") == 0 || strcmp(input, "exit") == 0) {
       break;
-    } else if (strcmp(input, "help\n") == 0 || strcmp(input, "?\n") == 0) {
+    } else if (strcmp(input, "help") == 0 || strcmp(input, "?") == 0) {
       printf("commands\n"
              "  end | quit | exit   end step mode\n"
              "  help | ?            print help\n"
+             "  read HEX            read u16 at the addr specified\n"
              "if no command, next instruction is run\n");
+    } else if (strcmp(input, "read") == 0) {
+      if (!arg1) {
+        printf("ERROR: addr not provided\n");
+      } else {
+        uint16_t addr = strtol(arg1, NULL, 16);
+        if (addr % 2 != 0) {
+          printf("ERROR: addr not even\n");
+        } else {
+          printf("0x%04X\n", cpu_read16(cpu, addr));
+        }
+      }
+
     } else {
       running = true;
       do {
@@ -929,8 +952,84 @@ void step_mode(cpu_t *cpu) {
         mc = control_rom[cpu->IR | (cpu->SC << 6) | (cpu->FR << (6 + 4))];
       } while (running && !(mc & (1 << SCr)));
     }
+
+    memset(input, 0, sizeof(input));
     printf("> ");
   }
+}
+
+void test_run_command(test_t *test, char *command, char *exe_path, uint16_t sh_input_pos, uint16_t execute_pos, uint16_t exit_pos) {
+  assert(test);
+  assert(command);
+  assert(exe_path);
+  cpu_t *cpu = &test->cpu;
+  bool running = true;
+
+  uint16_t stdlib_pos = cpu_read16(cpu, 0xF800);
+
+  int len = strlen(command);
+  char _command[len];
+  memcpy(_command, command, len);
+  char *params = strchr(_command, ' ');
+  if (params) {
+    *params = 0;
+  }
+
+  printf("  LOAD `%s`\n", command);
+  load_input_string(cpu, command);
+  load_input_string(cpu, "\n");
+
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+  while (running && cpu->IR != JMPA) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+
+  exe_t exe = exe_decode_file(exe_path);
+  exe_reloc(&exe, 3 * PAGE_SIZE, stdlib_pos);
+  test_unset_range(test, 3 * PAGE_SIZE, PAGE_SIZE); // unset the stack and the code of the program and then set the code
+  test_set_range(test, 3 * PAGE_SIZE, exe.code_size, exe.code);
+
+  test_set_range(test, sh_input_pos, len, (uint8_t *)_command);
+
+  // os struct:
+  test_set_u16(test, 0xF802, 0xF840);
+  test_set_u16(test, 0xF804, 0b111 << 13);
+  test_set_u16(test, 0xF806, 0b1111 << 12);
+  test_set_u16(test, 0xF808, 0);
+  // command process:
+  test_set_u16(test, 0xF840, 0xF830);
+  test_set_u16(test, 0xF842, cpu_read16(cpu, 0xF832));
+  test_set_u16(test, 0xF844, 0);
+  test_set_u16(test, 0xF846, cpu_read16(cpu, 0xF836));
+  test_check(test);
+
+  printf("  RUN `%s`\n", command);
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_pos)) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+  int calls = 1;
+  while (running && calls != 0) {
+    if (cpu->RAM[cpu->IP] == CALL || cpu->RAM[cpu->IP] == CALLR) {
+      calls++;
+    } else if (cpu->RAM[cpu->IP] == RET) {
+      calls--;
+    }
+    tick(cpu, &running);
+  }
+  test_assert(running);
+
+  // os struct:
+  test_set_u16(test, 0xF802, 0xF830);
+  test_set_u16(test, 0xF804, 0b11 << 14);
+  test_set_u16(test, 0xF806, 0b111 << 13);
+  test_check(test);
+
+  test_unset_range(test, 3 * PAGE_SIZE, exe.code_size);
 }
 
 void test() {
@@ -939,8 +1038,6 @@ void test() {
   test_init(test);
   cpu_t *cpu = &test->cpu;
   bool running = true;
-
-  uint16_t page_size = 2048;
 
   printf("TEST:\n");
 
@@ -958,20 +1055,19 @@ void test() {
   exe_t os = exe_decode_file("asm/bin/os");
   exe_reloc(&os, 0, os.code_size);
   test_set_range(test, 0, os.code_size, os.code);
-  test_check(test);
-
-  uint16_t stdlib_pos = os.code_size;
 
   {
     uint16_t font_file_ptr = test_find_symbol(os.symbols, os.symbol_count, "file");
     test_unset_range(test, font_file_ptr, 4);
-
-    uint16_t stdout_ptr = test_find_symbol(os.symbols, os.symbol_count, "stdout");
-    test_unset_range(test, stdout_ptr, 128);
-    printf("TODO STDOUT\n");
   }
 
+  uint16_t stdout_pos = test_find_symbol(os.symbols, os.symbol_count, "stdout");
+  test_unset_range(test, stdout_pos, 128);
+  printf("TODO STDOUT\n");
+  stdout_pos = 0xFFFF;
+
   printf("  STDLIB LOADED\n");
+  uint16_t stdlib_pos = os.code_size;
   so_t stdlib = so_decode_file("asm/bin/stdlib");
   for (int i = 0; i < stdlib.reloc_count; ++i) {
     reloc_entry_t entry = stdlib.relocs[i];
@@ -980,17 +1076,23 @@ void test() {
     stdlib.code[entry.where + 1] = (entry.what >> 8) & 0xFF;
   }
   test_set_range(test, stdlib_pos, stdlib.code_size, stdlib.code);
+
+  test_set_u16(test, 0xF800, stdlib_pos);
+  test_unset_range(test, 0xFE00, 256); // global stack
   test_check(test);
 
-  uint16_t execute_ptr = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "execute") + stdlib_pos;
+  uint16_t execute_pos = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "execute") + stdlib_pos;
+  uint16_t exit_pos = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "exit") + stdlib_pos;
 
   {
     uint16_t file_ptr = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "file") + stdlib_pos;
     test_unset_range(test, file_ptr, 4);
+    uint16_t print_pos_ptr = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "pos_ptr") + stdlib_pos;
+    test_unset_range(test, print_pos_ptr, 2); // TODO:
   }
 
   printf("  OS SETUP\n");
-  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_ptr)) {
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
     tick(cpu, &running);
   }
   test_assert(running);
@@ -1001,15 +1103,16 @@ void test() {
   // os struct:
   test_set_u16(test, 0xF800, stdlib_pos); // stdlib
   test_set_u16(test, 0xF802, 0xF820);     // current process
-  test_set_u16(test, 0xF804, 0x8000);     // used process map
-  test_set_u16(test, 0xF806, 0x8000);     // used page map
+  test_set_u16(test, 0xF804, 1 << 15);    // used process map
+  test_set_u16(test, 0xF806, 0b11 << 14); // used page map
   test_set_u16(test, 0xF808, 0);          // used page map
   //  os process:
-  test_set_u16(test, 0xF820, 0xFFFF); // parent process
-  test_set_u16(test, 0xF822, 1);      // cwd sec
-  test_set_u16(test, 0xF824, 0xFFFE); //  SP
-  // test_set_u16(test, 0xF826, stdout_pos); // stdout redirect
+  test_set_u16(test, 0xF820, 0xFFFF);     // parent process
+  test_set_u16(test, 0xF822, 1);          // cwd sec
+  test_set_u16(test, 0xF824, 0xFFFE);     //  SP
+  test_set_u16(test, 0xF826, stdout_pos); // stdout redirect
   test_check(test);
+  test_unset_range(test, 0xF824, 2); // os SP
 
   printf("  LOAD AND EXECUTE SH\n");
   while (running && cpu->IR != JMPA) {
@@ -1017,26 +1120,35 @@ void test() {
   }
   test_assert(running);
 
+  uint16_t sh_pos = 2 * PAGE_SIZE;
+
   exe_t sh = exe_decode_file("asm/bin/sh");
-  exe_reloc(&sh, page_size, stdlib_pos);
-  test_set_range(test, page_size, sh.code_size, sh.code);
+  exe_reloc(&sh, sh_pos, stdlib_pos);
+  test_unset_range(test, sh_pos, PAGE_SIZE); // unset sh stack and code then set code
+  test_set_range(test, sh_pos, sh.code_size, sh.code);
   // os struct:
   test_set_u16(test, 0xF802, 0xF830);
-  test_set_u16(test, 0xF804, 0xC000);
-  test_set_u16(test, 0xF806, 0xC000);
-  // os process:
-  test_unset_range(test, 0xF824, 2);
+  test_set_u16(test, 0xF804, 0b11 << 14);
+  test_set_u16(test, 0xF806, 0b111 << 13);
   // sh process:
   test_set_u16(test, 0xF830, 0xF820);
   test_set_u16(test, 0xF832, 1);
   test_set_u16(test, 0xF834, 0);
-  // test_set_u16(test, 0xF836, stdout_pos);
+  test_set_u16(test, 0xF836, stdout_pos);
   test_check(test);
+  test_unset_range(test, 0xF834, 2); // sh SP
 
-  uint16_t sh_input_pos = test_find_symbol(sh.symbols, sh.symbol_count, "input") + page_size;
+  uint16_t sh_input_pos = test_find_symbol(sh.symbols, sh.symbol_count, "input") + sh_pos;
 
-  printf("  RUN `ls`\n");
-  load_input_string(cpu, "ls\n");
+  test_run_command(test, "ls", "asm/bin/ls", sh_input_pos, execute_pos, exit_pos);
+  test_run_command(test, "cd dir", "asm/bin/cd", sh_input_pos, execute_pos, exit_pos);
+
+  printf("  RUN `shutdown`\n");
+  load_input_string(cpu, "shutdown\n");
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
+    tick(cpu, &running);
+  }
+  printf("TODO\n");
   test_assert(running);
 
   printf("END\n");
@@ -1057,6 +1169,7 @@ void print_help() {
 
 int main(int argc, char **argv) {
   set_control_rom();
+  set_char_to_scancode();
 
   char *input = "";
   char *mempath = "main.mem.bin";
@@ -1095,7 +1208,6 @@ int main(int argc, char **argv) {
   cpu_init(&cpu, mempath);
   cpu.has_screen = screen;
 
-  set_char_to_scancode();
   load_input_string(&cpu, input);
 
   if (cpu.has_screen) {
@@ -1132,6 +1244,13 @@ int main(int argc, char **argv) {
          (float)ticks * 1E3 / 10E6);
 
   cpu_dump(&cpu);
+
+  {
+    FILE *file = fopen("sim.mem.out.bin", "wb");
+    assert(file);
+    assert(fwrite(cpu.MEM, 1, 1 << 19, file) == 1 << 19);
+    assert(fclose(file) == 0);
+  }
 
   return 0;
 }

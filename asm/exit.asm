@@ -21,7 +21,7 @@ compute_mask:
   -- mask = 0x8000 << index
 
   -- page = SP / 2048
-  SP_A SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR INCA
+  SP_A SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR
   A_B RAM_AL 0x10 SUB JMPRNN $set_iup2
   B_A
   RAM_B 0x8000 PUSHB
