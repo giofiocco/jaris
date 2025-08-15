@@ -330,7 +330,7 @@ void obj_add_hex2(obj_t *obj, uint16_t num) {
   assert(obj);
 
   obj->code[obj->code_size++] = num & 0xFF;
-  obj->code[obj->code_size++] = num >> 8;
+  obj->code[obj->code_size++] = (num >> 8) & 0xFF;
 }
 
 obj_t obj_decode_file(char *filename) {

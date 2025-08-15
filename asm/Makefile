@@ -1,4 +1,4 @@
-PROGRAMS=os shutdown ls sh cd cat test_font echo brainfuck expr bfjit
+PROGRAMS=os shutdown ls sh cd cat test_font echo brainfuck expr bfjit tee
 STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string
 STDLIB=bin/stdlib
 STDLIB_LOC=$(STDLIB)

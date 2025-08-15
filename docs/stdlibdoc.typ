@@ -59,6 +59,6 @@
 
   align(center)[*#filename*]
   for (k,v) in symbols.pairs() {
-    [/ #raw(k):] + raw(v)
+    [/ #raw(k):] + raw(v) + [ \ ]
   }
 }

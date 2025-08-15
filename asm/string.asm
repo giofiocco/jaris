@@ -1,5 +1,6 @@
 GLOBAL str_find_char
 GLOBAL is_digit
+GLOBAL path_find_name
 
 -- [cstr str, char c] -> [char *ptr, _]
 -- returns the pointer of the first occurrence of c in str
@@ -29,3 +30,21 @@ is_digit:
   RAM_BL 0x09 SUB
 is_digit_end:
   RET
+
+-- [cstr path] -> [char *ptr, _]
+-- returns the pointer to the start of the name (of file or dir) in path
+-- ie: 'a/b/file.txt'
+--          ^ ptr
+path_find_name:
+  PUSHA PUSHA
+loop:
+  -- ^ ptr path
+  PEEKB rB_AL CMPA JMPRZ $end_loop
+  A_B RAM_AL "/" SUB JMPRNZ $not_slash
+  PEEKA INCA PUSHAR 0x04
+not_slash:
+  POPA INCA PUSHA JMPR $loop
+
+end_loop:
+  -- ^ ptr path
+  INCSP POPA RET

@@ -1,5 +1,5 @@
 TARGETS=assembler linker encodemem inspect sim encodefont code_analyzer
-CFLAGS=-Wall -Wextra -g -std=c99
+CFLAGS=-Wall -Wextra -g
 
 FILES=src/files.c src/files.h
 INSTRUCTIONS=src/instructions.c src/instructions.h

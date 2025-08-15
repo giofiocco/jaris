@@ -15,6 +15,7 @@ GLOBAL solve_path
 -- ERRORS:
 -- [0, 0xFFFF] if entry not found
 -- [0, 0xFFFE] if in "a/b" "a" is not a dir sec
+-- if error happends the SEC is at the last directory it searched in
 solve_path:
   PUSHA
   -- ^ path

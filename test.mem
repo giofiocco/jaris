@@ -12,3 +12,9 @@ newfile echo fromfile asm/bin/echo
 newfile brainfuck fromfile asm/bin/brainfuck
 newfile expr fromfile asm/bin/expr
 newfile bfjit fromfile asm/bin/bfjit
+newfile tee fromfile asm/bin/tee
+newdir dir
+newfile a fromtext
+culo
+__endtext
+enddir

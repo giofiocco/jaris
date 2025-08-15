@@ -796,9 +796,9 @@ void test_check(test_t *test) {
         fprintf(stderr, "ERROR:\n");
       }
       fail = 1;
-      fprintf(stderr, "  at 0x%04X %05d [%2d] expected %02X,   found %02X\n", i, i, i / PAGE_SIZE, test->test_ram[i], test->cpu.RAM[i]);
+      fprintf(stderr, "  at 0x%04X %05d [%2d+%-3d] expected %02X,   found %02X\n", i, i, i / PAGE_SIZE, i - (i / PAGE_SIZE) * PAGE_SIZE, test->test_ram[i], test->cpu.RAM[i]);
       if (i % 2 == 0) {
-        fprintf(stderr, "                       expected %04X, found %04X\n", test->test_ram[i] | (test->test_ram[i + 1] << 8), cpu_read16(&test->cpu, i));
+        fprintf(stderr, "                           expected %04X, found %04X\n", test->test_ram[i] | (test->test_ram[i + 1] << 8), cpu_read16(&test->cpu, i));
       }
     }
   }
@@ -958,7 +958,7 @@ void step_mode(cpu_t *cpu) {
   }
 }
 
-void test_run_command(test_t *test, char *command, char *exe_path, uint16_t sh_input_pos, uint16_t execute_pos, uint16_t exit_pos) {
+void test_run_command(test_t *test, char *command, char *input, char *exe_path, uint16_t sh_input_pos, uint16_t execute_pos, uint16_t exit_pos) {
   assert(test);
   assert(command);
   assert(exe_path);
@@ -975,10 +975,11 @@ void test_run_command(test_t *test, char *command, char *exe_path, uint16_t sh_i
     *params = 0;
   }
 
-  printf("  LOAD `%s`\n", command);
   load_input_string(cpu, command);
   load_input_string(cpu, "\n");
+  load_input_string(cpu, input);
 
+  printf("  LOAD `%s`\n", command);
   while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
     tick(cpu, &running);
   }
@@ -994,6 +995,7 @@ void test_run_command(test_t *test, char *command, char *exe_path, uint16_t sh_i
   test_set_range(test, 3 * PAGE_SIZE, exe.code_size, exe.code);
 
   test_set_range(test, sh_input_pos, len, (uint8_t *)_command);
+  test->test_ram[sh_input_pos + len] = 0;
 
   // os struct:
   test_set_u16(test, 0xF802, 0xF840);
@@ -1022,14 +1024,12 @@ void test_run_command(test_t *test, char *command, char *exe_path, uint16_t sh_i
     tick(cpu, &running);
   }
   test_assert(running);
+  test_assert(cpu->A == 0);
 
   // os struct:
   test_set_u16(test, 0xF802, 0xF830);
   test_set_u16(test, 0xF804, 0b11 << 14);
   test_set_u16(test, 0xF806, 0b111 << 13);
-  test_check(test);
-
-  test_unset_range(test, 3 * PAGE_SIZE, exe.code_size);
 }
 
 void test() {
@@ -1140,16 +1140,47 @@ void test() {
 
   uint16_t sh_input_pos = test_find_symbol(sh.symbols, sh.symbol_count, "input") + sh_pos;
 
-  test_run_command(test, "ls", "asm/bin/ls", sh_input_pos, execute_pos, exit_pos);
-  test_run_command(test, "cd dir", "asm/bin/cd", sh_input_pos, execute_pos, exit_pos);
+  test_run_command(test, "test_font", "", "asm/bin/test_font", sh_input_pos, execute_pos, exit_pos);
+  test_check(test);
+  test_run_command(test, "echo ab cd ef", "", "asm/bin/echo", sh_input_pos, execute_pos, exit_pos);
+  test_check(test);
+  test_run_command(test, "cd dir", "", "asm/bin/cd", sh_input_pos, execute_pos, exit_pos);
+  test_set_u16(test, 0xF832, 0x40);
+  test_check(test);
+  test_set_u16(test, 0xF842, 0x40);
+  test_run_command(test, "/ls", "", "asm/bin/ls", sh_input_pos, execute_pos, exit_pos);
+  test_check(test);
+  test_run_command(test, "/cat a", "", "asm/bin/cat", sh_input_pos, execute_pos, exit_pos);
+  {
+    exe_t cat = exe_decode_file("asm/bin/cat");
+    exe_reloc(&cat, 3 * PAGE_SIZE, stdlib_pos);
+    uint16_t file_pos = test_find_symbol(cat.symbols, cat.symbol_count, "file") + 3 * PAGE_SIZE;
+    test_unset_range(test, file_pos, 4);
+  }
+  test_check(test);
+  test_run_command(test, "/tee file", "hi\n", "asm/bin/tee", sh_input_pos, execute_pos, exit_pos);
+  {
+    exe_t tee = exe_decode_file("asm/bin/tee");
+    exe_reloc(&tee, 3 * PAGE_SIZE, stdlib_pos);
+    uint16_t file_pos = test_find_symbol(tee.symbols, tee.symbol_count, "file") + 3 * PAGE_SIZE;
+    test_unset_range(test, file_pos, 4);
+  }
+  test_check(test);
+  test_run_command(test, "/cd ..", "", "asm/bin/cd", sh_input_pos, execute_pos, exit_pos);
+  test_set_u16(test, 0xF832, 1);
+  test_check(test);
+  test_run_command(test, "ls", "", "asm/bin/ls", sh_input_pos, execute_pos, exit_pos);
+  test_check(test);
+  printf("TODO bfjit?\n");
+  printf("TODO expr?\n");
+  printf("TODO ERRORS\n");
 
   printf("  RUN `shutdown`\n");
   load_input_string(cpu, "shutdown\n");
-  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
+  while (running) {
     tick(cpu, &running);
   }
-  printf("TODO\n");
-  test_assert(running);
+  test_assert(!running);
 
   printf("END\n");
 }

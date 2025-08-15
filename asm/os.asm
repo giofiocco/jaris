@@ -4,8 +4,6 @@ EXTERN execute
 EXTERN load_font
 EXTERN print
 
-EXTERN path_find_name_dir_separator
-
 { page_size 0x0800 }
 
 stdout: db 128
@@ -37,8 +35,6 @@ set_used_page_map:
   RAM_B 0xF826 RAM_A 0xFFFF A_rB -- stdout unset
   -- RAM_B 0xF826 RAM_A stdout A_rB -- stdout redirect
 
-  RAM_A path2 CALL path_find_name_dir_separator
-
   -- stdout
   RAM_AL 0x80 RAM_B stdout A_rB
   RAM_AL 0x02 SUM A_B INCA INCA A_rB
@@ -52,5 +48,3 @@ set_used_page_map:
 
 font_path: "font" 0x00
 path: "sh" 0x00
-
-path2: "a/b/file.txt" 0x00
