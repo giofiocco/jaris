@@ -2,8 +2,8 @@
 all: aleph.pdf aleph_images.pdf stdlibdoc.pdf insts_analysis.pdf
 
 aleph.pdf: aleph.typ aleph_images.pl aleph_images.roff
-	typst c $< --root ..
 	perl aleph_images.pl
+	typst c $< --root ..
 
 %.pdf: %.typ
 	typst c $< --root ..
