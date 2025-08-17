@@ -594,6 +594,41 @@ void so_encode_file(so_t *so, char *filename) {
   assert(fclose(file) == 0);
 }
 
+void mem_sector_dump(uint8_t *sector) {
+  assert(sector);
+
+  if (sector[0] == 'D') {
+    printf("DIR:\n");
+    printf("\tNEXT: %d\n", sector[1] | (sector[2] << 8));
+    printf("\tENTRIES:\n");
+    int a = 3;
+    while (sector[a] != 0) {
+      int len = strlen((char *)(sector + a));
+      printf("\t\t%s %d\n", sector + a, sector[a + len + 1] | (sector[a + len + 2] << 8));
+      a += len + 3;
+    }
+  } else if (sector[0] == 'F') {
+    printf("FILE:\n");
+    printf("\tNEXT: %d\n", sector[1] | (sector[2] << 8));
+    printf("\tMAX INDEX: %d\n", sector[3]);
+    printf("\tDATA:\n");
+    int min = sector[3] < 64 ? sector[3] : 64;
+    for (int i = 0; i < min; i += 16) {
+      printf("\t");
+      for (int j = 0; j < 16; ++j) {
+        printf("%02X ", sector[4 + i + j]);
+      }
+      printf("\n");
+    }
+    if (sector[3] > min) {
+      printf("\t...\n");
+    }
+    printf("\t'%-.*s'\n", 64, sector + 4);
+  } else {
+    assert(0);
+  }
+}
+
 bytecode_t *disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count, int *out_bytecode_count) {
   assert(code);
   assert(symbols);

@@ -115,23 +115,7 @@ void inspect_mem(char *filename) {
     }
     uint8_t *sector = sectors[i];
     printf("%d ", i);
-    if (sector[0] == 'D') {
-      printf("DIR:\n");
-      printf("\tNEXT: %d\n", sector[1] | (sector[2] << 8));
-      printf("\tENTRIES:\n");
-      int a = 3;
-      while (sector[a] != 0) {
-        int len = strlen((char *)(sector + a));
-        printf("\t\t%s %d\n", sector + a, sector[a + len + 1] | (sector[a + len + 2] << 8));
-        a += len + 3;
-      }
-    } else if (sector[0] == 'F') {
-      printf("FILE:\n");
-      printf("\tNEXT: %d\n", sector[1] | (sector[2] << 8));
-      printf("\tMAX INDEX: %d\n", sector[3]);
-    } else {
-      assert(0);
-    }
+    mem_sector_dump(sector);
   }
 }
 
