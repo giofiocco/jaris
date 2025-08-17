@@ -13,8 +13,10 @@ newfile brainfuck fromfile asm/bin/brainfuck
 newfile expr fromfile asm/bin/expr
 newfile bfjit fromfile asm/bin/bfjit
 newfile tee fromfile asm/bin/tee
+newfile stack fromfile asm/bin/stack
 newdir dir
 newfile a fromtext
 culo
 __endtext
+newfile a.sk fromfile a.sk
 enddir

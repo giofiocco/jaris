@@ -1,6 +1,7 @@
 GLOBAL str_find_char
 GLOBAL is_digit
 GLOBAL path_find_name
+GLOBAL parse_int
 
 -- [cstr str, char c] -> [char *ptr, _]
 -- returns the pointer of the first occurrence of c in str
@@ -48,3 +49,28 @@ not_slash:
 end_loop:
   -- ^ ptr path
   INCSP POPA RET
+
+-- [cstr str, _] -> [u16 num, _]
+-- ERRORS:
+-- [0xFFFF, 0] if invalid
+parse_int:
+  RAM_BL 0x00 PUSHB
+parse_int_loop:
+  PUSHA
+  -- ^ str num
+  A_B rB_AL CMPA JMPRZ $parse_int_end
+  CALLR $is_digit CMPA JMPRN $parse_int_err
+  PUSHA
+  -- ^ new_digit str num
+  PEEKAR 0x06 A_B SHL SHL SUM SHL -- num * 10
+  POPB SUM PUSHAR 0x04 -- num = num * 10 + new_digit
+  -- ^ str num
+  POPA INCA JMPR $parse_int_loop
+parse_int_end:
+  -- ^ str num
+  INCSP POPA RET
+
+parse_int_err:
+  -- ^ _ _
+  RAM_A 0xFFFF
+  INCSP INCSP RET

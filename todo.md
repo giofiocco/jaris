@@ -15,6 +15,8 @@ test flag in assembler linker etc to test encoding and others
 put the exe and exe_state things in link
 and obj things in assemble
 
+max index in directory sector
+
 # Assembler
 
 - warn macro unused
