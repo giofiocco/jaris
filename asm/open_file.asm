@@ -23,10 +23,7 @@ open_file:
   MEM_A RAM_BL "F" SUB JMPRNZ $is_not_file
 
   PEEKB SEC_A A_rB
-  B_A INCA INCA A_B
-  RAM_AL data_start AL_rB
-  B_A INCA A_B
-  RAM_NDX max_ndx_index MEM_A AL_rB
+  INCB INCB RAM_AL data_start AL_rB
 
   POPA RET
 
@@ -59,8 +56,7 @@ open_create_file:
   RAM_NDX first_entry_ndx
 loop:
   INCNDX MEM_A CMPA JMPRNZ $loop
-  INCNDX INCNDX MEM_A CMPA JMPRNZ $loop
-  INCNDX
+  INCNDX INCNDX INCNDX MEM_A CMPA JMPRNZ $loop
 
   POPB rB_AL AL_MEM INCNDX -- first char copied
 copy_name:
@@ -96,8 +92,7 @@ search_sec:
   POPA PEEKB A_rB -- sec
   B_A INCA INCA A_B
   -- SEC: found_sec NDX: index_of_max_ndx
-  RAM_AL 0x00 AL_rB
-  B_A INCA A_B MEM_A AL_rB
+  RAM_AL data_start AL_rB
 
   POPA RET
 
@@ -108,6 +103,5 @@ found:
   INCSP PEEKB A_rB -- set file->sec
   B_A INCA INCA A_B
   RAM_AL 0x03 AL_MEM AL_rB
-  B_A INCA A_B RAM_AL 0x03 AL_rB
 
   POPA RET

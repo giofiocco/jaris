@@ -304,11 +304,11 @@ TODO: when multithreading redo SP -> RET and SP ?
 
 ### FILE struct
 
-| size [B] | description |
-| :------- | :---------- |
-| 2        | sec of file |
-| 1        | ndx         |
-| 1        | max ndx     |
+| size [B] | description               |
+| :------- | :------------------------ |
+| 2        | sec of file               |
+| 1        | ndx                       |
+| 1        | undef (to keep alignment) |
 
 ### Stdout struct
 

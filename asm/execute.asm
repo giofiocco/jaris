@@ -48,6 +48,7 @@ copy_code:
   -- ^ ram ram_start argv
 
   INCSP RAM_A file CALL read_u16
+  CMPA JMPRZ $reloc_end
 reloc:
   PUSHA
   -- ^ count ram_start argv
@@ -56,6 +57,7 @@ reloc:
   RAM_A file CALL read_u16 A_B PEEKAR 0x06 SUM -- what += ram_start
   POPB A_rB
   POPA DECA JMPRNZ $reloc
+reloc_end:
   -- ^ ram_start argv
 
   RAM_A file CALL read_u16
