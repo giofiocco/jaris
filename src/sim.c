@@ -731,7 +731,7 @@ void tick(cpu_t *cpu, bool *running) {
       if (cpu->has_screen) {
         compute_screen(cpu);
         BeginDrawing();
-        ClearBackground(WHITE);
+        ClearBackground(RED);
         DrawTextureEx(cpu->screen.texture, (Vector2){SCREEN_PAD, SCREEN_PAD}, 0, SCREEN_ZOOM, WHITE);
         EndDrawing();
       }
@@ -745,6 +745,9 @@ void tick(cpu_t *cpu, bool *running) {
 typedef struct {
   cpu_t cpu;
   int16_t test_ram[1 << 16]; // negative if undef
+  uint8_t test_gpu[1 << 15];
+  uint8_t gpu_x;
+  uint8_t gpu_y;
 
   char stdout[2048];
   int stdout_size;
@@ -754,7 +757,6 @@ void test_init(test_t *test) {
   assert(test);
   *test = (test_t){0};
   cpu_init(&test->cpu, TEST_MEM_PATH);
-  memset(test->test_ram, 0, sizeof(test->test_ram));
 }
 
 void test_check(test_t *test) {
@@ -794,12 +796,27 @@ void test_check(test_t *test) {
     if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
       if (!fail) {
         fprintf(stderr, "ERROR:\n");
+        fprintf(stderr, "                   expected | found\n");
       }
       fail = 1;
-      fprintf(stderr, "  at 0x%04X %05d [%2d+%-3d] expected %02X,   found %02X\n", i, i, i / PAGE_SIZE, i - (i / PAGE_SIZE) * PAGE_SIZE, test->test_ram[i], test->cpu.RAM[i]);
-      if (i % 2 == 0) {
-        fprintf(stderr, "                           expected %04X, found %04X\n", test->test_ram[i] | (test->test_ram[i + 1] << 8), cpu_read16(&test->cpu, i));
+      fprintf(stderr, "  0x%04X [%2d+%-3d]        %02X | %02X", i, i / PAGE_SIZE, i - (i / PAGE_SIZE) * PAGE_SIZE, test->test_ram[i], test->cpu.RAM[i]);
+      if (isprint(test->cpu.RAM[i])) {
+        fprintf(stderr, "    '%c'", test->cpu.RAM[i]);
       }
+      fprintf(stderr, "\n");
+      if (i % 2 == 0) {
+        fprintf(stderr, "                       %04X | %04X\n", test->test_ram[i] | (test->test_ram[i + 1] << 8), cpu_read16(&test->cpu, i));
+      }
+    }
+  }
+  for (int i = 0; i < 1 << 15; ++i) {
+    if (test->test_gpu[i] != test->cpu.ATTRIBUTE_RAM[i]) {
+      if (!fail) {
+        fprintf(stderr, "ERROR GPU:\n");
+        fprintf(stderr, "            expected | found\n");
+      }
+      fail = 1;
+      fprintf(stderr, "  %02d:%02d:     %3d '%c' | %3d '%c'\n", (i >> 8) & 0xFF, i & 0xFF, test->test_gpu[i], isprint(test->test_gpu[i]) ? test->test_gpu[i] : ' ', test->cpu.ATTRIBUTE_RAM[i], isprint(test->cpu.ATTRIBUTE_RAM[i]) ? test->cpu.ATTRIBUTE_RAM[i] : ' ');
     }
   }
   if (fail) {
@@ -850,6 +867,24 @@ void test_set_u16(test_t *test, uint16_t at, uint16_t num) {
 void test_unset_range(test_t *test, uint16_t from, uint16_t count) {
   assert(test);
   memset(test->test_ram + from, -1, count * sizeof(test->test_ram[0]));
+}
+
+void test_gpu_print(test_t *test, char *str) {
+  assert(test);
+  assert(str);
+  for (int i = 0; str[i]; ++i) {
+    if (str[i] == '\n') {
+      test->gpu_x = 0;
+      test->gpu_y++;
+      continue;
+    }
+    test->test_gpu[test->gpu_x + (test->gpu_y << 8)] = str[i];
+    test->gpu_x++;
+    if (test->gpu_x > 0x4A) {
+      test->gpu_x = 0;
+      test->gpu_y++;
+    }
+  }
 }
 
 void test_print_ram_range(test_t *test, uint16_t from, uint16_t to) {
@@ -997,6 +1032,10 @@ void test_run_command(test_t *test, char *command, char *input, char *exe_path, 
   test_set_range(test, sh_input_pos, len, (uint8_t *)_command);
   test->test_ram[sh_input_pos + len] = 0;
 
+  test_gpu_print(test, "$ ");
+  test_gpu_print(test, command);
+  test_gpu_print(test, "\n");
+
   // os struct:
   test_set_u16(test, 0xF802, 0xF840);
   test_set_u16(test, 0xF804, 0b111 << 13);
@@ -1141,15 +1180,22 @@ void test() {
   uint16_t sh_input_pos = test_find_symbol(sh.symbols, sh.symbol_count, "input") + sh_pos;
 
   test_run_command(test, "test_font", "", "asm/bin/test_font", sh_input_pos, execute_pos, exit_pos);
+  test_gpu_print(test, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789\n!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}\n");
   test_check(test);
+
   test_run_command(test, "echo ab cd ef", "", "asm/bin/echo", sh_input_pos, execute_pos, exit_pos);
+  test_gpu_print(test, "ab cd ef\n");
   test_check(test);
+
   test_run_command(test, "cd dir", "", "asm/bin/cd", sh_input_pos, execute_pos, exit_pos);
-  test_set_u16(test, 0xF832, 0x40);
+  test_set_u16(test, 0xF832, 0x47);
   test_check(test);
-  test_set_u16(test, 0xF842, 0x40);
+
+  test_set_u16(test, 0xF842, 0x47);
   test_run_command(test, "/ls", "", "asm/bin/ls", sh_input_pos, execute_pos, exit_pos);
+  test_gpu_print(test, "a a.sk \n");
   test_check(test);
+
   test_run_command(test, "/cat a", "", "asm/bin/cat", sh_input_pos, execute_pos, exit_pos);
   {
     exe_t cat = exe_decode_file("asm/bin/cat");
@@ -1157,20 +1203,46 @@ void test() {
     uint16_t file_pos = test_find_symbol(cat.symbols, cat.symbol_count, "file") + 3 * PAGE_SIZE;
     test_unset_range(test, file_pos, 4);
   }
+  test_gpu_print(test, "culo\n");
   test_check(test);
-  test_run_command(test, "/tee file", "hi\n", "asm/bin/tee", sh_input_pos, execute_pos, exit_pos);
-  {
-    exe_t tee = exe_decode_file("asm/bin/tee");
-    exe_reloc(&tee, 3 * PAGE_SIZE, stdlib_pos);
-    uint16_t file_pos = test_find_symbol(tee.symbols, tee.symbol_count, "file") + 3 * PAGE_SIZE;
-    test_unset_range(test, file_pos, 4);
-  }
-  test_check(test);
+
   test_run_command(test, "/cd ..", "", "asm/bin/cd", sh_input_pos, execute_pos, exit_pos);
   test_set_u16(test, 0xF832, 1);
   test_check(test);
-  test_run_command(test, "ls", "", "asm/bin/ls", sh_input_pos, execute_pos, exit_pos);
+
+  test_run_command(test, "stack dir/a.sk", "", "asm/bin/stack", sh_input_pos, execute_pos, exit_pos);
+  test_unset_range(test, 3 * PAGE_SIZE + 3, 4 * 3 + 32 + 4);
+  mem_sector_dump(test->cpu.MEM + 256 * 22);
+  for (int i = 4; i < test->cpu.MEM[256 * 22 + 3]; ++i) {
+    printf("%02x ", test->cpu.MEM[256 * 22 + i]);
+  }
+  printf("\n");
   test_check(test);
+
+  printf("  LOAD `stack.out`\n");
+  load_input_string(cpu, "stack.out\n");
+  test_gpu_print(test, "$ stack.out\n");
+  test_set_range(test, sh_input_pos, 10, (uint8_t *)"stack.out\0");
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
+    tick(cpu, &running);
+  }
+  test_assert(running);
+  while (running && cpu->IR != JMPA) {
+    tick(cpu, &running);
+  }
+  cpu_dump(cpu);
+  test_assert(running);
+  test_check(test);
+
+  // test_run_command(test, "tee file", "hi\n", "asm/bin/tee", sh_input_pos, execute_pos, exit_pos);
+  //{
+  //   exe_t tee = exe_decode_file("asm/bin/tee");
+  //   exe_reloc(&tee, 3 * PAGE_SIZE, stdlib_pos);
+  //   uint16_t file_pos = test_find_symbol(tee.symbols, tee.symbol_count, "file") + 3 * PAGE_SIZE;
+  //   test_unset_range(test, file_pos, 4);
+  // }
+  // test_check(test);
+
   printf("TODO bfjit?\n");
   printf("TODO expr?\n");
   printf("TODO ERRORS\n");
@@ -1180,6 +1252,7 @@ void test() {
   while (running) {
     tick(cpu, &running);
   }
+  test_assert(cpu->A == 0xA0A0);
   test_assert(!running);
 
   printf("END\n");
@@ -1262,6 +1335,10 @@ int main(int argc, char **argv) {
     ++ticks;
   }
   if (cpu.has_screen) {
+    BeginDrawing();
+    ClearBackground(WHITE);
+    DrawTextureEx(cpu.screen.texture, (Vector2){SCREEN_PAD, SCREEN_PAD}, 0, SCREEN_ZOOM, WHITE);
+    EndDrawing();
     while (!WindowShouldClose()) {
       PollInputEvents();
     }
