@@ -299,9 +299,3 @@ int main(int argc, char **argv) {
 
   return 0;
 }
-
-int compare_symbols(const void *a, const void *b) {
-  assert(a);
-  assert(b);
-  return ((symbol_t *)a)->pos - ((symbol_t *)b)->pos;
-}

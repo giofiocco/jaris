@@ -747,8 +747,11 @@ bytecode_t *disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, ui
           break;
         case INST_LABEL_ARG:
           assert(i + 2 < code_size);
-          assert(labels[i + 1]);
-          bcs[bc_count++] = bytecode_with_string(BINSTLABEL, code[i], labels[i + 1]);
+          if (labels[i + 1]) {
+            bcs[bc_count++] = bytecode_with_string(BINSTLABEL, code[i], labels[i + 1]);
+          } else {
+            bcs[bc_count++] = bytecode_with_string(BINSTLABEL, code[i], "UNK");
+          }
           i += 3;
           break;
         case INST_RELLABEL_ARG:

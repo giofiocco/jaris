@@ -1015,7 +1015,7 @@ void test_run_command(test_t *test, char *command, char *input, char *exe_path, 
   load_input_string(cpu, input);
 
   printf("  LOAD `%s`\n", command);
-  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
+  while (running && !(cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_pos)) {
     tick(cpu, &running);
   }
   test_assert(running);
@@ -1188,10 +1188,10 @@ void test() {
   test_check(test);
 
   test_run_command(test, "cd dir", "", "asm/bin/cd", sh_input_pos, execute_pos, exit_pos);
-  test_set_u16(test, 0xF832, 0x47);
+  test_set_u16(test, 0xF832, 0x48);
   test_check(test);
 
-  test_set_u16(test, 0xF842, 0x47);
+  test_set_u16(test, 0xF842, 0x48);
   test_run_command(test, "/ls", "", "asm/bin/ls", sh_input_pos, execute_pos, exit_pos);
   test_gpu_print(test, "a a.sk \n");
   test_check(test);
@@ -1211,7 +1211,8 @@ void test() {
   test_check(test);
 
   test_run_command(test, "stack dir/a.sk", "", "asm/bin/stack", sh_input_pos, execute_pos, exit_pos);
-  test_unset_range(test, 3 * PAGE_SIZE + 3, 4 * 3 + 32 + 4);
+  test_unset_range(test, 3 * PAGE_SIZE + 3, 4 + 4 + 32 + 2);
+  mem_sector_dump(test->cpu.MEM + 256);
   mem_sector_dump(test->cpu.MEM + 256 * 22);
   for (int i = 4; i < test->cpu.MEM[256 * 22 + 3]; ++i) {
     printf("%02x ", test->cpu.MEM[256 * 22 + i]);
