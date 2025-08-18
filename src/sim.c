@@ -1212,13 +1212,25 @@ void test() {
 
   test_run_command(test, "stack dir/a.sk", "", "asm/bin/stack", sh_input_pos, execute_pos, exit_pos);
   test_unset_range(test, 3 * PAGE_SIZE + 3, 4 + 4 + 32 + 2);
-  mem_sector_dump(test->cpu.MEM + 256);
-  mem_sector_dump(test->cpu.MEM + 256 * 22);
-  for (int i = 4; i < test->cpu.MEM[256 * 22 + 3]; ++i) {
-    printf("%02x ", test->cpu.MEM[256 * 22 + i]);
-  }
-  printf("\n");
+  // mem_sector_dump(cpu->MEM + 256);
+  // mem_sector_dump(cpu->MEM + 256 * 22);
+  // for (int i = 4; i < cpu->MEM[256 * 22 + 3]; ++i) {
+  //   printf("%02x ", cpu->MEM[256 * 22 + i]);
+  // }
+  // printf("\n");
   test_check(test);
+
+  {
+    FILE *file = fmemopen(cpu->MEM + 256 * 22 + 4, cpu->MEM[256 * 22 + 3], "r");
+    assert(file);
+    exe_t exe = exe_decode(file);
+    test_assert(exe.reloc_count == 0);
+    test_assert(exe.dynamic_count == 1);
+    test_assert(exe.dynamics[0].file_name[0] = 1);
+    test_assert(exe.symbol_count == 0);
+    exe_dump(&exe);
+    assert(fclose(file) == 0);
+  }
 
   printf("  LOAD `stack.out`\n");
   load_input_string(cpu, "stack.out\n");

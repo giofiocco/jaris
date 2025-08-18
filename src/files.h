@@ -85,18 +85,21 @@ void obj_add_hex2(obj_t *obj, uint16_t num);
 void obj_compile_bytecode(obj_t *obj, bytecode_t bc);
 void obj_check(obj_t *obj, int debug_info);
 
+obj_t obj_decode(FILE *file);
 obj_t obj_decode_file(char *filename);
 void obj_encode_file(obj_t *obj, char *filename);
 
 void exe_dump(exe_t *exe);
 void exe_add_symbol_offset(exe_t *exe, symbol_t *s, uint16_t offset);
 
+exe_t exe_decode(FILE *file);
 exe_t exe_decode_file(char *filename);
 void exe_encode_file(exe_t *exe, char *filename);
 
 void bin_encode_file(exe_t *exe, char *filename);
 
 void so_dump(so_t *so);
+so_t so_decode(FILE *file);
 so_t so_decode_file(char *filename);
 void so_encode_file(so_t *so, char *filename);
 

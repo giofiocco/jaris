@@ -333,20 +333,15 @@ void obj_add_hex2(obj_t *obj, uint16_t num) {
   obj->code[obj->code_size++] = (num >> 8) & 0xFF;
 }
 
-obj_t obj_decode_file(char *filename) {
-  assert(filename);
+obj_t obj_decode(FILE *file) {
+  assert(file);
 
   obj_t obj = {0};
-
-  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
-  if (!file) {
-    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
-  }
 
   char magic_number[4] = {0};
   assert(fread(magic_number, 1, 3, file) == 3);
   if (strcmp(magic_number, "OBJ") != 0) {
-    eprintf("%s: expected magic number to be 'OBJ': found '%s'", filename, magic_number);
+    eprintf("expected magic number to be 'OBJ': found '%s'", magic_number);
   }
 
   assert(fread(&obj.code_size, 2, 1, file) == 1);
@@ -362,8 +357,17 @@ obj_t obj_decode_file(char *filename) {
   assert(fread(obj.externs, 2, obj.extern_count, file) == obj.extern_count);
   symbols_list_decode(obj.symbols, &obj.symbol_count, file);
 
-  assert(fclose(file) == 0);
+  return obj;
+}
 
+obj_t obj_decode_file(char *filename) {
+  assert(filename);
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    error_fopen(filename);
+  }
+  obj_t obj = obj_decode(file);
+  assert(fclose(file) == 0);
   return obj;
 }
 
@@ -432,20 +436,15 @@ void exe_add_symbol_offset(exe_t *exe, symbol_t *from, uint16_t offset) {
   }
 }
 
-exe_t exe_decode_file(char *filename) {
-  assert(filename);
+exe_t exe_decode(FILE *file) {
+  assert(file);
 
   exe_t exe = {0};
-
-  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
-  if (!file) {
-    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
-  }
 
   char magic_number[4] = {0};
   assert(fread(magic_number, 1, 3, file) == 3);
   if (strcmp(magic_number, "EXE") != 0) {
-    eprintf("%s: expected magic number to be 'EXE': found '%s'", filename, magic_number);
+    eprintf("expected magic number to be 'EXE': found '%s'", magic_number);
   }
 
   assert(fread(&exe.code_size, 2, 1, file) == 1);
@@ -470,8 +469,17 @@ exe_t exe_decode_file(char *filename) {
   }
   symbols_list_decode(exe.symbols, &exe.symbol_count, file);
 
-  assert(fclose(file) == 0);
+  return exe;
+}
 
+exe_t exe_decode_file(char *filename) {
+  assert(filename);
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    error_fopen(filename);
+  }
+  exe_t exe = exe_decode(file);
+  assert(fclose(file) == 0);
   return exe;
 }
 
@@ -540,20 +548,15 @@ void so_dump(so_t *so) {
   symbol_list_dump(so->symbols, so->symbol_count);
 }
 
-so_t so_decode_file(char *filename) {
-  assert(filename);
+so_t so_decode(FILE *file) {
+  assert(file);
 
   so_t so = {0};
-
-  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
-  if (!file) {
-    eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
-  }
 
   char magic_number[3] = {0};
   assert(fread(magic_number, 1, 2, file) == 2);
   if (strcmp(magic_number, "SO") != 0) {
-    eprintf("%s: expected magic number to be 'SO': found '%s'", filename, magic_number);
+    eprintf("expected magic number to be 'SO': found '%s'", magic_number);
   }
   assert(fread(&so.code_size, 2, 1, file) == 1);
   assert(fread(so.code, 1, so.code_size, file) == so.code_size);
@@ -566,8 +569,17 @@ so_t so_decode_file(char *filename) {
   assert(fread(so.globals, 2, so.global_count, file) == so.global_count);
   symbols_list_decode(so.symbols, &so.symbol_count, file);
 
-  assert(fclose(file) == 0);
+  return so;
+}
 
+so_t so_decode_file(char *filename) {
+  assert(filename);
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    error_fopen(filename);
+  }
+  so_t so = so_decode(file);
+  assert(fclose(file) == 0);
   return so;
 }
 
