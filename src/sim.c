@@ -1049,7 +1049,7 @@ void test_run_command(test_t *test, char *command, char *input, char *exe_path, 
   test_check(test);
 
   printf("  RUN `%s`\n", command);
-  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_pos)) {
+  while (running && !(cpu->IR == CALL && cpu->SC == 2 && cpu_read16(cpu, cpu->IP) == exit_pos)) {
     tick(cpu, &running);
   }
   test_assert(running);
