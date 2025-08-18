@@ -338,7 +338,7 @@ obj_t obj_decode_file(char *filename) {
 
   obj_t obj = {0};
 
-  FILE *file = fopen(filename, "rb");
+  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
   if (!file) {
     eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
   }
@@ -437,7 +437,7 @@ exe_t exe_decode_file(char *filename) {
 
   exe_t exe = {0};
 
-  FILE *file = fopen(filename, "rb");
+  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
   if (!file) {
     eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
   }
@@ -545,7 +545,7 @@ so_t so_decode_file(char *filename) {
 
   so_t so = {0};
 
-  FILE *file = fopen(filename, "rb");
+  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
   if (!file) {
     eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
   }

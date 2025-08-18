@@ -193,7 +193,9 @@ void print_help() {
          "  --so    analyse the input as a so\n"
          "  --mem   analyse the input as a memory bin\n"
          "  --bin   analyse the input as a bin (just plain code)\n"
-         "  --font  analyse the input as a font\n");
+         "  --font  analyse the input as a font\n"
+         "\n"
+         "if input is '-' it read from the stdin\n");
 }
 
 int main(int argc, char **argv) {
@@ -236,6 +238,10 @@ int main(int argc, char **argv) {
 
   unsigned int len = strlen(path);
 
+  if (strcmp(path, "-") == 0 && kind == KUNSET) {
+    eprintf("cannot deduce file kind from stdin");
+  }
+
   if (kind == KUNSET) {
     if (strcmp(path + len - 2, ".o") == 0) {
       kind = KOBJ;
@@ -246,6 +252,7 @@ int main(int argc, char **argv) {
     } else if (strcmp(path + len - 5, ".font") == 0) {
       kind = KFONT;
     } else {
+      assert(strcmp(path, "-") != 0);
       FILE *file = fopen(path, "rb");
       if (!file) {
         eprintf("cannot open file '%s': '%s'", path, strerror(errno));
@@ -265,8 +272,7 @@ int main(int argc, char **argv) {
       } else if (sv_eq((sv_t){magic_number, 4}, sv_from_cstr("FONT"))) {
         kind = KFONT;
       } else {
-        fprintf(stderr, "ERROR: cannot deduce file kind from '%s'\n", path);
-        exit(1);
+        eprintf("cannot deduce file kind from '%s'", path);
       }
     }
   }
