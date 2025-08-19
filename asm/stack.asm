@@ -13,6 +13,7 @@ EXTERN write_u8
 EXTERN write_u16
 EXTERN parse_int
 EXTERN print_int
+EXTERN str_eq
 
 file: db 4
 out_file: db 4
@@ -21,6 +22,10 @@ code_size: 0x0000
 
   { stdlib_pos 0xF800 }
   { inc_code_size RAM_B code_size rB_A INCA A_rB }
+
+dup_str: "dup" 0x00
+drop_str: "drop" 0x00
+swap_str: "swap" 0x00
 
 -- [func ptr (reloced), _] -> [_, _]
 -- write out CALL 0x0000, increment the code_size, then call push_dynamic_reloc with the pointer to the function wanted
@@ -64,6 +69,33 @@ not_int:
   RAM_B code_size rB_A INCA INCA INCA INCA A_rB
   RET
 not_add:
+  RAM_B buffer rB_A RAM_BL "-" SUB JMPRNZ $not_sub
+  RAM_A out_file RAM_BL POPA CALL write_u8
+  RAM_BL POPB CALL write_u8
+  RAM_BL SUB CALL write_u8
+  RAM_BL PUSHA CALL write_u8
+  RAM_B code_size rB_A INCA INCA INCA INCA A_rB
+  RET
+not_sub:
+  RAM_A buffer RAM_B dup_str CALL str_eq CMPA JMPRZ $not_dup
+  RAM_A out_file RAM_BL PEEKA CALL write_u8
+  RAM_BL PUSHA CALL write_u8
+  RAM_B code_size rB_A INCA INCA A_rB
+  RET
+not_dup:
+  RAM_A buffer RAM_B drop_str CALL str_eq CMPA JMPRZ $not_drop
+  RAM_A out_file RAM_BL INCSP CALL write_u8
+  inc_code_size
+  RET
+not_drop:
+  RAM_A buffer RAM_B swap_str CALL str_eq CMPA JMPRZ $not_swap
+  RAM_A out_file RAM_BL POPA CALL write_u8
+  RAM_A out_file RAM_BL POPB CALL write_u8
+  RAM_A out_file RAM_BL PUSHA CALL write_u8
+  RAM_A out_file RAM_BL PUSHB CALL write_u8
+  RAM_B code_size rB_A INCA INCA INCA INCA A_rB
+  RET
+not_swap:
   RAM_B buffer rB_A RAM_BL "." SUB JMPRNZ $not_print
   RAM_A out_file RAM_BL POPA CALL write_u8
   inc_code_size
