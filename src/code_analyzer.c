@@ -90,6 +90,7 @@ void path(context_t *context, int starting_node, int sp) {
       i += 1;
     } else if ((node->bc.kind == BINSTLABEL && node->bc.inst == CALL)
                || (node->bc.kind == BINSTRELLABEL && node->bc.inst == CALLR)) {
+      // TODO: CALLR doesnt work in asm/string.asm?
       int n = search_label(context, node->bc.arg.string);
       if (n != -1) {
         path(context, n, 0);
@@ -207,11 +208,9 @@ int main(int argc, char **argv) {
     }
   }
 
-  int start = search_label(&context, "_start");
-  if (start == -1) {
-    start = 0;
+  for (int i = 0; context.nodes[i].bc.kind == BGLOBAL; ++i) {
+    path(&context, search_label(&context, context.nodes[i].bc.arg.string), 0);
   }
-  path(&context, start, 0);
 
   printf("digraph {\n\tnode [shape = box];\n");
 
