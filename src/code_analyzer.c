@@ -51,7 +51,7 @@ void path(context_t *context, int starting_node, int sp) {
         fprintf(stderr, "ERROR: for '");
         bytecode_to_asm(stderr, node->bc);
         fprintf(stderr, "' expected sp %d, found %d\n", node->sp, sp);
-        exit(1);
+        // exit(1);
       }
 
       return;
@@ -133,6 +133,8 @@ void print_help() {
          "Options:\n"
          "  -d           print the disassembled code\n"
          "  -h | --help  show help message\n"
+         "  -a <str>     allow special cases that usually are considered mistakes, <str> can be:\n"
+         "                 inst-as-arg    allow insts mnemonics as argument of 8bit inst\n"
          "\nKinds:\n"
          "if the kind is not specified it's deduced from the file extension\n\n"
          "  --obj   analyse the input as an obj\n"
@@ -145,9 +147,21 @@ void print_help() {
 
 int main(int argc, char **argv) {
   char *input = NULL;
+  int allowed = 0;
 
   ARG_PARSE {
     ARG_PARSE_HELP_ARG
+    else if (ARG_SFLAG("a")) {
+      if (*(argv + 1) == NULL) {
+        ARG_ERROR("expected string: '%s'", *argv);
+      }
+      ++argv;
+      if (strcmp(*argv, "inst-as-arg") == 0) {
+        allowed |= 1 << ASM_ALLOWED_INST_AS_ARG;
+      } else {
+        ARG_ERROR_("unexpected arg for '-a'");
+      }
+    }
     else {
       if (input != NULL) {
         eprintf("file already provided: %s", input);
@@ -171,7 +185,7 @@ int main(int argc, char **argv) {
   assert(fclose(file) == 0);
 
   asm_tokenizer_t tok = {0};
-  asm_tokenizer_init(&tok, buffer, input, 0);
+  asm_tokenizer_init(&tok, buffer, input, allowed);
 
   context_t context = {0};
 
@@ -215,7 +229,9 @@ int main(int argc, char **argv) {
     if (!node->visited) {
       printf(", color=red");
     }
-    printf(", xlabel=\"%d\"", node->sp);
+    if (node->sp != -1) {
+      printf(", xlabel=\"%d\"", node->sp);
+    }
     printf("];\n");
   }
 
