@@ -25,7 +25,6 @@ typedef struct {
   char labels[MAX_LABEL_COUNT][LABEL_MAX_LEN];
   int labels_node[MAX_LABEL_COUNT];
   int label_count;
-  int sp;
 } context_t;
 
 int search_label(context_t *context, char *label) {
@@ -42,26 +41,35 @@ int search_label(context_t *context, char *label) {
   return -1;
 }
 
-void path(context_t *context, int starting_node) {
+void path(context_t *context, int starting_node, int sp) {
   assert(context);
 
   for (int i = starting_node; i < context->node_count;) {
     node_t *node = &context->nodes[i];
     if (node->visited) {
-      if (node->sp != context->sp) {
+      if (node->sp != sp) {
         fprintf(stderr, "ERROR: for '");
         bytecode_to_asm(stderr, node->bc);
-        fprintf(stderr, "' expected sp %d, found %d\n", node->sp, context->sp);
+        fprintf(stderr, "' expected sp %d, found %d\n", node->sp, sp);
         exit(1);
       }
 
       return;
     }
     node->visited = 1;
-    node->sp = context->sp;
+    node->sp = sp;
 
-    if (node->bc.kind == BINSTLABEL && node->bc.inst == CALL && strcmp(node->bc.arg.string, "exit") == 0) {
+    if ((node->bc.kind == BINSTLABEL && node->bc.inst == CALL && strcmp(node->bc.arg.string, "exit") == 0)
+        || (node->bc.kind == BINST && node->bc.inst == HLT)) {
       return;
+    } else if (node->bc.kind == BINST && (node->bc.inst == JMPA || node->bc.inst == JMPAR)) {
+      return;
+    } else if (node->bc.kind == BINST && node->bc.inst == RET) {
+      if (sp != 0) {
+        eprintf("expected sp to be 0 for RET\n");
+      }
+      return;
+
     } else if ((node->bc.kind == BINSTLABEL || node->bc.kind == BINSTRELLABEL) && (node->bc.inst == JMP || node->bc.inst == JMPR)) {
       int n = search_label(context, node->bc.arg.string);
       assert(n != -1);
@@ -77,9 +85,15 @@ void path(context_t *context, int starting_node) {
       int n = search_label(context, node->bc.arg.string);
       assert(n != -1);
       node->branch = n;
-      int save_sp = context->sp;
-      path(context, n);
-      context->sp = save_sp;
+      path(context, n, sp);
+      node->next = i + 1;
+      i += 1;
+    } else if ((node->bc.kind == BINSTLABEL && node->bc.inst == CALL)
+               || (node->bc.kind == BINSTRELLABEL && node->bc.inst == CALLR)) {
+      int n = search_label(context, node->bc.arg.string);
+      if (n != -1) {
+        path(context, n, 0);
+      }
       node->next = i + 1;
       i += 1;
     } else {
@@ -88,9 +102,9 @@ void path(context_t *context, int starting_node) {
     }
 
     if (node->bc.kind == BINST && (node->bc.inst == PUSHA || node->bc.inst == PUSHB || node->bc.inst == DECSP)) {
-      context->sp += 2;
+      sp += 2;
     } else if (node->bc.kind == BINST && (node->bc.inst == POPA || node->bc.inst == POPB || node->bc.inst == INCSP)) {
-      context->sp -= 2;
+      sp -= 2;
     }
 
     if (node->bc.kind == BINSTLABEL) {
@@ -179,7 +193,11 @@ int main(int argc, char **argv) {
     }
   }
 
-  path(&context, search_label(&context, "_start"));
+  int start = search_label(&context, "_start");
+  if (start == -1) {
+    start = 0;
+  }
+  path(&context, start, 0);
 
   printf("digraph {\n\tnode [shape = box];\n");
 
