@@ -2,6 +2,7 @@ GLOBAL str_find_char
 GLOBAL is_digit
 GLOBAL path_find_name
 GLOBAL parse_int
+GLOBAL str_eq
 
 -- [cstr str, char c] -> [char *ptr, _]
 -- returns the pointer of the first occurrence of c in str
@@ -74,3 +75,28 @@ parse_int_err:
   -- ^ _ _
   RAM_A 0xFFFF
   INCSP INCSP RET
+
+-- [cstr a, cstr b] -> [res, _]
+-- compares 2 str (by pointers)
+-- returns 0 if are different, 1 if equal
+str_eq:
+  PUSHB PUSHA
+  -- ^ a b
+  rB_AL CMPA JMPRZ $str_eq_null
+  -- ^ a b [*b, _]
+  PUSHA PEEKAR 0x04
+  -- ^ *b a b [a, _]
+  A_B rB_AL POPB SUB JMPRNZ $str_eq_diff
+  -- ^ a b
+  POPA INCA POPB INCB
+  -- [a+1, b+1]
+  JMPR $str_eq
+
+str_eq_null:
+  -- ^ a b [*b, _]
+  PEEKB rB_AL CMPA JMPRNZ $str_eq_diff
+  INCSP INCSP RAM_AL 0x01 RET
+str_eq_diff:
+  -- ^ a b
+  INCSP INCSP RAM_AL 0x00 RET
+
