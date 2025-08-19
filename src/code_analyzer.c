@@ -9,6 +9,7 @@
 #include "../mystb/errors.h"
 
 typedef struct {
+  int visited;
   int sp;
   bytecode_t bc;
 
@@ -24,6 +25,7 @@ typedef struct {
   char labels[MAX_LABEL_COUNT][LABEL_MAX_LEN];
   int labels_node[MAX_LABEL_COUNT];
   int label_count;
+  int sp;
 } context_t;
 
 int search_label(context_t *context, char *label) {
@@ -37,19 +39,32 @@ int search_label(context_t *context, char *label) {
       break;
     }
   }
-  assert(0 && "label not found");
+  return -1;
 }
 
 void path(context_t *context, int starting_node) {
   assert(context);
 
-  for (int i = starting_node; context->nodes[i].next == -1 && i < context->node_count;) {
+  for (int i = starting_node; i < context->node_count;) {
     node_t *node = &context->nodes[i];
+    if (node->visited) {
+      if (node->sp != context->sp) {
+        fprintf(stderr, "ERROR: for '");
+        bytecode_to_asm(stderr, node->bc);
+        fprintf(stderr, "' expected sp %d, found %d\n", node->sp, context->sp);
+        exit(1);
+      }
+
+      return;
+    }
+    node->visited = 1;
+    node->sp = context->sp;
 
     if (node->bc.kind == BINSTLABEL && node->bc.inst == CALL && strcmp(node->bc.arg.string, "exit") == 0) {
       return;
     } else if ((node->bc.kind == BINSTLABEL || node->bc.kind == BINSTRELLABEL) && (node->bc.inst == JMP || node->bc.inst == JMPR)) {
       int n = search_label(context, node->bc.arg.string);
+      assert(n != -1);
       node->next = n;
       i = n;
     } else if (node->bc.kind == BINSTRELLABEL
@@ -60,13 +75,41 @@ void path(context_t *context, int starting_node) {
                    || node->bc.inst == JMPRNN
                    || node->bc.inst == JMPRNC)) {
       int n = search_label(context, node->bc.arg.string);
+      assert(n != -1);
       node->branch = n;
+      int save_sp = context->sp;
       path(context, n);
+      context->sp = save_sp;
       node->next = i + 1;
       i += 1;
     } else {
       node->next = i + 1;
       i += 1;
+    }
+
+    if (node->bc.kind == BINST && (node->bc.inst == PUSHA || node->bc.inst == PUSHB || node->bc.inst == DECSP)) {
+      context->sp += 2;
+    } else if (node->bc.kind == BINST && (node->bc.inst == POPA || node->bc.inst == POPB || node->bc.inst == INCSP)) {
+      context->sp -= 2;
+    }
+
+    if (node->bc.kind == BINSTLABEL) {
+      int n = search_label(context, node->bc.arg.string);
+      if (n == -1) {
+        continue;
+      }
+      if (context->nodes[n + 1].bc.kind == BDB) {
+        context->nodes[n].next = n + 1;
+        context->nodes[n].visited = 1;
+        context->nodes[n + 1].visited = 1;
+
+      } else if (context->nodes[n + 1].bc.kind == BSTRING) {
+        context->nodes[n].visited = 1;
+        for (int j = n + 1; !(context->nodes[j - 1].bc.kind == BHEX && context->nodes[j - 1].bc.arg.num == 0); ++j) {
+          context->nodes[j - 1].next = j;
+          context->nodes[j].visited = 1;
+        }
+      }
     }
   }
 }
@@ -121,7 +164,12 @@ int main(int argc, char **argv) {
   bytecode_t bc = {0};
   while ((bc = asm_parse_bytecode(&tok)).kind != BNONE) {
     assert(context.node_count + 1 < MAX_NODE_COUNT);
-    context.nodes[context.node_count++] = (node_t){-1, bc, -1, -1};
+    context.nodes[context.node_count++] = (node_t){
+        .visited = 0,
+        .sp = -1,
+        .bc = bc,
+        .next = -1,
+        .branch = -1};
 
     if (bc.kind == BSETLABEL) {
       assert(context.label_count + 1 < MAX_LABEL_COUNT);
@@ -131,7 +179,7 @@ int main(int argc, char **argv) {
     }
   }
 
-  path(&context, 0);
+  path(&context, search_label(&context, "_start"));
 
   printf("digraph {\n\tnode [shape = box];\n");
 
@@ -141,10 +189,15 @@ int main(int argc, char **argv) {
     if (node->bc.kind == BNONE || node->bc.kind == BEXTERN || node->bc.kind == BGLOBAL) {
       continue;
     }
+
     printf("\tN%03d [label=", i);
     printf("< ");
     bytecode_to_asm(stdout, node->bc);
     printf(">");
+    if (!node->visited) {
+      printf(", color=red");
+    }
+    printf(", xlabel=\"%d\"", node->sp);
     printf("];\n");
   }
 
