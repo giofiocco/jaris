@@ -362,7 +362,7 @@ obj_t obj_decode(FILE *file) {
 
 obj_t obj_decode_file(char *filename) {
   assert(filename);
-  FILE *file = fopen(filename, "rb");
+  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
   if (!file) {
     error_fopen(filename);
   }
@@ -474,7 +474,7 @@ exe_t exe_decode(FILE *file) {
 
 exe_t exe_decode_file(char *filename) {
   assert(filename);
-  FILE *file = fopen(filename, "rb");
+  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
   if (!file) {
     error_fopen(filename);
   }
@@ -574,7 +574,7 @@ so_t so_decode(FILE *file) {
 
 so_t so_decode_file(char *filename) {
   assert(filename);
-  FILE *file = fopen(filename, "rb");
+  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
   if (!file) {
     error_fopen(filename);
   }

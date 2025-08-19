@@ -23,8 +23,17 @@ code_size: 0x0000
   { inc_code_size RAM_B code_size rB_A INCA A_rB }
 
 -- [func ptr (reloced), _] -> [_, _]
+-- write out CALL 0x0000, increment the code_size, then call push_dynamic_reloc with the pointer to the function wanted
 push_dynamic_reloc:
-  RET
+  PUSHA
+  RAM_B dr_index rB_A PUSHA INCA INCA INCA INCA A_rB -- *dr_index += 4
+  -- ^ dr_index(of where) func_ptr
+  RAM_B code_size rB_A DECA DECA POPB A_rB INCB INCB PUSHB -- push to dynamic_reloc the code_size - 2 (the where)
+  -- ^ dr_index(of what) func_ptr
+  RAM_B stdlib_pos rB_A PUSHA PEEKAR 0x06 A_B POPA -- [stdlib_start, func_ptr]
+  SUB POPB A_rB -- push to dynamic_reloc the func_ptr - stdlib_start
+  -- ^ func_ptr
+  INCSP RET
 
 -- [_, _] -> [_, _]
 -- if code_size even adds one 0x00
@@ -62,6 +71,7 @@ not_add:
   RAM_A out_file RAM_BL CALL CALL write_u8
   RAM_BL 0x00 CALL write_u16
   RAM_B code_size rB_A INCA INCA INCA A_rB
+  RAM_A print_int CALLR $push_dynamic_reloc
   RET
 not_print:
   RET
@@ -70,6 +80,8 @@ _start:
   CMPB JMPRZ $no_arg
   B_A RAM_B file CALL open_file
   CMPA JMPRZ $fail_open_file
+
+  RAM_A dynamic_relocs RAM_B dr_index A_rB
 
   RAM_A out_str RAM_B out_file CALL open_create_file
   CMPA JMPRZ $fail_open_file
@@ -117,18 +129,30 @@ not_unparsed:
   RAM_BL CALL CALL write_u8
   RAM_BL 0x00 CALL write_u16 -- exit placeholder
   -- writing: unalign RAM_AL 0x00 CALL exit
-  RAM_B code_size rB_A INCA INCA INCA PUSHA INCA INCA A_rB
-  -- ^ exit_pos code_size_file_ndx code_size_file_sec
+  RAM_B code_size rB_A INCA INCA INCA INCA INCA A_rB
+  -- ^ code_size_file_ndx code_size_file_sec
+  RAM_A exit CALLR $push_dynamic_reloc
 
   RAM_A out_file RAM_BL 0x00 CALL write_u16 -- reloc count
   RAM_BL 0x01 CALL write_u16 -- dynamic linking count
   RAM_B 0x0101 CALL write_u16 -- file name and size
-  RAM_BL 0x01 CALL write_u8 -- reloc count
 
-  PEEKB CALL write_u16 -- where to subst = exit ptr
-  RAM_B stdlib_pos rB_A RAM_B exit SUB A_B RAM_A out_file CALL write_u16
-  RAM_BL 0x00 CALL write_u16 -- symbol list count
+  -- copy the dynamic_reloc list to the file
+  RAM_B dr_index rB_A A_B RAM_A dynamic_relocs SUB SHR SHR -- reloc_count = (*dr_index - dynamic_relocs) / 4
+  PUSHA A_B RAM_A out_file CALL write_u8 -- reloc count
+  -- ^ reloc_count code_size_file_ndx code_size_file_sec
+  POPA SHL
+  RAM_B dynamic_relocs PUSHB
+copy_dynamic_reloc:
+  PUSHA
+  -- ^ n_iterations entry_ptr ...
+  PEEKAR 0x04 A_B rB_A A_B RAM_A out_file CALL write_u16
+  PEEKAR 0x04 INCA INCA PUSHAR 0x04
+  POPA DECA JMPRNZ $copy_dynamic_reloc
   INCSP
+  -- ^ code_size_file_ndx code_size_file_sec
+
+  RAM_A out_file RAM_BL 0x00 CALL write_u16 -- symbol list count
 
   -- ^ code_size_file_ndx code_size_file_sec
   POPA RAM_B out_file INCB INCB AL_rB
