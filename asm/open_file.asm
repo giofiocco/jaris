@@ -58,10 +58,10 @@ loop:
   INCNDX MEM_A CMPA JMPRNZ $loop
   INCNDX INCNDX INCNDX MEM_A CMPA JMPRNZ $loop
 
-  POPB rB_AL AL_MEM INCNDX -- first char copied
+  POPB rB_AL A_MEM INCNDX -- first char copied
 copy_name:
   B_A INCA A_B
-  rB_AL CMPA AL_MEM INCNDX CMPA JMPRNZ $copy_name
+  rB_AL CMPA A_MEM INCNDX CMPA JMPRNZ $copy_name
 
   NDX_A PUSHA
   SEC_A PUSHA
@@ -76,16 +76,16 @@ search_sec:
   SEC_A A_B POPA A_SEC POPA A_NDX
   -- ^ file
   PUSHB
-  B_A AL_MEM INCNDX
-  SHR SHR SHR SHR SHR SHR SHR SHR AL_MEM INCNDX
-  RAM_AL 0x00 AL_MEM
+  B_A A_MEM INCNDX
+  SHR SHR SHR SHR SHR SHR SHR SHR A_MEM INCNDX
+  RAM_AL 0x00 A_MEM
   -- ^ found_sec file [_, found_sec]
 
   -- populate file sec
   B_A A_SEC RAM_NDX 0x00
-  RAM_AL "F" AL_MEM INCNDX
-  RAM_AL 0xFF AL_MEM INCNDX AL_MEM INCNDX
-  NDX_A AL_MEM
+  RAM_AL "F" A_MEM INCNDX
+  RAM_AL 0xFF A_MEM INCNDX A_MEM INCNDX
+  NDX_A A_MEM
 
   -- populate file struct
   -- ^ found_sec file [_, found_sec]
@@ -102,6 +102,6 @@ found:
   RAM_NDX max_ndx_index
   INCSP PEEKB A_rB -- set file->sec
   B_A INCA INCA A_B
-  RAM_AL 0x03 AL_MEM AL_rB
+  RAM_AL 0x03 A_MEM AL_rB
 
   POPA RET

@@ -23,7 +23,7 @@ typedef enum {
   A_SP, SP_A,
   A_SEC, SEC_A,
   RAM_NDX, INCNDX, NDX_A, A_NDX,
-  MEM_A, MEM_AH, AL_MEM,
+  MEM_A, MEM_AH, A_MEM,
   CALL, CALLR, RET,
   _KEY_A,
   DRW, RAM_DRW,

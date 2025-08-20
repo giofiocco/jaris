@@ -428,8 +428,8 @@ void set_control_rom() {
   set_instruction_allflag(MEM_A, 3, micro(SCr));
   set_instruction_allflag(MEM_AH, 2, micro(MEMo) | micro(AHi));
   set_instruction_allflag(MEM_AH, 3, micro(SCr));
-  set_instruction_allflag(AL_MEM, 2, micro(Ao) | micro(MEMi));
-  set_instruction_allflag(AL_MEM, 3, micro(SCr));
+  set_instruction_allflag(A_MEM, 2, micro(Ao) | micro(MEMi));
+  set_instruction_allflag(A_MEM, 3, micro(SCr));
   set_instruction_allflag(CALL, 2, micro(SPo) | micro(MARi));
   set_instruction_allflag(
       CALL, 3, micro(IPo) | micro(RAM) | micro(RAM16) | micro(SPu) | micro(SPm));

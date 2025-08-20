@@ -13,12 +13,12 @@ write_u8:
   INCB INCB rB_AL A_B RAM_AL 0xFF SUB JMPRZ $new_file_sec -- check if ndx == 0xFF
   -- ^ a file [_, ndx]
   B_A A_NDX
-  POPA AL_MEM
+  POPA A_MEM
   -- ^ file
   PEEKB INCB INCB rB_AL INCA AL_rB -- inc ndx
   PUSHA
   RAM_NDX max_ndx_index MEM_A A_B POPA SUB JMPRNN $not_inc_max
-  B_A INCA AL_MEM -- inc max_ndx in file sec
+  B_A INCA A_MEM -- inc max_ndx in file sec
 not_inc_max:
   -- ^ file
   POPA RET
