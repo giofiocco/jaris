@@ -3,6 +3,7 @@ GLOBAL is_digit
 GLOBAL path_find_name
 GLOBAL parse_int
 GLOBAL str_eq
+GLOBAL str_len
 
 -- [cstr str, char c] -> [char *ptr, _]
 -- returns the pointer of the first occurrence of c in str
@@ -100,3 +101,13 @@ str_eq_diff:
   -- ^ a b
   INCSP INCSP RAM_AL 0x00 RET
 
+-- [cstr str, _] -> [int len, _]
+-- return the len of the string
+-- has to be null terminated
+str_len:
+  A_B RAM_AL 0x00 PUSHA
+str_len_loop:
+  -- ^ len [_, str]
+  POPA INCA PUSHA
+  rB_AL INCB CMPA JMPRNZ $str_len_loop
+  POPA DECA RET
