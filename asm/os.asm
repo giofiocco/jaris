@@ -27,7 +27,7 @@ set_used_page_map:
   RAM_B 0xF802 RAM_A 0xF820 A_rB -- ptr to current process struct
   RAM_B 0xF804 RAM_A 0x8000 A_rB -- used process map
   -- already set used page map
-  RAM_B 0xF808 RAM_A 0x0000 A_rB -- used page map
+  RAM_B 0xF808 RAM_A 0x0001 A_rB -- used page map
   -- os process
   RAM_B 0xF820 RAM_A 0xFFFF A_rB -- ptr to parent process
   RAM_B 0xF822 RAM_A 0x0001 A_rB -- cwd sec

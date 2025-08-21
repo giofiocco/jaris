@@ -1040,7 +1040,6 @@ void test_run_command(test_t *test, char *command, char *input, char *exe_path, 
   test_set_u16(test, 0xF802, 0xF840);
   test_set_u16(test, 0xF804, 0b111 << 13);
   test_set_u16(test, 0xF806, 0b1111 << 12);
-  test_set_u16(test, 0xF808, 0);
   // command process:
   test_set_u16(test, 0xF840, 0xF830);
   test_set_u16(test, 0xF842, cpu_read16(cpu, 0xF832));
@@ -1144,7 +1143,7 @@ void test() {
   test_set_u16(test, 0xF802, 0xF820);     // current process
   test_set_u16(test, 0xF804, 1 << 15);    // used process map
   test_set_u16(test, 0xF806, 0b11 << 14); // used page map
-  test_set_u16(test, 0xF808, 0);          // used page map
+  test_set_u16(test, 0xF808, 1);          // used page map
   //  os process:
   test_set_u16(test, 0xF820, 0xFFFF);     // parent process
   test_set_u16(test, 0xF822, 1);          // cwd sec
@@ -1188,10 +1187,11 @@ void test() {
   test_check(test);
 
   test_run_command(test, "cd dir", "", "asm/bin/cd", sh_input_pos, execute_pos, exit_pos);
-  test_set_u16(test, 0xF832, 0x48);
+  uint16_t dir_sec = mem_sector_find_entry(cpu->MEM + 256, "dir");
+  test_set_u16(test, 0xF832, dir_sec);
   test_check(test);
 
-  test_set_u16(test, 0xF842, 0x48);
+  test_set_u16(test, 0xF842, dir_sec);
   test_run_command(test, "/ls", "", "asm/bin/ls", sh_input_pos, execute_pos, exit_pos);
   test_gpu_print(test, "a a.sk \n");
   test_check(test);
@@ -1212,12 +1212,6 @@ void test() {
 
   test_run_command(test, "stack dir/a.sk", "", "asm/bin/stack", sh_input_pos, execute_pos, exit_pos);
   test_unset_range(test, 3 * PAGE_SIZE + 3, 4 + 4 + 32 + 2);
-  // mem_sector_dump(cpu->MEM + 256);
-  // mem_sector_dump(cpu->MEM + 256 * 22);
-  // for (int i = 4; i < cpu->MEM[256 * 22 + 3]; ++i) {
-  //   printf("%02x ", cpu->MEM[256 * 22 + i]);
-  // }
-  // printf("\n");
   test_check(test);
 
   {

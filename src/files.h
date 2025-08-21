@@ -104,6 +104,7 @@ so_t so_decode_file(char *filename);
 void so_encode_file(so_t *so, char *filename);
 
 void mem_sector_dump(uint8_t *sector);
+uint16_t mem_sector_find_entry(uint8_t *sector, char *entry);
 
 // bytecode list to free
 bytecode_t *disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count, int *out_bytecode_count);

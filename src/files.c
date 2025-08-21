@@ -641,6 +641,21 @@ void mem_sector_dump(uint8_t *sector) {
   }
 }
 
+uint16_t mem_sector_find_entry(uint8_t *sector, char *entry) {
+  assert(sector);
+  assert(sector[0] == 'D');
+  for (int i = 3; i < 256;) {
+    char *str = (char *)&sector[i];
+    int len = strlen(str);
+    if (strcmp(entry, str) == 0) {
+      return sector[i + len + 1] + (sector[i + len + 2] << 8);
+    }
+    i += len + 3;
+  }
+
+  return 0;
+}
+
 bytecode_t *disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count, int *out_bytecode_count) {
   assert(code);
   assert(symbols);
