@@ -29,6 +29,7 @@ char *instruction_to_string(instruction_t instruction) {
     case SUB: return "SUB";
     case SHR: return "SHR";
     case SHL: return "SHL";
+    case AND: return "AND";
     case CMPA: return "CMPA";
     case CMPB: return "CMPB";
     case JMP: return "JMP";
@@ -116,6 +117,8 @@ int sv_to_instruction(sv_t sv, instruction_t *out) {
     *out = SHR;
   } else if (sv_eq(sv, sv_from_cstr("SHL"))) {
     *out = SHL;
+  } else if (sv_eq(sv, sv_from_cstr("AND"))) {
+    *out = AND;
   } else if (sv_eq(sv, sv_from_cstr("CMPA"))) {
     *out = CMPA;
   } else if (sv_eq(sv, sv_from_cstr("CMPB"))) {
@@ -201,7 +204,7 @@ instruction_stat_t instruction_stat(instruction_t instruction) {
   switch (instruction) {
     case NOP: case INCA: case DECA: case INCB: case INCSP: case DECSP:
     case PUSHA: case POPA: case PEEKA: case PUSHB: case POPB: case PEEKB:
-    case SUM: case SUB: case SHR: case SHL: case CMPA: case CMPB:
+    case SUM: case SUB: case SHR: case SHL: case AND: case CMPA: case CMPB:
     case JMPA: case JMPAR:
     case A_B: case B_A: case B_AH:
     case AL_rB: case A_rB: case rB_AL: case rB_A:
