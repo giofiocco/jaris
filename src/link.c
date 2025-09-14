@@ -2,7 +2,7 @@
 #include <string.h>
 
 #define ERRORS_IMPLEMENTATION
-#include "../../mystb/errors.h"
+#include "../mystb/errors.h"
 #include "files.h"
 #define SV_IMPLEMENTATION
 #include "link.h"
