@@ -3,6 +3,7 @@ CFLAGS=-Wall -Wextra -g
 
 FILES=src/files.c src/files.h
 INSTRUCTIONS=src/instructions.c src/instructions.h
+RUNTIME=src/runtime.c src/runtime.h
 ASSEMBLE=src/build/libassemble.a
 
 .PHONY: all asm docs clean cleanall
@@ -30,7 +31,7 @@ encodemem: src/encodemem.c
 inspect: src/inspect.c $(FILES) $(INSTRUCTIONS)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
-sim: src/sim.c main.mem.bin test.mem.bin $(FILES) $(INSTRUCTIONS)
+sim: src/sim.c main.mem.bin test.mem.bin $(FILES) $(INSTRUCTIONS) $(RUNTIME)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) -lraylib
 
 code_analyzer: src/code_analyzer.c $(ASSEMBLE) $(FILES)
