@@ -4,6 +4,7 @@
 #include <raylib.h>
 #include <stdint.h>
 
+#include "../mystb/errors.h"
 #include "files.h"
 
 #define KEY_FIFO_SIZE 1024
@@ -74,6 +75,7 @@ typedef struct {
 
 // TODO: test mem
 typedef struct {
+  bool running;
   cpu_t cpu;
   int16_t test_ram[1 << 16]; // negative if undef
   uint8_t test_gpu[1 << 15];
@@ -83,6 +85,11 @@ typedef struct {
   char stdout[2048];
   int stdout_size;
 } test_t;
+
+#define test_run_while(test__, cond__)                        \
+  while (test__.running && !(test__.cpu.SC == 2 && cond__)) { \
+    tick(&test__.cpu, &test__.running);                       \
+  }
 
 #define test_assert(cond__)               \
   do {                                    \
@@ -115,6 +122,7 @@ void test_gpu_print(test_t *test, char *str);
 void test_print_ram_range(test_t *test, uint16_t from, uint16_t to);
 void test_set_stdout(test_t *test, uint16_t stdout_pos, char *str);
 void exe_reloc(exe_t *exe, uint16_t start_pos, uint16_t stdlib_pos);
+void so_reloc(so_t *so, uint16_t start_pos);
 void test_run_command(test_t *test, char *command, char *input, char *exe_path, uint16_t sh_input_pos, uint16_t execute_pos, uint16_t exit_pos);
 
 void step_mode(cpu_t *cpu);

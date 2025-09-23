@@ -9,7 +9,6 @@
 
 #define ERRORS_IMPLEMENTATION
 #define SV_IMPLEMENTATION
-#include "../mystb/errors.h"
 #include "files.h"
 #include "instructions.h"
 #include "runtime.h"
@@ -70,7 +69,7 @@ void cpu_dump(cpu_t *cpu) {
   printf("A:   %5d %04X ", cpu->A, cpu->A);
   dumpsbit(cpu->A, 16);
   printf(" %c\n", isprint(cpu->A) ? cpu->A : ' ');
-  printf("B:   %5d %04X ", cpu->B, cpu->B, isprint(cpu->B) ? cpu->B : ' ');
+  printf("B:   %5d %04X ", cpu->B, cpu->B);
   dumpsbit(cpu->B, 16);
   printf(" %c\n", isprint(cpu->B) ? cpu->B : ' ');
   printf("IP:  %5d %04X %s\n", cpu->IP, cpu->IP, instruction_to_string(cpu->IR));
@@ -533,6 +532,7 @@ bool check_microcode(microcode_t mc, microcode_flag_t flag) {
 void tick(cpu_t *cpu, bool *running) {
   assert(cpu);
   assert(running);
+  assert(control_rom[cpu->IR]);
 
   uint16_t bus = 0;
   microcode_t mc = control_rom[cpu->IR | (cpu->SC << 6) | (cpu->FR << (6 + 4))];
@@ -676,6 +676,7 @@ void test_init(test_t *test, char *mem_path) {
   assert(test);
   *test = (test_t){0};
   cpu_init(&test->cpu, mem_path);
+  test->running = 1;
 }
 
 void test_check(test_t *test) {
@@ -852,6 +853,17 @@ void exe_reloc(exe_t *exe, uint16_t start_pos, uint16_t stdlib_pos) {
     entry.what += stdlib_pos;
     exe->code[entry.where] = entry.what & 0xFF;
     exe->code[entry.where + 1] = (entry.what >> 8) & 0xFF;
+  }
+}
+
+void so_reloc(so_t *so, uint16_t start_pos) {
+  assert(so);
+
+  for (int i = 0; i < so->reloc_count; ++i) {
+    reloc_entry_t entry = so->relocs[i];
+    entry.what += start_pos;
+    so->code[entry.where] = entry.what & 0xFF;
+    so->code[entry.where + 1] = (entry.what >> 8) & 0xFF;
   }
 }
 
