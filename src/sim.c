@@ -217,7 +217,6 @@ void print_help() {
 
 int main(int argc, char **argv) {
   set_control_rom();
-  set_char_to_scancode();
 
   char *input = "";
   char *mempath = "main.mem.bin";

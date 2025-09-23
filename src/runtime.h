@@ -107,7 +107,6 @@ void cpu_dump_ram_range(cpu_t *cpu, uint16_t from, uint16_t to);
 void cpu_dump_stdout(cpu_t *cpu, uint16_t pos);
 
 void set_control_rom();
-void set_char_to_scancode();
 void load_input_string(cpu_t *cpu, char *string);
 bool check_microcode(microcode_t mc, microcode_flag_t flag);
 void tick(cpu_t *cpu, bool *running);
