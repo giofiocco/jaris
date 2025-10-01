@@ -1,5 +1,7 @@
 GLOBAL div
 GLOBAL mul
+GLOBAL shiftl
+GLOBAL shiftr
 
 -- [a, b] -> [b div a, b mod a]
 div:
@@ -43,5 +45,23 @@ end_if:
   PEEKAR 0x04 SHR PUSHAR 0x04 -- a >>= 1
   CMPA JMPRNZ $mul_loop
   POPA INCSP INCSP
+  RET
+
+-- [a, b] -> [a << b, _]
+shiftl:
+  CMPB JMPRZ $shiftl_ret
+  SHL PUSHA
+  B_A DECA A_B POPA
+  JMPR $shiftl
+shiftl_ret:
+  RET
+
+-- [a, b] -> [a >> b, _]
+shiftr:
+  CMPB JMPRZ $shiftr_ret
+  SHR PUSHA
+  B_A DECA A_B POPA
+  JMPR $shiftr
+shiftr_ret:
   RET
 
