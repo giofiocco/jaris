@@ -1,5 +1,5 @@
 PROGRAMS=os shutdown ls sh cd cat test_font echo brainfuck expr bfjit tee stack
-STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string write_file alloc
+STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string write_file alloc dynamic_array
 STDLIB=bin/stdlib
 STDLIB_LOC=$(STDLIB)
 LINKER_FLAGS=--stdlib-path $(STDLIB_LOC) -g

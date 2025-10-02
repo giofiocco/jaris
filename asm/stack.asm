@@ -1,5 +1,22 @@
+-- STACK
+--
 -- A stack based language inspired on Forth
 -- Usage: stack <file>
+-- it creates an executable stack.out
+--
+-- entering an integer pushes it to the stack
+-- operations are:
+-- `+` to sum the first 2 numbers
+-- `-` to subtract the first 2 numbers
+-- `dup` to duplicate the first number
+-- `drop` to remove the first number
+-- `swap` to swap the first 2 numbers
+--  `.` to pop the first number and print it
+--
+-- example:
+-- 10 20 + 1 -
+--
+-- will add 10 to 20 and the subtract 1
 
 GLOBAL _start
 
@@ -14,11 +31,17 @@ EXTERN write_u16
 EXTERN parse_int
 EXTERN print_int
 EXTERN str_eq
+EXTERN str_len
+EXTERN dynamic_array_init
+EXTERN dynamic_array_push16
 
 file: db 4
 out_file: db 4
 buffer: db 32
+0x0000 -- as \0
+-- TODO: 0x00 ALIGN instead of 0x0000
 code_size: 0x0000
+reloc_da: db 6
 
   { stdlib_pos 0xF800 }
   { inc_code_size RAM_B code_size rB_A INCA A_rB }
@@ -31,17 +54,14 @@ swap_str: "swap" 0x00
 -- write out CALL 0x0000, increment the code_size, then call push_dynamic_reloc with the pointer to the function wanted
 push_dynamic_reloc:
   PUSHA
-  RAM_B dr_index rB_A PUSHA INCA INCA INCA INCA A_rB -- *dr_index += 4
-  -- ^ dr_index(of where) func_ptr
-  RAM_B code_size rB_A DECA DECA POPB A_rB INCB INCB PUSHB -- push to dynamic_reloc the code_size - 2 (the where)
-  -- ^ dr_index(of what) func_ptr
-  RAM_B stdlib_pos rB_A PUSHA PEEKAR 0x06 A_B POPA -- [stdlib_start, func_ptr]
-  SUB POPB A_rB -- push to dynamic_reloc the func_ptr - stdlib_start
   -- ^ func_ptr
-  INCSP RET
+  RAM_B code_size rB_A DECA DECA A_B RAM_A reloc_da CALL dynamic_array_push16 -- push to reloc_da the code_siz - 2 (the where)
+  RAM_B stdlib_pos rB_A POPB SUB A_B RAM_A reloc_da CALL dynamic_array_push16 -- push func_ptr - stdlib_start
+  -- ^
+  RET
 
 -- [_, _] -> [_, _]
--- if code_size even adds one 0x00
+-- if code_size is even adds one 0x00
 unalign:
   RAM_B code_size rB_A SHR JMPRC $dont_align
   SHL INCA A_rB
@@ -90,12 +110,27 @@ not_dup:
 not_drop:
   RAM_A buffer RAM_B swap_str CALL str_eq CMPA JMPRZ $not_swap
   RAM_A out_file RAM_BL POPA CALL write_u8
-  RAM_A out_file RAM_BL POPB CALL write_u8
-  RAM_A out_file RAM_BL PUSHA CALL write_u8
-  RAM_A out_file RAM_BL PUSHB CALL write_u8
+  RAM_BL POPB CALL write_u8
+  RAM_BL PUSHA CALL write_u8
+  RAM_BL PUSHB CALL write_u8
   RAM_B code_size rB_A INCA INCA INCA INCA A_rB
   RET
 not_swap:
+  RAM_B buffer rB_AL RAM_BL 0x22 SUB JMPRNZ $not_string
+  RAM_A buffer INCA PUSHA CALL str_len DECA
+  -- ^ str [len, _]
+  CMPA JMPRZ $copy_string_end
+copy_string:
+  PUSHA
+  -- ^ len str
+  PEEKAR 0x04 A_B rB_AL PUSHA
+  HLT
+  POPA DECA JMPRNZ $copy_string
+
+copy_string_end:
+  -- ^ str
+  INCSP RET
+not_string:
   RAM_B buffer rB_A RAM_BL "." SUB JMPRNZ $not_print
   RAM_A out_file RAM_BL POPA CALL write_u8
   inc_code_size
@@ -106,14 +141,15 @@ not_swap:
   RAM_A print_int CALLR $push_dynamic_reloc
   RET
 not_print:
-  RET
+  RAM_A unknown_str CALL print RAM_A buffer CALL print RAM_AL "'" CALL put_char RAM_AL 0x0A CALL put_char
+  RAM_AL 0x01 CALL exit
 
 _start:
   CMPB JMPRZ $no_arg
   B_A RAM_B file CALL open_file
   CMPA JMPRZ $fail_open_file
 
-  RAM_A dynamic_relocs RAM_B dr_index A_rB
+  RAM_A reloc_da CALL dynamic_array_init
 
   RAM_A out_str RAM_B out_file CALL open_create_file
   CMPA JMPRZ $fail_open_file
@@ -156,8 +192,7 @@ loop_end:
 not_unparsed:
 
   CALLR $unalign
-  RAM_A out_file RAM_BL RAM_AL CALL write_u8
-  RAM_BL 0x00 CALL write_u8
+  RAM_BL RAM_AL CALL write_u16
   RAM_BL CALL CALL write_u8
   RAM_BL 0x00 CALL write_u16 -- exit placeholder
   -- writing: unalign RAM_AL 0x00 CALL exit
@@ -170,11 +205,13 @@ not_unparsed:
   RAM_B 0x0101 CALL write_u16 -- file name and size
 
   -- copy the dynamic_reloc list to the file
-  RAM_B dr_index rB_A A_B RAM_A dynamic_relocs SUB SHR SHR -- reloc_count = (*dr_index - dynamic_relocs) / 4
+  RAM_A reloc_da INCA INCA A_B rB_A SHR SHR -- reloc_count = reloc_da.size / 4
   PUSHA A_B RAM_A out_file CALL write_u8 -- reloc count
   -- ^ reloc_count code_size_file_ndx code_size_file_sec
+  RAM_B reloc_da rB_A A_B
   POPA SHL
-  RAM_B dynamic_relocs PUSHB
+  PUSHB
+  -- ^ entry_ptr code_size_file_ndx code_size_file_sec [n_iterations, _]
 copy_dynamic_reloc:
   PUSHA
   -- ^ n_iterations entry_ptr ...
@@ -200,11 +237,9 @@ no_arg:
   RAM_A no_arg_str CALL print
   RAM_AL 0x01 CALL exit
 
-fail_open_file_str: "ERROR: failed opening file" 0x00
+fail_open_file_str: "ERROR: failed opening file" 0x0A 0x00
 fail_open_file:
   RAM_A fail_open_file_str CALL print
   RAM_AL 0x01 CALL exit
 
-ALIGN
-dr_index: 0x0000
-dynamic_relocs:
+unknown_str: "ERROR: unknown: '" 0x0A 0x00
