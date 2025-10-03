@@ -1,5 +1,7 @@
 bss section?
 
+maybe check that when copying a label ecc it will always be null terminated
+
 allow label alone or hex2 as rel with @allow thing
 labels with dot as sublabels?
 conditional call?
