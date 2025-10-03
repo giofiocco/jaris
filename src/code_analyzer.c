@@ -85,7 +85,7 @@ void path(context_t *context, int starting_node, int sp) {
                || node->bc.inst == JMPRNC) {
       int jmp = search_label(context, node->bc.arg.string);
       assert(0 <= jmp && jmp < context->node_count);
-      if (node->bc.inst == JMPR | node->bc.inst == JMP) {
+      if (node->bc.inst == JMPR || node->bc.inst == JMP) {
         node->next = jmp;
       } else {
         node->branch = jmp;
@@ -167,46 +167,60 @@ void dump_dot_digraph(context_t *context, char *filename) {
   assert(fclose(file) == 0);
 }
 
-void analyze_exe(context_t *context, exe_t *exe) {
+void analyze_asm(context_t *context, char *filename) {
   assert(context);
-  assert(exe);
+  assert(filename);
+  assert(0 && "TODO");
+}
 
-  if (exe->code_size > MAX_NODE_COUNT) {
-    printf("WARN: exe->code_size > MAX_NODE_COUNT\n");
+void analyze_obj(context_t *context, char *filename) {
+  assert(context);
+  assert(filename);
+  assert(0 && "TODO");
+}
+
+void analyze_exe(context_t *context, char *filename) {
+  assert(context);
+  assert(filename);
+
+  exe_t exe = exe_decode_file(filename);
+
+  if (exe.code_size > MAX_NODE_COUNT) {
+    printf("WARN: exe.code_size > MAX_NODE_COUNT\n");
   }
 
-  int ip_nodes[exe->code_size];
+  int ip_nodes[exe.code_size];
   memset(ip_nodes, -1, sizeof(ip_nodes));
 
   bytecode_t bc = {0};
-  for (int ip = 0; ip < exe->code_size;) {
+  for (int ip = 0; ip < exe.code_size;) {
     int node_ip = ip;
 
-    if (instruction_to_string(exe->code[ip])) {
-      switch (instruction_stat(exe->code[ip]).arg) {
+    if (instruction_to_string(exe.code[ip])) {
+      switch (instruction_stat(exe.code[ip]).arg) {
         case INST_NO_ARGS:
-          bc = (bytecode_t){BINST, exe->code[ip], {}};
+          bc = (bytecode_t){BINST, exe.code[ip], {}};
           ip += 1;
           break;
         case INST_8BITS_ARG:
-          bc = (bytecode_t){BINSTHEX, exe->code[ip], {.num = exe->code[ip + 1]}};
+          bc = (bytecode_t){BINSTHEX, exe.code[ip], {.num = exe.code[ip + 1]}};
           ip += 2;
           break;
         case INST_16BITS_ARG:
-          bc = (bytecode_t){BINSTHEX2, exe->code[ip], {.num = exe->code[ip + 1] + (exe->code[ip + 2] << 8)}};
+          bc = (bytecode_t){BINSTHEX2, exe.code[ip], {.num = exe.code[ip + 1] + (exe.code[ip + 2] << 8)}};
           ip += 3;
           break;
         case INST_LABEL_ARG:
-          bc = (bytecode_t){BINSTHEX2, exe->code[ip], {.num = exe->code[ip + 1] + (exe->code[ip + 2] << 8)}};
+          bc = (bytecode_t){BINSTHEX2, exe.code[ip], {.num = exe.code[ip + 1] + (exe.code[ip + 2] << 8)}};
           ip += 3;
           break;
         case INST_RELLABEL_ARG:
-          bc = (bytecode_t){BINSTHEX2, exe->code[ip], {.num = exe->code[ip + 1] + (exe->code[ip + 2] << 8)}};
+          bc = (bytecode_t){BINSTHEX2, exe.code[ip], {.num = exe.code[ip + 1] + (exe.code[ip + 2] << 8)}};
           ip += 3;
           break;
       }
     } else {
-      bc = (bytecode_t){BHEX, 0, {.num = exe->code[ip]}};
+      bc = (bytecode_t){BHEX, 0, {.num = exe.code[ip]}};
       ip += 1;
     }
 
@@ -222,10 +236,10 @@ void analyze_exe(context_t *context, exe_t *exe) {
     ip_nodes[node_ip] = context->node_count - 1;
   }
 
-  for (int i = 0; i < exe->reloc_count; ++i) {
-    int from = ip_nodes[exe->relocs[i].where - 1]; // to get the JMP instead of the addr
+  for (int i = 0; i < exe.reloc_count; ++i) {
+    int from = ip_nodes[exe.relocs[i].where - 1]; // to get the JMP instead of the addr
     assert(from >= 0);
-    int to = ip_nodes[exe->relocs[i].what];
+    int to = ip_nodes[exe.relocs[i].what];
     assert(to >= 0);
     assert(context->nodes[from].branch == -1);
     if (context->nodes[from].bc.inst == JMP || context->nodes[from].bc.inst == CALL) {
@@ -233,16 +247,16 @@ void analyze_exe(context_t *context, exe_t *exe) {
     }
   }
 
-  if (exe->dynamic_count > 0) {
-    assert(exe->dynamic_count == 1);
-    assert(exe->dynamics[0].file_name[0] == 1);
-    assert(exe->dynamics[0].file_name[1] == 0);
+  if (exe.dynamic_count > 0) {
+    assert(exe.dynamic_count == 1);
+    assert(exe.dynamics[0].file_name[0] == 1);
+    assert(exe.dynamics[0].file_name[1] == 0);
     so_t stdlib = so_decode_file(STDLIB_PATH);
-    for (int i = 0; i < exe->dynamics[0].reloc_count; ++i) {
-      int from = ip_nodes[exe->dynamics[0].relocs[i].where - 1]; // to get the JMP instead of the addr
+    for (int i = 0; i < exe.dynamics[0].reloc_count; ++i) {
+      int from = ip_nodes[exe.dynamics[0].relocs[i].where - 1]; // to get the JMP instead of the addr
       assert(from >= 0);
       for (int j = 0; j < stdlib.global_count; ++j) {
-        if (stdlib.symbols[stdlib.globals[j]].pos == exe->dynamics[0].relocs[i].what) {
+        if (stdlib.symbols[stdlib.globals[j]].pos == exe.dynamics[0].relocs[i].what) {
           context->nodes[from].bc.kind = BINSTLABEL;
           strncpy(context->nodes[from].bc.arg.string, stdlib.symbols[stdlib.globals[j]].image, LABEL_MAX_LEN);
           break;
@@ -251,31 +265,31 @@ void analyze_exe(context_t *context, exe_t *exe) {
     }
   }
 
-  for (int i = 0; i < exe->symbol_count; ++i) {
+  for (int i = 0; i < exe.symbol_count; ++i) {
     assert(context->label_count + 1 < MAX_LABEL_COUNT);
-    strcpy(context->labels[context->label_count], exe->symbols[i].image);
-    assert(ip_nodes[exe->symbols[i].pos] != -1);
-    context->labels_node[context->label_count] = ip_nodes[exe->symbols[i].pos];
+    strcpy(context->labels[context->label_count], exe.symbols[i].image);
+    assert(ip_nodes[exe.symbols[i].pos] != -1);
+    context->labels_node[context->label_count] = ip_nodes[exe.symbols[i].pos];
     context->label_count++;
 
-    for (int j = 0; j < exe->symbols[i].reloc_count; ++j) {
-      if (ip_nodes[exe->symbols[i].relocs[j] - 1] == -1) {
+    for (int j = 0; j < exe.symbols[i].reloc_count; ++j) {
+      if (ip_nodes[exe.symbols[i].relocs[j] - 1] == -1) {
         continue;
       }
-      node_t *node = &context->nodes[ip_nodes[exe->symbols[i].relocs[j] - 1]];
+      node_t *node = &context->nodes[ip_nodes[exe.symbols[i].relocs[j] - 1]];
       if (node->bc.kind == BINSTHEX2) {
         node->bc.kind = BINSTLABEL;
-        strncpy(node->bc.arg.string, exe->symbols[i].image, LABEL_MAX_LEN);
+        strncpy(node->bc.arg.string, exe.symbols[i].image, LABEL_MAX_LEN);
       }
     }
-    for (int j = 0; j < exe->symbols[i].relreloc_count; ++j) {
-      if (ip_nodes[exe->symbols[i].relrelocs[j] - 1] == -1) {
+    for (int j = 0; j < exe.symbols[i].relreloc_count; ++j) {
+      if (ip_nodes[exe.symbols[i].relrelocs[j] - 1] == -1) {
         continue;
       }
-      node_t *node = &context->nodes[ip_nodes[exe->symbols[i].relrelocs[j] - 1]];
+      node_t *node = &context->nodes[ip_nodes[exe.symbols[i].relrelocs[j] - 1]];
       if (node->bc.kind == BINSTHEX2) {
         node->bc.kind = BINSTRELLABEL;
-        strncpy(node->bc.arg.string, exe->symbols[i].image, LABEL_MAX_LEN);
+        strncpy(node->bc.arg.string, exe.symbols[i].image, LABEL_MAX_LEN);
       }
     }
   }
@@ -292,14 +306,14 @@ void analyze_exe(context_t *context, exe_t *exe) {
          || node->bc.inst == CALLR)
         && node->bc.kind == BINSTHEX2) {
       int nodeip = -1;
-      for (int j = 0; j < exe->code_size; ++j) {
+      for (int j = 0; j < exe.code_size; ++j) {
         if (ip_nodes[j] == i) {
           nodeip = j;
         }
       }
       assert(nodeip != -1);
       int jmp = nodeip + 1 + (int16_t)node->bc.arg.num;
-      if (0 <= jmp && jmp < exe->code_size) {
+      if (0 <= jmp && jmp < exe.code_size) {
         assert(ip_nodes[jmp] != -1);
         if (node->bc.inst == JMPR) {
           node->next = ip_nodes[jmp];
@@ -313,47 +327,38 @@ void analyze_exe(context_t *context, exe_t *exe) {
   path(context, 0, 0);
 }
 
+void analyze_so(context_t *context, char *filename) {
+  assert(context);
+  assert(filename);
+  assert(0 && "TODO");
+}
+
 void print_help() {
   printf("Usage: inspect [kind] [options] <input>\n\n"
          "Options:\n"
          "  -d            print the disassembled code\n"
          "  -h | --help   show help message\n"
          "  --dot <path>  path of output dot file\n"
-         "  --text        print the textual rappresentation of the nodes\n"
-         "  -a <str>      allow special cases that usually are considered mistakes, <str> can be:\n"
-         "                  inst-as-arg    allow insts mnemonics as argument of 8bit inst\n"
-         "\nKinds:\n"
-         "if the kind is not specified it's deduced from the file extension\n\n"
-         "  --obj   analyse the input as an obj\n"
-         "  --exe   analyse the input as an exe\n"
-         "  --so    analyse the input as a so\n"
-         "  --mem   analyse the input as a memory bin\n"
-         "  --bin   analyse the input as a bin (just plain code)\n"
-         "  --font  analyse the input as a font\n");
+         "  --text        print the textual rappresentation of the nodes\n");
+  print_file_kind_list();
+  printf("kinds allowed are: asm, obj, exe, so\n");
 }
 
 int main(int argc, char **argv) {
   char *input = NULL;
   char *dot_path = NULL;
-  int allowed = 0;
   int text = 0;
+  file_kind_t filekind = F_NONE;
 
   ARG_PARSE {
-    ARG_PARSE_HELP_ARG
-    else if (ARG_SFLAG("a")) {
-      if (*(argv + 1) == NULL) {
-        ARG_ERROR("expected string: '%s'", *argv);
-      }
-      ++argv;
-      if (strcmp(*argv, "inst-as-arg") == 0) {
-        allowed |= 1 << ASM_ALLOWED_INST_AS_ARG;
-      } else {
-        ARG_ERROR_("unexpected arg for '-a'");
-      }
+    ARG_PARSE_HELP_ARG                                         //
+        else ARG_PARSE_STRING_ARG_(ARG_LFLAG("dot"), dot_path) //
+        else ARG_PARSE_FLAG_(ARG_LFLAG("text"), text)          //
+        else if ((filekind = parse_argument_file_kind(*argv)) != F_NONE) {
+      argv++;
+      continue;
     }
-    else ARG_PARSE_STRING_ARG_(ARG_LFLAG("dot"), dot_path) //
-        else ARG_PARSE_FLAG_(ARG_LFLAG("text"), text)      //
-        else {
+    else {
       if (input != NULL) {
         eprintf("file already provided: %s", input);
       }
@@ -365,10 +370,22 @@ int main(int argc, char **argv) {
     eprintf("input file not provided");
   }
 
+  if (filekind == F_NONE) {
+    filekind = file_deduce_kind(input);
+  }
+
   context_t context = {0};
 
-  exe_t exe = exe_decode_file(input);
-  analyze_exe(&context, &exe);
+  switch (filekind) {
+    case F_NONE: assert(0); break;
+    case F_ASM: analyze_asm(&context, input); break;
+    case F_OBJ: analyze_obj(&context, input); break;
+    case F_EXE: analyze_exe(&context, input); break;
+    case F_SO: analyze_so(&context, input); break;
+    case F_MEM:
+    case F_BIN:
+    case F_FONT: eprintf("unvalid file kind: %s", file_kind_to_string(filekind)); break;
+  }
 
   if (text) {
     for (int i = 0; i < context.node_count; ++i) {

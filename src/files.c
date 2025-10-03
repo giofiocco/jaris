@@ -10,6 +10,94 @@
 
 #define TODO assert(0 && "TO IMPLEMENT")
 
+void print_file_kind_list() {
+  printf(
+      "Kinds:\n"
+      "if the kind is not specified it's deduced from the file extension or file magic number\n"
+      "  --asm   analyze the input as an asm\n"
+      "  --obj   analyse the input as an obj\n"
+      "  --exe   analyse the input as an exe\n"
+      "  --so    analyse the input as a so\n"
+      "  --mem   analyse the input as a memory bin\n"
+      "  --bin   analyse the input as a bin (just plain code)\n"
+      "  --font  analyse the input as a font\n");
+}
+
+char *file_kind_to_string(file_kind_t kind) {
+  switch (kind) {
+    case F_NONE: return "F_NONE";
+    case F_ASM: return "F_ASM";
+    case F_OBJ: return "F_OBJ";
+    case F_EXE: return "F_EXE";
+    case F_SO: return "F_SO";
+    case F_MEM: return "F_MEM";
+    case F_BIN: return "F_BIN";
+    case F_FONT: return "F_FONT";
+  }
+  assert(0);
+}
+
+file_kind_t parse_argument_file_kind(char *arg) {
+  assert(arg);
+  if (strcmp("--asm ", arg) == 0) {
+    return F_ASM;
+  } else if (strcmp("--obj ", arg) == 0) {
+    return F_OBJ;
+  } else if (strcmp("--exe ", arg) == 0) {
+    return F_EXE;
+  } else if (strcmp("--so  ", arg) == 0) {
+    return F_SO;
+  } else if (strcmp("--mem ", arg) == 0) {
+    return F_MEM;
+  } else if (strcmp("--bin ", arg) == 0) {
+    return F_BIN;
+  } else if (strcmp("--font", arg) == 0) {
+    return F_FONT;
+  }
+  return F_NONE;
+}
+
+file_kind_t file_deduce_kind(char *filename) {
+  int len = strlen(filename);
+
+  if (strcmp(filename, "-") == 0) {
+    eprintf("cannot deduce file kind from stdin");
+  }
+
+  if (strcmp(filename + len - 2, ".o") == 0) {
+    return F_ASM;
+  } else if (strcmp(filename + len - 2, ".o") == 0) {
+    return F_OBJ;
+  } else if (strcmp(filename + len - 4, ".exe") == 0) {
+    return F_EXE;
+  } else if (strcmp(filename + len - 3, ".so") == 0) {
+    return F_SO;
+  } else if (strcmp(filename + len - 5, ".font") == 0) {
+    return F_FONT;
+  }
+
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    error_fopen(filename);
+  }
+  char magic_number[MAGIC_NUMBER_MAX_LEN + 1] = {0};
+  assert(fread(magic_number, 1, MAGIC_NUMBER_MAX_LEN, file) == MAGIC_NUMBER_MAX_LEN);
+  assert(fclose(file) == 0);
+
+  if (sv_eq((sv_t){magic_number, 3}, sv_from_cstr("EXE"))) {
+    return F_EXE;
+  } else if (sv_eq((sv_t){magic_number, 3}, sv_from_cstr("OBJ"))) {
+    return F_OBJ;
+  } else if (sv_eq((sv_t){magic_number, 2}, sv_from_cstr("SO"))) {
+    return F_SO;
+  } else if (sv_eq((sv_t){magic_number, 4}, sv_from_cstr("FONT"))) {
+    return F_FONT;
+  }
+
+  eprintf("cannot deduce file kind from '%s'", filename);
+  assert(0);
+}
+
 void symbol_list_dump(symbol_t *symbols, uint16_t count) {
   assert(symbols);
 

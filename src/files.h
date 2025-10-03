@@ -13,6 +13,8 @@
 #define SYMBOL_MAX_COUNT       256
 #define FILE_NAME_MAX_LEN      64
 
+#define MAGIC_NUMBER_MAX_LEN 5
+
 typedef struct {
   uint16_t where;
   uint16_t what;
@@ -68,6 +70,22 @@ typedef struct {
   uint16_t symbol_count;
   symbol_t symbols[SYMBOL_MAX_COUNT];
 } exe_t;
+
+typedef enum {
+  F_NONE,
+  F_ASM,
+  F_OBJ,
+  F_EXE,
+  F_SO,
+  F_MEM,
+  F_BIN,
+  F_FONT,
+} file_kind_t;
+
+void print_file_kind_list();
+char *file_kind_to_string(file_kind_t kind);
+file_kind_t parse_argument_file_kind(char *arg);
+file_kind_t file_deduce_kind(char *filename);
 
 void symbol_list_dump(symbol_t *symbols, uint16_t count);
 void symbols_list_decode(symbol_t *symbols, uint16_t *count, FILE *file);
