@@ -22,7 +22,6 @@
  *
  * Macros:
  *
- *
  * ARG_PARSE: iterate argv untill it's NULL
  * ARG_PARSE_STRING_ARG(short, long, str):
  *   checks if *argv is "-"short or "--"long

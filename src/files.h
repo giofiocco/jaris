@@ -9,11 +9,10 @@
 #define EXTERN_MAX_COUNT       32
 #define RELOC_MAX_COUNT        128
 #define INTERN_RELOC_MAX_COUNT 128
-#define DYNAMIC_MAX_COUNT      4
-#define SYMBOL_MAX_COUNT       256
+#define DYNAMIC_MAX_COUNT      2
+#define SYMBOL_MAX_COUNT       128
 #define FILE_NAME_MAX_LEN      64
-
-#define MAGIC_NUMBER_MAX_LEN 5
+#define MAGIC_NUMBER_MAX_LEN   (4 + 1)
 
 typedef struct {
   uint16_t where;

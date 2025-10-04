@@ -25,31 +25,31 @@ void print_file_kind_list() {
 
 char *file_kind_to_string(file_kind_t kind) {
   switch (kind) {
-    case F_NONE: return "F_NONE";
-    case F_ASM: return "F_ASM";
-    case F_OBJ: return "F_OBJ";
-    case F_EXE: return "F_EXE";
-    case F_SO: return "F_SO";
-    case F_MEM: return "F_MEM";
-    case F_BIN: return "F_BIN";
-    case F_FONT: return "F_FONT";
+    case F_NONE: return "none";
+    case F_ASM: return "asm";
+    case F_OBJ: return "obj";
+    case F_EXE: return "exe";
+    case F_SO: return "so";
+    case F_MEM: return "mem";
+    case F_BIN: return "bin";
+    case F_FONT: return "font";
   }
   assert(0);
 }
 
 file_kind_t parse_argument_file_kind(char *arg) {
   assert(arg);
-  if (strcmp("--asm ", arg) == 0) {
+  if (strcmp("--asm", arg) == 0) {
     return F_ASM;
-  } else if (strcmp("--obj ", arg) == 0) {
+  } else if (strcmp("--obj", arg) == 0) {
     return F_OBJ;
-  } else if (strcmp("--exe ", arg) == 0) {
+  } else if (strcmp("--exe", arg) == 0) {
     return F_EXE;
-  } else if (strcmp("--so  ", arg) == 0) {
+  } else if (strcmp("--so", arg) == 0) {
     return F_SO;
-  } else if (strcmp("--mem ", arg) == 0) {
+  } else if (strcmp("--mem", arg) == 0) {
     return F_MEM;
-  } else if (strcmp("--bin ", arg) == 0) {
+  } else if (strcmp("--bin", arg) == 0) {
     return F_BIN;
   } else if (strcmp("--font", arg) == 0) {
     return F_FONT;
@@ -64,7 +64,7 @@ file_kind_t file_deduce_kind(char *filename) {
     eprintf("cannot deduce file kind from stdin");
   }
 
-  if (strcmp(filename + len - 2, ".o") == 0) {
+  if (strcmp(filename + len - 4, ".asm") == 0) {
     return F_ASM;
   } else if (strcmp(filename + len - 2, ".o") == 0) {
     return F_OBJ;

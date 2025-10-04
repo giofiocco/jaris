@@ -32,7 +32,7 @@ while (<$file>) {
 
     system "printf \".PS\n$body.PE\" | \
     groff -p -ms -Tps | \
-    magick -density 250 - -colorspace Gray -trim -strip $filename";
+    magick -colorspace LinearGray -density 100 - -trim -strip $filename";
     $i += 1;
 
     $collect = 0;

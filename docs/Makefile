@@ -5,6 +5,9 @@ aleph.pdf: aleph.typ aleph_images.pl aleph_images.roff
 	perl aleph_images.pl
 	typst c $< --root ..
 
+stdlibdoc.pdf: stdlibdoc.typ ../asm/Makefile
+	typst c $< --root ..
+
 %.pdf: %.typ
 	typst c $< --root ..
 

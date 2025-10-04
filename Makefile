@@ -8,7 +8,7 @@ ASSEMBLE=src/build/libassemble.a
 
 .PHONY: all asm docs clean cleanall
 all: $(TARGETS) asm docs
-asm: font
+asm:
 	make -C asm all
 docs:
 	make -C docs all
@@ -43,7 +43,7 @@ font: encodefont
 encodefont: src/encodefont.c
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
-%.mem.bin: %.mem asm encodemem
+%.mem.bin: %.mem asm font encodemem
 	./encodemem $<
 
 src/build/%.o: src/%.c src/%.h | src/build/
