@@ -10,16 +10,6 @@
 #include "files.h"
 #include "instructions.h"
 
-typedef enum {
-  KUNSET,
-  KOBJ,
-  KEXE,
-  KSO,
-  KMEM,
-  KBIN,
-  KFONT,
-} kind_t;
-
 void print_disassemble(uint8_t *code, uint16_t code_size, symbol_t *symbols, uint16_t symbols_count) {
   int count = 0;
   bytecode_t *bcs = disassemble(code, code_size, symbols, symbols_count, &count);
@@ -185,44 +175,20 @@ void print_help() {
   printf("Usage: inspect [kind] [options] <input>\n\n"
          "Options:\n"
          "  -d           print the disassembled code\n"
-         "  -h | --help  show help message\n"
-         "\nKinds:\n"
-         "if the kind is not specified it's deduced from the file extension\n\n"
-         "  --obj   analyse the input as an obj\n"
-         "  --exe   analyse the input as an exe\n"
-         "  --so    analyse the input as a so\n"
-         "  --mem   analyse the input as a memory bin\n"
-         "  --bin   analyse the input as a bin (just plain code)\n"
-         "  --font  analyse the input as a font\n"
-         "\n"
-         "if input is '-' it read from the stdin\n");
+         "  -h | --help  show help message\n");
+  print_file_kind_list();
+  printf("\nif input is '-' it read from the stdin\n");
 }
 
 int main(int argc, char **argv) {
   char *path = NULL;
-  int kind = KUNSET;
+  file_kind_t kind = F_NONE;
   int disassemble = 0;
 
   ARG_PARSE {
     ARG_PARSE_HELP_ARG                                       //
         else ARG_PARSE_FLAG("d", "disassemble", disassemble) //
-        else if (ARG_LFLAG("obj")) {
-      kind = KOBJ;
-    }
-    else if (ARG_LFLAG("exe")) {
-      kind = KEXE;
-    }
-    else if (ARG_LFLAG("so")) {
-      kind = KSO;
-    }
-    else if (ARG_LFLAG("mem")) {
-      kind = KMEM;
-    }
-    else if (ARG_LFLAG("bin")) {
-      kind = KBIN;
-    }
-    else if (ARG_LFLAG("font")) {
-      kind = KFONT;
+        else if (kind == F_NONE && (kind = parse_argument_file_kind(*argv))) {
     }
     else {
       if (path != NULL) {
@@ -236,71 +202,19 @@ int main(int argc, char **argv) {
     eprintf("file not provided");
   }
 
-  unsigned int len = strlen(path);
-
-  if (strcmp(path, "-") == 0 && kind == KUNSET) {
-    eprintf("cannot deduce file kind from stdin");
-  }
-
-  if (kind == KUNSET) {
-    if (strcmp(path + len - 2, ".o") == 0) {
-      kind = KOBJ;
-    } else if (strcmp(path + len - 4, ".exe") == 0) {
-      kind = KEXE;
-    } else if (strcmp(path + len - 3, ".so") == 0) {
-      kind = KSO;
-    } else if (strcmp(path + len - 5, ".font") == 0) {
-      kind = KFONT;
-    } else {
-      assert(strcmp(path, "-") != 0);
-      FILE *file = fopen(path, "rb");
-      if (!file) {
-        eprintf("cannot open file '%s': '%s'", path, strerror(errno));
-      }
-
-#define MAGIC_NUMBER_MAX_LEN 5
-      char magic_number[MAGIC_NUMBER_MAX_LEN + 1] = {0};
-      assert(fread(magic_number, 1, MAGIC_NUMBER_MAX_LEN, file) == MAGIC_NUMBER_MAX_LEN);
-      assert(fclose(file) == 0);
-
-      if (sv_eq((sv_t){magic_number, 3}, sv_from_cstr("EXE"))) {
-        kind = KEXE;
-      } else if (sv_eq((sv_t){magic_number, 3}, sv_from_cstr("OBJ"))) {
-        kind = KOBJ;
-      } else if (sv_eq((sv_t){magic_number, 2}, sv_from_cstr("SO"))) {
-        kind = KSO;
-      } else if (sv_eq((sv_t){magic_number, 4}, sv_from_cstr("FONT"))) {
-        kind = KFONT;
-      } else {
-        eprintf("cannot deduce file kind from '%s'", path);
-      }
-    }
+  if (kind == F_NONE) {
+    kind = file_deduce_kind(path);
   }
 
   switch (kind) {
-    case KUNSET:
-      assert(0);
-      break;
-    case KOBJ:
-      inspect_obj(path, disassemble);
-      break;
-    case KEXE:
-      inspect_exe(path, disassemble);
-      break;
-    case KSO:
-      inspect_so(path, disassemble);
-      break;
-    case KMEM:
-      inspect_mem(path);
-      break;
-    case KBIN:
-      inspect_bin(path, disassemble);
-      break;
-    case KFONT:
-      inspect_font(path);
-      break;
-    default:
-      assert(0 && "UNREACHABLE");
+    case F_NONE: assert(0); break;
+    case F_ASM: eprintf("unvalid file kind: asm"); break;
+    case F_OBJ: inspect_obj(path, disassemble); break;
+    case F_EXE: inspect_exe(path, disassemble); break;
+    case F_SO: inspect_so(path, disassemble); break;
+    case F_MEM: inspect_mem(path); break;
+    case F_BIN: inspect_bin(path, disassemble); break;
+    case F_FONT: inspect_font(path); break;
   }
 
   return 0;
