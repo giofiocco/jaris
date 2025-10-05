@@ -233,6 +233,26 @@ instruction_stat_t instruction_stat(instruction_t instruction) {
 }
 // clang-format on
 
+char *bytecode_kind_to_string(bytecode_kind_t kind) {
+  switch (kind) {
+    case BNONE: return "BNONE";
+    case BINST: return "BINST";
+    case BINSTHEX: return "BINSTHEX";
+    case BINSTHEX2: return "BINSTHEX2";
+    case BINSTLABEL: return "BINSTLABEL";
+    case BINSTRELLABEL: return "BINSTRELLABEL";
+    case BHEX: return "BHEX";
+    case BHEX2: return "BHEX2";
+    case BSTRING: return "BSTRING";
+    case BSETLABEL: return "BSETLABEL";
+    case BGLOBAL: return "BGLOBAL";
+    case BEXTERN: return "BEXTERN";
+    case BALIGN: return "BALIGN";
+    case BDB: return "BDB";
+  }
+  assert(0);
+}
+
 void bytecode_dump(bytecode_t bc) {
   switch (bc.kind) {
     case BNONE:

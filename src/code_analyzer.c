@@ -56,29 +56,40 @@ int search_label(context_t *context, char *label) {
   return -1;
 }
 
-void path(context_t *context, int starting_node) {
+void path(context_t *context, int starting_node, int sp) {
   assert(context);
   ASSERT_IS_NODE(starting_node);
+  assert(sp >= 0);
 
   for (int i = starting_node; i < context->node_count;) {
     node_t *node = &context->nodes[i];
     if (node->visited) {
+      if (node->sp != sp) {
+        fprintf(stderr, "ERROR: expected sp to be %d, found %d, at node %d: ", node->sp, sp, i);
+        bytecode_dump(node->bc);
+      }
       return;
     }
     node->visited = 1;
+    node->sp = sp;
 
     if (node->next >= 0) {
       assert(node->next < context->node_count);
 
     } else if (node->branch >= 0) {
       assert(node->branch < context->node_count);
-      path(context, node->branch);
+      path(context, node->branch, sp);
 
     } else if ((node->bc.kind == BINSTLABEL && node->bc.inst == CALL && strcmp(node->bc.arg.string, "exit") == 0)
                || node->bc.inst == HLT
                || node->bc.inst == JMPA
-               || node->bc.inst == JMPAR
-               || node->bc.inst == RET) {
+               || node->bc.inst == JMPAR) {
+      return;
+
+    } else if (node->bc.inst == RET) {
+      if (node->sp != 0) {
+        fprintf(stderr, "ERROR: expected RET sp to be 0, found %d, at node %d\n", node->sp, i);
+      }
       return;
 
     } else if (node->bc.inst == JMPR
@@ -114,9 +125,12 @@ void path(context_t *context, int starting_node) {
       assert(0 <= jmp && jmp < context->node_count);
       if (node->bc.inst == JMPR || node->bc.inst == JMP) {
         node->next = jmp;
+      } else if (node->bc.inst == CALLR || node->bc.inst == CALL) {
+        node->branch = jmp;
+        path(context, jmp, 0);
       } else {
         node->branch = jmp;
-        path(context, jmp);
+        path(context, jmp, sp);
       }
     }
 
@@ -125,6 +139,12 @@ void path(context_t *context, int starting_node) {
     }
 
     i = node->next;
+
+    if (node->bc.inst == PUSHA || node->bc.inst == PUSHB || node->bc.inst == INCSP) {
+      sp += 2;
+    } else if (node->bc.inst == POPA || node->bc.inst == POPB || node->bc.inst == DECSP) {
+      sp -= 2;
+    }
   }
 }
 
@@ -282,7 +302,7 @@ void analyze_asm(context_t *context, char *filename) {
   for (int i = 0; i < global_count; ++i) {
     int node = search_label(context, globals[i]);
     ASSERT_IS_NODE(node);
-    path(context, node);
+    path(context, node, 0);
   }
 }
 
@@ -312,7 +332,7 @@ void analyze_obj(context_t *context, char *filename) {
   for (int i = 0; i < obj.global_count; ++i) {
     int node = search_label(context, obj.symbols[obj.globals[i]].image);
     assert(node != -1);
-    path(context, node);
+    path(context, node, 0);
   }
 }
 
@@ -357,7 +377,7 @@ void analyze_exe(context_t *context, char *filename) {
     }
   }
 
-  path(context, 0);
+  path(context, 0, 0);
 }
 
 void analyze_so(context_t *context, char *filename) {
@@ -389,7 +409,7 @@ void analyze_so(context_t *context, char *filename) {
   for (int i = 0; i < so.global_count; ++i) {
     int node = search_label(context, so.symbols[so.globals[i]].image);
     assert(node != -1);
-    path(context, node);
+    path(context, node, 0);
   }
 }
 
@@ -411,7 +431,7 @@ void analyze_bin(context_t *context, char *filename) {
 
   analyze_code(context, size, code, 0, NULL);
 
-  path(context, 0);
+  path(context, 0, 0);
 }
 
 void dump_dot_digraph(context_t *context, char *filename) {
@@ -469,15 +489,15 @@ void dump_dot_digraph(context_t *context, char *filename) {
 }
 
 void print_help() {
-  printf("Usage: inspect [kind] [options] <input>\n\n"
+  printf("Usage: code_analyze [options] [kinds] <input>\n\n"
          "Options:\n"
-         "  -d                  print the disassembled code\n"
          " --stdlib-path <str>  set path of stdlib\n"
          "  --dot <path>        path of output dot file\n"
          "  --text              print the textual rappresentation of the nodes\n"
+         "  --sp                check stack pointers\n"
          "  -h | --help         show help message\n");
   print_file_kind_list();
-  printf("kinds allowed are: asm, obj, exe, so\n");
+  printf("kinds allowed are: asm, obj, exe, so, bin\n");
 }
 
 int main(int argc, char **argv) {
