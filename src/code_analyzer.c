@@ -11,10 +11,12 @@
 #include "../mystb/errors.h"
 
 #define MAX_NODE_COUNT  4096
-#define MAX_LABEL_COUNT 128
+#define MAX_LABEL_COUNT 1024
 #define MAX_CODE_SIZE   4096
 
 char *stdlib_path = "asm/bin/stdlib";
+
+#define ASSERT_IS_NODE(i__) assert(0 <= i__ && i__ < context->node_count)
 
 typedef struct {
   int visited;
@@ -54,33 +56,29 @@ int search_label(context_t *context, char *label) {
   return -1;
 }
 
-void path(context_t *context, int starting_node, int sp) {
+void path(context_t *context, int starting_node) {
   assert(context);
-  assert(0 <= starting_node && starting_node < context->node_count);
+  ASSERT_IS_NODE(starting_node);
 
   for (int i = starting_node; i < context->node_count;) {
     node_t *node = &context->nodes[i];
     if (node->visited) {
-      if (node->sp != sp) {
-        printf("ERROR: expected sp to be 0 at node %i:\t", i);
-        bytecode_dump(node->bc);
-      }
       return;
     }
     node->visited = 1;
-    node->sp = sp;
 
     if (node->next >= 0) {
       assert(node->next < context->node_count);
 
     } else if (node->branch >= 0) {
       assert(node->branch < context->node_count);
-      path(context, node->branch, sp);
+      path(context, node->branch);
 
     } else if ((node->bc.kind == BINSTLABEL && node->bc.inst == CALL && strcmp(node->bc.arg.string, "exit") == 0)
                || node->bc.inst == HLT
                || node->bc.inst == JMPA
-               || node->bc.inst == JMPAR) {
+               || node->bc.inst == JMPAR
+               || node->bc.inst == RET) {
       return;
 
     } else if (node->bc.inst == JMPR
@@ -118,14 +116,8 @@ void path(context_t *context, int starting_node, int sp) {
         node->next = jmp;
       } else {
         node->branch = jmp;
-        path(context, jmp, sp);
+        path(context, jmp);
       }
-
-    } else if (node->bc.inst == RET) {
-      if (sp != 0) {
-        fprintf(stderr, "ERROR: expected sp to be 0 for RET at node %d\n", i);
-      }
-      return;
     }
 
     if (node->next < 0) {
@@ -133,19 +125,12 @@ void path(context_t *context, int starting_node, int sp) {
     }
 
     i = node->next;
-
-    if (node->bc.inst == PUSHA || node->bc.inst == PUSHB || node->bc.inst == DECSP) {
-      sp += 2;
-    } else if (node->bc.inst == POPA || node->bc.inst == POPB || node->bc.inst == INCSP) {
-      sp -= 2;
-    }
   }
 }
 
 void analyze_code(context_t *context, uint16_t code_size, uint8_t *code, uint16_t symbol_count, symbol_t *symbols) {
   assert(context);
   assert(code);
-  assert(symbols);
 
   bytecode_t bc = {0};
   for (int ip = 0; ip < code_size;) {
@@ -213,12 +198,92 @@ void analyze_code(context_t *context, uint16_t code_size, uint8_t *code, uint16_
     assert(context->ip_nodes[node_ip] == -1);
     context->ip_nodes[node_ip] = label_node == -1 ? context->node_count - 1 : label_node;
   }
+
+  for (int i = 0; i < symbol_count; ++i) {
+    if (symbols[i].pos == 0xFFFF) {
+      continue;
+    }
+    assert(context->label_count + 1 < MAX_LABEL_COUNT);
+    strcpy(context->labels[context->label_count], symbols[i].image);
+    assert(context->ip_nodes[symbols[i].pos] != -1);
+    context->labels_node[context->label_count] = context->ip_nodes[symbols[i].pos];
+    context->label_count++;
+
+    for (int j = 0; j < symbols[i].reloc_count; ++j) {
+      if (context->ip_nodes[symbols[i].relocs[j] - 1] == -1) {
+        continue;
+      }
+      node_t *node = &context->nodes[context->ip_nodes[symbols[i].relocs[j] - 1]];
+      if (node->bc.kind == BINSTHEX2) {
+        node->bc.kind = BINSTLABEL;
+        strncpy(node->bc.arg.string, symbols[i].image, LABEL_MAX_LEN);
+      }
+    }
+    for (int j = 0; j < symbols[i].relreloc_count; ++j) {
+      if (context->ip_nodes[symbols[i].relrelocs[j] - 1] == -1) {
+        continue;
+      }
+      node_t *node = &context->nodes[context->ip_nodes[symbols[i].relrelocs[j] - 1]];
+      if (node->bc.kind == BINSTHEX2) {
+        node->bc.kind = BINSTRELLABEL;
+        strncpy(node->bc.arg.string, symbols[i].image, LABEL_MAX_LEN);
+      }
+    }
+  }
 }
 
 void analyze_asm(context_t *context, char *filename) {
   assert(context);
   assert(filename);
-  assert(0 && "TODO");
+
+  FILE *file = fopen(filename, "r");
+  if (!file) {
+    error_fopen(filename);
+  }
+  assert(fseek(file, 0, SEEK_END) == 0);
+  int size = ftell(file);
+  assert(fseek(file, 0, SEEK_SET) == 0);
+  char buffer[size];
+  assert((int)fread(buffer, 1, size, file) == size);
+  assert(fclose(file) == 0);
+
+  char globals[GLOBAL_MAX_COUNT][LABEL_MAX_LEN] = {0};
+  int global_count = 0;
+
+  asm_tokenizer_t tok = {0};
+  asm_tokenizer_init(&tok, buffer, filename, 0);
+
+  bytecode_t bc = {0};
+  while ((bc = asm_parse_bytecode(&tok)).kind != BNONE) {
+    if (bc.kind == BEXTERN) {
+      continue;
+    } else if (bc.kind == BGLOBAL) {
+      assert(global_count + 1 < GLOBAL_MAX_COUNT);
+      strncpy(globals[global_count++], bc.arg.string, LABEL_MAX_LEN);
+      continue;
+    }
+
+    assert(context->node_count + 1 < MAX_NODE_COUNT);
+    context->nodes[context->node_count++] = (node_t){
+        .visited = 0,
+        .sp = -1,
+        .bc = bc,
+        .next = -1,
+        .branch = -1,
+    };
+
+    if (bc.kind == BSETLABEL) {
+      assert(context->label_count + 1 < MAX_LABEL_COUNT);
+      strncpy(context->labels[context->label_count], bc.arg.string, LABEL_MAX_LEN);
+      context->labels_node[context->label_count++] = context->node_count - 1;
+    }
+  }
+
+  for (int i = 0; i < global_count; ++i) {
+    int node = search_label(context, globals[i]);
+    ASSERT_IS_NODE(node);
+    path(context, node);
+  }
 }
 
 void analyze_obj(context_t *context, char *filename) {
@@ -244,42 +309,10 @@ void analyze_obj(context_t *context, char *filename) {
     }
   }
 
-  for (int i = 0; i < obj.symbol_count; ++i) {
-    if (obj.symbols[i].pos == 0xFFFF) {
-      continue;
-    }
-    assert(context->label_count + 1 < MAX_LABEL_COUNT);
-    strcpy(context->labels[context->label_count], obj.symbols[i].image);
-    assert(context->ip_nodes[obj.symbols[i].pos] != -1);
-    context->labels_node[context->label_count] = context->ip_nodes[obj.symbols[i].pos];
-    context->label_count++;
-
-    for (int j = 0; j < obj.symbols[i].reloc_count; ++j) {
-      if (context->ip_nodes[obj.symbols[i].relocs[j] - 1] == -1) {
-        continue;
-      }
-      node_t *node = &context->nodes[context->ip_nodes[obj.symbols[i].relocs[j] - 1]];
-      if (node->bc.kind == BINSTHEX2) {
-        node->bc.kind = BINSTLABEL;
-        strncpy(node->bc.arg.string, obj.symbols[i].image, LABEL_MAX_LEN);
-      }
-    }
-    for (int j = 0; j < obj.symbols[i].relreloc_count; ++j) {
-      if (context->ip_nodes[obj.symbols[i].relrelocs[j] - 1] == -1) {
-        continue;
-      }
-      node_t *node = &context->nodes[context->ip_nodes[obj.symbols[i].relrelocs[j] - 1]];
-      if (node->bc.kind == BINSTHEX2) {
-        node->bc.kind = BINSTRELLABEL;
-        strncpy(node->bc.arg.string, obj.symbols[i].image, LABEL_MAX_LEN);
-      }
-    }
-  }
-
   for (int i = 0; i < obj.global_count; ++i) {
     int node = search_label(context, obj.symbols[obj.globals[i]].image);
     assert(node != -1);
-    path(context, node, 0);
+    path(context, node);
   }
 }
 
@@ -324,39 +357,7 @@ void analyze_exe(context_t *context, char *filename) {
     }
   }
 
-  for (int i = 0; i < exe.symbol_count; ++i) {
-    if (exe.symbols[i].pos == 0xFFFF) {
-      continue;
-    }
-    assert(context->label_count + 1 < MAX_LABEL_COUNT);
-    strcpy(context->labels[context->label_count], exe.symbols[i].image);
-    assert(context->ip_nodes[exe.symbols[i].pos] != -1);
-    context->labels_node[context->label_count] = context->ip_nodes[exe.symbols[i].pos];
-    context->label_count++;
-
-    for (int j = 0; j < exe.symbols[i].reloc_count; ++j) {
-      if (context->ip_nodes[exe.symbols[i].relocs[j] - 1] == -1) {
-        continue;
-      }
-      node_t *node = &context->nodes[context->ip_nodes[exe.symbols[i].relocs[j] - 1]];
-      if (node->bc.kind == BINSTHEX2) {
-        node->bc.kind = BINSTLABEL;
-        strncpy(node->bc.arg.string, exe.symbols[i].image, LABEL_MAX_LEN);
-      }
-    }
-    for (int j = 0; j < exe.symbols[i].relreloc_count; ++j) {
-      if (context->ip_nodes[exe.symbols[i].relrelocs[j] - 1] == -1) {
-        continue;
-      }
-      node_t *node = &context->nodes[context->ip_nodes[exe.symbols[i].relrelocs[j] - 1]];
-      if (node->bc.kind == BINSTHEX2) {
-        node->bc.kind = BINSTRELLABEL;
-        strncpy(node->bc.arg.string, exe.symbols[i].image, LABEL_MAX_LEN);
-      }
-    }
-  }
-
-  path(context, 0, 0);
+  path(context, 0);
 }
 
 void analyze_so(context_t *context, char *filename) {
@@ -372,22 +373,23 @@ void analyze_so(context_t *context, char *filename) {
 
   analyze_code(context, so.code_size, so.code, so.symbol_count, so.symbols);
 
-  for (int i = 0; i < so.reloc_count; ++i) {
-    int from = context->ip_nodes[so.relocs[i].where - 1]; // to get the JMP instead of the addr
-    assert(from >= 0);
-    int to = context->ip_nodes[so.relocs[i].what];
-    assert(to >= 0);
-    assert(context->nodes[from].branch == -1);
-    if (context->nodes[from].bc.inst == JMP || context->nodes[from].bc.inst == CALL) {
-      context->nodes[from].next = to;
-    }
-  }
-  // TODO: TBD
+  // for (int i = 0; i < so.reloc_count; ++i) {
+  //   int from = context->ip_nodes[so.relocs[i].where - 1]; // to get the JMP instead of the addr
+  //   ASSERT_IS_NODE(from);
+  //   int to = context->ip_nodes[so.relocs[i].what];
+  //   ASSERT_IS_NODE(to);
+  //   assert(context->nodes[from].branch == -1);
+  //   if (context->nodes[from].bc.inst == JMP || context->nodes[from].bc.inst == CALL) {
+  //     context->nodes[from].next = to;
+  //   }
+  // }
+
+  //  TODO: TBD
 
   for (int i = 0; i < so.global_count; ++i) {
     int node = search_label(context, so.symbols[so.globals[i]].image);
     assert(node != -1);
-    path(context, node, 0);
+    path(context, node);
   }
 }
 
@@ -409,7 +411,7 @@ void analyze_bin(context_t *context, char *filename) {
 
   analyze_code(context, size, code, 0, NULL);
 
-  path(context, 0, 0);
+  path(context, 0);
 }
 
 void dump_dot_digraph(context_t *context, char *filename) {
@@ -421,7 +423,7 @@ void dump_dot_digraph(context_t *context, char *filename) {
     error_fopen(filename);
   }
 
-  fprintf(file, "digraph {\n\tsplines = ortho; overlap = false;\n\tnode [shape = box];\n");
+  fprintf(file, "digraph {\n\tsplines = ortho;\n\tnode [shape = box];\n");
 
   for (int i = 0; i < context->node_count; ++i) {
     node_t *node = &context->nodes[i];
