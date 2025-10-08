@@ -58,6 +58,7 @@ block_map_list: db 32 -- 2 bytes per map * 16 pages (upper half)
 
 -- [u16 count, _] -> [u8* ptr, _]
 -- allocate `count` contiguous blocks (128 bytes wide) in a page reserved for it
+-- crash [0xDFFA, _] if no more pages
 -- ERROR:
 -- [0, count] if invalid alloc count (not 0 < count <= 16)
 alloc:
@@ -129,5 +130,4 @@ invalid_alloc_count:
   RET
 
 no_more_pages:
-  RAM_A 0xFFFF
-  RET
+  RAM_A 0xDFFA HLT

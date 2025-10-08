@@ -115,6 +115,7 @@ search_process:
   SP_A RAM_BL 0x08 SUM PUSHA -- sp before return ptr
   PEEKAR 0x06 A_B rB_A RAM_BL SP_offset SUM A_B POPA A_rB -- process_ptr->parent_process->SP = sp before return ptr
 
+  -- ^ new_sp process_ptr ram_start argv
   POPA INCSP POPB -- [new_sp, ram_start]
   A_SP
   B_A POPB -- [ram_start, argv]
@@ -132,7 +133,7 @@ allocate_page:
   RAM_AL 0x00 PUSHA
   RAM_A 0x8000 PUSHA
   RAM_B iup_ptr rB_A
-  INCA JMPRZ $allocate_page2 -- if (iup == 0xFFFF) goto allocate_page2 
+  INCA JMPRZ $allocate_page2 -- if (iup == 0xFFFF) goto allocate_page2
   DECA
   SHL
 search_page:
@@ -148,28 +149,8 @@ search_page:
   POPA RET
 
 allocate_page2:
-  RAM_AL 0x00 PUSHA
-  RAM_A 0x8000 PUSHA
-  RAM_B iup_ptr rB_A
-  INCA JMPRZ $no_more_space -- if (iup == 0xFFFF) goto no_more_space 
-  DECA
-  SHL
-search_page2:
-  -- ^ mask page_start [iup, _]
-  PUSHA
-  PEEKAR 0x04 SHR PUSHAR 0x04
-  PEEKAR 0x06 RAM_B page_size SUM PUSHAR 0x06
-  POPA SHL JMPRC $search_page2
-
-  RAM_B iup2_ptr rB_A POPB SUM
-  RAM_B iup2_ptr A_rB
-
-  POPA RET
-
-no_more_space:
-  -- ^ _ _
-  RAM_A 0xFFFE
-  INCSP INCSP RET
+  -- TODO: to implement
+  RAM_A 0xFFFE HLT
 
 not_stdlib:
   -- ^ dynamic_count ram_start argv

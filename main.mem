@@ -10,7 +10,6 @@ newfile cat fromfile asm/bin/cat
 newfile test_font fromfile asm/bin/test_font
 newfile echo fromfile asm/bin/echo
 newfile brainfuck fromfile asm/bin/brainfuck
-newfile expr fromfile asm/bin/expr
 newfile bfjit fromfile asm/bin/bfjit
 newfile tee fromfile asm/bin/tee
 newfile stack fromfile asm/bin/stack

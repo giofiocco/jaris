@@ -274,12 +274,17 @@ void obj_check(obj_t *obj, int debug_info) {
   assert(obj);
 
   uint8_t is_extern[obj->symbol_count];
-  memset(is_extern, 0, obj->symbol_count * sizeof(is_extern[0]));
+  memset(is_extern, 0, sizeof(is_extern));
 
   for (int i = 0; i < obj->extern_count; ++i) {
-    assert(obj->symbols[obj->externs[i]].pos == 0xFFFF);
-    assert(obj->symbols[obj->externs[i]].relreloc_count == 0);
+    symbol_t *s = &obj->symbols[obj->externs[i]];
+    assert(s->pos == 0xFFFF);
+    assert(s->relreloc_count == 0);
     is_extern[obj->externs[i]] = 1;
+    for (int j = 0; j < s->reloc_count; ++j) {
+      obj->code[s->relocs[j]] = 0xFF;
+      obj->code[s->relocs[j] + 1] = 0xFF;
+    }
   }
   for (int i = 0; i < obj->symbol_count; ++i) {
     symbol_t *s = &obj->symbols[i];

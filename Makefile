@@ -8,7 +8,7 @@ ASSEMBLE=src/build/libassemble.a
 
 .PHONY: all asm docs clean cleanall
 all: $(TARGETS) asm docs
-asm:
+asm: assembler linker code_analyzer
 	make -C asm all
 docs:
 	make -C docs all
@@ -31,7 +31,7 @@ encodemem: src/encodemem.c
 inspect: src/inspect.c $(FILES) $(INSTRUCTIONS)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
-sim: src/sim.c main.mem.bin test.mem.bin $(FILES) $(INSTRUCTIONS) $(RUNTIME)
+sim: src/sim.c main.mem.bin $(FILES) $(INSTRUCTIONS) $(RUNTIME)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) -lraylib
 
 code_analyzer: src/code_analyzer.c $(ASSEMBLE) $(FILES)

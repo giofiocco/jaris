@@ -11,6 +11,7 @@ file: db 4
 -- ERRORS:
 -- crash [0, 0xFFFF] if file not found
 -- crash [0, 0xFFFA] if file is not a font
+-- TODO: should be [0xFFFF, 0]?
 load_font:
   RAM_B file CALL open_file
   CMPA JMPRZ $not_found

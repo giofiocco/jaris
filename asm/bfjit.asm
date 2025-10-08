@@ -5,14 +5,13 @@ EXTERN put_char
 EXTERN print_int
 EXTERN get_char
 
-
 ALIGN
 mem: db 16
 mem_end:
 
 ALIGN
-code: db 512
-code_end:
+code: db 511
+code_end: RET
 ALIGN code_ptr: 0x0000
 
 ALIGN

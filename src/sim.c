@@ -5,7 +5,7 @@
 #include "files.h"
 #include "runtime.h"
 
-#define TEST_MEM_PATH "test.mem.bin"
+#define TEST_MEM_PATH "main.mem.bin" // TODO: make test mem
 
 void test() {
   test_t test_ = {0};
