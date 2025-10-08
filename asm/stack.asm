@@ -8,6 +8,8 @@
 -- operations are:
 -- `+` to sum the first 2 numbers
 -- `-` to subtract the first 2 numbers
+-- `*` to multiply the first 2 numbers
+-- `/` to divide the first 2 numbers
 -- `dup` to duplicate the first number
 -- `drop` to remove the first number
 -- `swap` to swap the first 2 numbers
@@ -34,6 +36,8 @@ EXTERN str_eq
 EXTERN str_len
 EXTERN dynamic_array_init
 EXTERN dynamic_array_push16
+EXTERN mul
+EXTERN div
 
 file: db 4
 out_file: db 4
@@ -97,6 +101,29 @@ not_add:
   RAM_B code_size rB_A INCA INCA INCA INCA A_rB
   RET
 not_sub:
+  RAM_B buffer rB_A RAM_BL "*" SUB JMPRNZ $not_mul
+  RAM_A out_file RAM_BL POPA CALL write_u8
+  RAM_BL POPB CALL write_u8
+  RAM_B code_size rB_A INCA INCA A_rB
+  CALLR $unalign
+  RAM_A out_file RAM_BL CALL CALL write_u8
+  RAM_BL 0x00 CALL write_u16
+  RAM_B code_size rB_A INCA INCA INCA A_rB
+  RAM_A mul CALLR $push_dynamic_reloc
+  RET
+not_mul:
+  RAM_B buffer rB_A RAM_BL "/" SUB JMPRNZ $not_div
+  RAM_AL 0xAA HLT
+  RAM_A out_file RAM_BL POPA CALL write_u8
+  RAM_BL POPB CALL write_u8
+  RAM_B code_size rB_A INCA INCA A_rB
+  CALLR $unalign
+  RAM_A out_file RAM_BL CALL CALL write_u8
+  RAM_BL 0x00 CALL write_u16
+  RAM_B code_size rB_A INCA INCA INCA A_rB
+  RAM_A div CALLR $push_dynamic_reloc
+  RET
+not_div:
   RAM_A buffer RAM_B dup_str CALL str_eq CMPA JMPRZ $not_dup
   RAM_A out_file RAM_BL PEEKA CALL write_u8
   RAM_BL PUSHA CALL write_u8
@@ -116,21 +143,22 @@ not_drop:
   RAM_B code_size rB_A INCA INCA INCA INCA A_rB
   RET
 not_swap:
-  RAM_B buffer rB_AL RAM_BL 0x22 SUB JMPRNZ $not_string
-  RAM_A buffer INCA PUSHA CALL str_len DECA
-  -- ^ str [len, _]
-  CMPA JMPRZ $copy_string_end
-copy_string:
-  PUSHA
-  -- ^ len str
-  PEEKAR 0x04 A_B rB_AL PUSHA
-  HLT
-  POPA DECA JMPRNZ $copy_string
-
-copy_string_end:
-  -- ^ str
-  INCSP RET
-not_string:
+--  RAM_B buffer rB_AL RAM_BL 0x22 SUB JMPRNZ $not_string
+--  RAM_AL 0xAA HLT
+--  RAM_A buffer INCA PUSHA CALL str_len DECA
+--  -- ^ str [len, _]
+--  CMPA JMPRZ $copy_string_end
+--copy_string:
+--  PUSHA
+--  -- ^ len str
+--  PEEKAR 0x04 A_B rB_AL PUSHA
+--  HLT
+--  POPA DECA JMPRNZ $copy_string
+--
+--copy_string_end:
+--  -- ^ str
+--  INCSP RET
+--not_string:
   RAM_B buffer rB_A RAM_BL "." SUB JMPRNZ $not_print
   RAM_A out_file RAM_BL POPA CALL write_u8
   inc_code_size
