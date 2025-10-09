@@ -4,24 +4,18 @@ EXTERN execute
 EXTERN load_font
 EXTERN print
 EXTERN mul
+EXTERN shiftr
 
 { page_size 0x0800 }
 
 stdout: db 128
 
 _start:
-  -- ^ [_, tot_size]
-  PUSHB
-  RAM_B 0xF806 RAM_AL 0x00 A_rB
-  RAM_AL 0x00 PUSHA
-  RAM_A 0x8000 PUSHA
-set_used_page_map:
-  -- ^ page_mask used_pages_map tot_size [rest_size, _]
-  PUSHAR 0x06
-  POPB POPA SUM PUSHA -- used_pages_map += page_mask
-  B_A SHR PUSHA -- page_mask >>= 1
-  PEEKAR 0x06 A_B RAM_A page_size SUB JMPRNN $set_used_page_map
-  INCSP POPA RAM_B 0xF806 A_rB INCSP -- set used page map
+  -- ^ [_, tot_size] (os code_size + stdlib code_size)
+  B_A SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR
+  A_B RAM_A 0x8000 CALL shiftr DECA
+  RAM_B 0xFFFF SUB
+  RAM_B 0xF806 A_rB
 
   -- ptr to stdlib set by the bootloader
   RAM_B 0xF802 RAM_A 0xF820 A_rB -- ptr to current process struct
