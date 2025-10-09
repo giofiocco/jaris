@@ -444,7 +444,7 @@ void dump_dot_digraph(context_t *context, char *filename) {
   assert(context);
   assert(filename);
 
-  FILE *file = fopen(filename, "w");
+  FILE *file = strcmp(filename, "-") == 0 ? stdout : fopen(filename, "w");
   if (!file) {
     error_fopen(filename);
   }
