@@ -108,19 +108,20 @@ not_sub:
   CALLR $unalign
   RAM_A out_file RAM_BL CALL CALL write_u8
   RAM_BL 0x00 CALL write_u16
-  RAM_B code_size rB_A INCA INCA INCA A_rB
+  RAM_A out_file RAM_BL PUSHA CALL write_u8
+  RAM_B code_size rB_A INCA INCA INCA INCA A_rB
   RAM_A mul CALLR $push_dynamic_reloc
   RET
 not_mul:
   RAM_B buffer rB_A RAM_BL "/" SUB JMPRNZ $not_div
-  RAM_AL 0xAA HLT
   RAM_A out_file RAM_BL POPA CALL write_u8
   RAM_BL POPB CALL write_u8
   RAM_B code_size rB_A INCA INCA A_rB
   CALLR $unalign
   RAM_A out_file RAM_BL CALL CALL write_u8
   RAM_BL 0x00 CALL write_u16
-  RAM_B code_size rB_A INCA INCA INCA A_rB
+  RAM_A out_file RAM_BL PUSHA CALL write_u8
+  RAM_B code_size rB_A INCA INCA INCA INCA A_rB
   RAM_A div CALLR $push_dynamic_reloc
   RET
 not_div:
@@ -220,8 +221,8 @@ loop_end:
 not_unparsed:
 
   CALLR $unalign
-  RAM_BL RAM_AL CALL write_u16
-  RAM_BL CALL CALL write_u8
+  RAM_A out_file RAM_BL RAM_AL CALL write_u16
+  RAM_A out_file RAM_BL CALL CALL write_u8
   RAM_BL 0x00 CALL write_u16 -- exit placeholder
   -- writing: unalign RAM_AL 0x00 CALL exit
   RAM_B code_size rB_A INCA INCA INCA INCA INCA A_rB
