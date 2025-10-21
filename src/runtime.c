@@ -38,8 +38,16 @@ void cpu_init(cpu_t *cpu, char *mem_path) {
   assert(fread(cpu->MEM, 1, 1 << 19, file) == 1 << 19);
   assert(fclose(file) == 0);
 
-  memcpy(cpu->RAM + 0xFF00, cpu->MEM, 256);
-  cpu->IP = 0xFF00;
+  cpu->IP = 0;
+  cpu->SEC = cpu->IP;
+  for (int i = 0; i < 256; ++i) {
+    cpu->IP = (cpu->IP - 1) & 0xFFFF;
+    uint16_t bus = cpu->IP;
+    cpu->MAR = bus;
+    cpu->NDX = bus & 0xFF;
+    cpu->RAM[cpu->MAR] = cpu->MEM[cpu->NDX | (cpu->SEC << 8)];
+  }
+  assert(cpu->IP == 0xFF00);
 }
 
 uint16_t cpu_read16(cpu_t *cpu, uint16_t at) {

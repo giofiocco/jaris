@@ -39,18 +39,23 @@ line from 2/3 <last [].ne, last [].se> right (BUSL.x - last [].e.x)
 
 Booting Circuit Diagram:
 .PS
-down
-box "counter"
-line 0.1
-box "decoder"
+"CLK" above; line down
+box "1:2"
+move down left
+box "SHR counter"
+for i = 1 to 4 do {
+  line from (i/5 <last box.w,last box.e>,last box.s) down 0.1
+}
 .PE
 
 ALU Diagram:
 .PS
 down
 box "X"
-move 0.5
+arrow 0.25
 box "+"
+arrow <- 0.25
+box "X"
 .PE
 
 X: box "X"
@@ -64,3 +69,47 @@ line from ADDER.e right 0.3
 buffer(0.2)
 line right 0.3
 line from last line.e + (0, -1.2) to last line.e + (0, 0.6)
+
+GPU:
+.PS
+up
+ADDR: box "ADDR"
+line from last box .e right 1 then up
+ATTR: box "ATTR"
+line
+PATT: box "PATT"
+line
+SHR: box "SHR"
+arrow right from last box .e
+box "VGA"
+line from last box .s down
+box "signal"
+BUS: line from ADDR.s-(1,0) up (SHR.n.y-ADDR.s.y)
+line from (BUS,ADDR) to ADDR.w
+line from (BUS,PATT) right
+[ line from last line.e+(0.1,0) up 0.2 then left 0.1 down 0.05 then down 0.3 then down 0.05 right 0.1 then up 0.2 ]
+line from 1/4<last [].ne,last [].se> right then up 0.4 then right (SHR.x-Here.x-0.5)
+line from 3/4<last [].ne,last [].se> right then down 0.4 then right (PATT.x-last [].e.x-0.5)
+line from (1/2<ADDR,ATTR>,ADDR) up
+line from Here+(0,0.17) left 0.1 down 0.17 then right 0.2 then up 0.17 left 0.1
+line up (PATT.y+ATTR.y)/2-Here.y
+.PE
+
+
+Counter:
+.PS
+C: box "counter"
+for i = 1 to 4 do { 
+  line from (i/5 <C.w,C.e>,C.n) up 0.1
+  line from (i/5 <C.w,C.e>,C.s) down 0.1
+}
+"INPUT" above at C.n+(0,0.1)
+"OUTPUT" below at C.s-(0,0.1)
+
+line from (C.e, 1/4<C.n,C.s>) right 0.1
+"RESET" ljust with .w at last line .e
+line from (C.e, 2/4<C.n,C.s>) right 0.1
+"UP/DOWN" ljust with .w at last line .e
+line from (C.e, 3/4<C.n,C.s>) right 0.1
+"UPDATE" ljust with .w at last line .e
+.PE

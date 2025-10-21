@@ -22,9 +22,10 @@ while (<$file>) {
     $filename =~ s/\n//;
     $filename =~ tr/A-Z /a-z_/;
     $filename =~ s/[^a-z0-9_]//g;
-    $filename = "$out_dir/$filename.png";
 
-    printf "$filename\n";
+    # $filename = "$out_dir/$filename.png";
+
+    printf "compiling $filename...\n";
 
     $body =~ s/"/\\"/g;
     $body =~ s/\n/\\n/g;
@@ -32,7 +33,7 @@ while (<$file>) {
 
     system "printf \".PS\n$body.PE\" | \
     groff -p -ms -Tps | \
-    magick -colorspace LinearGray -density 100 - -trim -strip $filename";
+    magick -colorspace LinearGray -density 100 - -trim -strip $out_dir/$filename.png";
     $i += 1;
 
     $collect = 0;
