@@ -109,6 +109,61 @@ void inspect_mem(char *filename) {
   }
 }
 
+void print_dir(uint8_t *sectors, int ptr, int indent) {
+  assert(sectors);
+  uint8_t *sector = sectors + ptr * 256;
+  assert(sector[0] == 'D');
+  assert(sector[1] == 0xFF); // TODO: subsec
+  assert(sector[2] == 0xFF);
+
+  for (int i = 3; sector[i];) {
+    printf("%*.*s", indent, indent, "                                                                                                                                ");
+    while (sector[i] != 0) {
+      putchar(sector[i]);
+      i++;
+    }
+    putchar(' ');
+    int sec = sector[i + 1] | (sector[i + 2] << 8);
+    i += 3;
+    if (sec == 0xFFFF || sec == ptr || i <= 12) {
+      printf("%d\n", sec);
+      continue;
+    }
+
+    if (sectors[sec * 256] == 'D') {
+      printf("\n");
+      print_dir(sectors, sec, indent + 2);
+    } else if (sectors[sec * 256] == 'F') {
+      do {
+        printf("%d ", sec);
+        sec = sectors[sec * 256 + 1] | (sectors[sec * 256 + 2] << 8);
+      } while (sec != 0xFFFF);
+      printf("\n");
+    } else {
+      assert(0);
+    }
+  }
+}
+
+void inspect_mem2(char *filename) {
+  assert(filename);
+
+  uint8_t sectors[2048][256] = {0};
+
+  FILE *file = fopen(filename, "rb");
+  if (!file) {
+    eprintf("cannot open file '%s': %s", filename, strerror(errno));
+  }
+  assert(fread(sectors, 1, 1 << 19, file) == 1 << 19);
+  assert(fclose(file) == 0);
+
+  printf("bootloader\n");
+  printf("  os:     %d\n", sectors[0][252] | (sectors[0][253] << 8));
+  printf("  stdlib: %d\n", sectors[0][254] | (sectors[0][255] << 8));
+  printf("root\n");
+  print_dir((uint8_t *)sectors, 1, 2);
+}
+
 void inspect_font(char *filename) {
   assert(filename);
 
@@ -212,7 +267,7 @@ int main(int argc, char **argv) {
     case F_OBJ: inspect_obj(path, disassemble); break;
     case F_EXE: inspect_exe(path, disassemble); break;
     case F_SO: inspect_so(path, disassemble); break;
-    case F_MEM: inspect_mem(path); break;
+    case F_MEM: inspect_mem2(path); break;
     case F_BIN: inspect_bin(path, disassemble); break;
     case F_FONT: inspect_font(path); break;
   }
