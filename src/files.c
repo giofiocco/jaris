@@ -282,6 +282,7 @@ void obj_check(obj_t *obj, int debug_info) {
     assert(s->relreloc_count == 0);
     is_extern[obj->externs[i]] = 1;
     for (int j = 0; j < s->reloc_count; ++j) {
+      assert(s->relocs[j] % 2 == 0);
       obj->code[s->relocs[j]] = 0xFF;
       obj->code[s->relocs[j] + 1] = 0xFF;
     }
@@ -301,6 +302,7 @@ void obj_check(obj_t *obj, int debug_info) {
     }
     for (int j = 0; j < s->reloc_count; ++j) {
       assert(obj->reloc_count + 1 < RELOC_MAX_COUNT);
+      assert(s->relocs[j] % 2 == 0);
       obj->relocs[obj->reloc_count++] = (reloc_entry_t){s->relocs[j], s->pos};
       obj->code[s->relocs[j]] = s->pos & 0xFF;
       obj->code[s->relocs[j] + 1] = (s->pos >> 8) & 0xFF;

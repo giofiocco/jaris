@@ -1,7 +1,5 @@
 bss section?
 
-use file_deduce_kind in inspect
-
 maybe check that when copying a label ecc it will always be null terminated
 
 allow label alone or hex2 as rel with @allow thing
@@ -10,16 +8,12 @@ conditional call?
 
 remove some micro flags
 
-emit graph
-
-maybe check that reloc where is an even number
-
 test flag in assembler linker etc to test encoding and others
 
 put the exe and exe_state things in link
 and obj things in assemble
 
-max index in directory sector
+max index in directory sector?
 
 # Assembler
 
@@ -33,23 +27,16 @@ max index in directory sector
   - `read 0010` to read from ram
   - `next` to run till the next `HLT`
 
-# encodemem
-
-- pass bootloader stdlib os as args
-
 # bootloader
 
 - add file checking etc
 
 # Inspect
 
-- font file
-- disassemble using debug info
-- read from the stdin
+- os disassemble does not work
 
 # Assemble
 
-- files obj functions in assemble.c
 - bytecode BLABEL
 - error when trying:
 
@@ -61,4 +48,3 @@ arg: "asdf" 0x00
 # execute
 
 - errors instead of crashes (but how do you diff between exitcode or error from execute?)
-- allocate_page not as a function

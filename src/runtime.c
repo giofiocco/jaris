@@ -687,7 +687,6 @@ void test_init(test_t *test, char *mem_path) {
 
 void test_check(test_t *test) {
   assert(test);
-  int fail = 0;
   // for (int i = 0; i < 1 << 16; ++i) {
   //   if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
   //     int j = i;
@@ -717,7 +716,7 @@ void test_check(test_t *test) {
   //   exit(1);
   // }
   // return;
-
+  int fail = 0;
   for (int i = 0; i < 1 << 16; ++i) {
     if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
       if (!fail) {
@@ -735,6 +734,7 @@ void test_check(test_t *test) {
       }
     }
   }
+  fail = 0;
   for (int i = 0; i < 1 << 15; ++i) {
     if (test->test_gpu[i] != test->cpu.ATTRIBUTE_RAM[i]) {
       if (!fail) {
