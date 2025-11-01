@@ -124,6 +124,15 @@ void cpu_dump_stdout(cpu_t *cpu, uint16_t pos) {
   printf("EOF\n");
 }
 
+void cpu_dump_stack(cpu_t *cpu, uint16_t count) {
+  assert(cpu);
+  printf("STACK:\n");
+  for (int i = 0; i < count; ++i) {
+    int at = cpu->SP + 2 * (i + 1);
+    printf("\t%04X   %04X %d\n", at, cpu_read16(cpu, at), cpu_read16(cpu, at));
+  }
+}
+
 void compute_screen(cpu_t *cpu) {
   assert(cpu);
 
@@ -540,6 +549,8 @@ void tick(cpu_t *cpu, bool *running) {
   assert(running);
   assert(control_rom[cpu->IR]);
 
+  cpu->ticks++;
+
   uint16_t bus = 0;
   microcode_t mc = control_rom[cpu->IR | (cpu->SC << 6) | (cpu->FR << (6 + 4))];
 
@@ -953,15 +964,17 @@ void test_run_command(test_t *test, char *command, char *input, char *exe_path, 
 void step_mode(cpu_t *cpu) {
   assert(cpu);
 
+  printf("\nSTEP MODE:\ninput ? or help to see commands\n\n");
+
+  cpu_dump(cpu);
+
   bool running = true;
   microcode_flag_t mc = 0;
 
   char input[512] = {0};
 
-  cpu_dump(cpu);
   printf("> ");
   while (fgets(input, 512, stdin)) {
-    cpu_dump(cpu);
 
     char *arg1 = input;
     strsep(&arg1, " \n");
@@ -974,7 +987,9 @@ void step_mode(cpu_t *cpu) {
              "  end | quit | exit   end step mode\n"
              "  help | ?            print help\n"
              "  read HEX            read u16 at the addr specified\n"
-             "if no command, next instruction is run\n");
+             "  c | continue        continue till the next HLT\n"
+             "  stack INT           print INT items from the stack\n"
+             "if no command, next instruction is run\n\n");
     } else if (strcmp(input, "read") == 0) {
       if (!arg1) {
         printf("ERROR: addr not provided\n");
@@ -987,13 +1002,31 @@ void step_mode(cpu_t *cpu) {
         }
       }
 
+    } else if (strcmp(input, "c") == 0 || strcmp(input, "continue") == 0) {
+      cpu->SC = 0;
+      running = true;
+      do {
+        tick(cpu, &running);
+      } while (running);
+
+    } else if (strcmp(input, "stack") == 0) {
+      if (!arg1) {
+        printf("ERROR: addr not provided\n");
+      } else {
+        uint16_t count = atoi(arg1);
+        cpu_dump_stack(cpu, count);
+      }
+
     } else {
+      cpu->SC = 0;
       running = true;
       do {
         tick(cpu, &running);
         mc = control_rom[cpu->IR | (cpu->SC << 6) | (cpu->FR << (6 + 4))];
       } while (running && !(mc & (1 << SCr)));
     }
+
+    cpu_dump(cpu);
 
     memset(input, 0, sizeof(input));
     printf("> ");

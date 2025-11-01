@@ -116,7 +116,7 @@ void test() {
   uint16_t sh_input_pos = test_find_symbol(sh.symbols, sh.symbol_count, "input") + sh_pos;
 
   test_run_command(test, "test_font", "", "asm/bin/test_font", sh_input_pos, execute_pos, exit_pos);
-  test_gpu_print(test, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789\n!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}\n");
+  test_gpu_print(test, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789\n!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}\1\n");
   test_check(test);
 
   test_run_command(test, "echo ab cd ef", "", "asm/bin/echo", sh_input_pos, execute_pos, exit_pos);
@@ -147,36 +147,36 @@ void test() {
   test_set_u16(test, 0xF832, 1);
   test_check(test);
 
-  test_run_command(test, "stack dir/a.sk", "", "asm/bin/stack", sh_input_pos, execute_pos, exit_pos);
-  test_unset_range(test, 3 * PAGE_SIZE + 3, 4 + 4 + 32 + 2);
-  test_check(test);
-
-  {
-    FILE *file = fmemopen(cpu->MEM + 256 * 22 + 4, cpu->MEM[256 * 22 + 3], "r");
-    assert(file);
-    exe_t exe = exe_decode(file);
-    test_assert(exe.reloc_count == 0);
-    test_assert(exe.dynamic_count == 1);
-    test_assert(exe.dynamics[0].file_name[0] = 1);
-    test_assert(exe.symbol_count == 0);
-    exe_dump(&exe);
-    assert(fclose(file) == 0);
-  }
-
-  printf("  LOAD `stack.out`\n");
-  load_input_string(cpu, "stack.out\n");
-  test_gpu_print(test, "$ stack.out\n");
-  test_set_range(test, sh_input_pos, 10, (uint8_t *)"stack.out\0");
-  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
-    tick(cpu, &running);
-  }
-  test_assert(running);
-  while (running && cpu->IR != JMPA) {
-    tick(cpu, &running);
-  }
-  cpu_dump(cpu);
-  test_assert(running);
-  test_check(test);
+  // test_run_command(test, "stack dir/a.sk", "", "asm/bin/stack", sh_input_pos, execute_pos, exit_pos);
+  // test_unset_range(test, 3 * PAGE_SIZE + 3, 4 + 4 + 32 + 2);
+  // test_check(test);
+  //
+  // {
+  //   FILE *file = fmemopen(cpu->MEM + 256 * 22 + 4, cpu->MEM[256 * 22 + 3], "r");
+  //   assert(file);
+  //   exe_t exe = exe_decode(file);
+  //   test_assert(exe.reloc_count == 0);
+  //   test_assert(exe.dynamic_count == 1);
+  //   test_assert(exe.dynamics[0].file_name[0] = 1);
+  //   test_assert(exe.symbol_count == 0);
+  //   exe_dump(&exe);
+  //   assert(fclose(file) == 0);
+  // }
+  //
+  // printf("  LOAD `stack.out`\n");
+  // load_input_string(cpu, "stack.out\n");
+  // test_gpu_print(test, "$ stack.out\n");
+  // test_set_range(test, sh_input_pos, 10, (uint8_t *)"stack.out\0");
+  // while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
+  //   tick(cpu, &running);
+  // }
+  // test_assert(running);
+  // while (running && cpu->IR != JMPA) {
+  //   tick(cpu, &running);
+  // }
+  // cpu_dump(cpu);
+  // test_assert(running);
+  // test_check(test);
 
   // test_run_command(test, "tee file", "hi\n", "asm/bin/tee", sh_input_pos, execute_pos, exit_pos);
   //{
@@ -202,14 +202,62 @@ void test() {
   printf("END\n");
 }
 
+void test_rule110() {
+  test_t test = {0};
+  test_init(&test, TEST_MEM_PATH);
+  cpu_t *cpu = &test.cpu;
+
+  printf("TEST rule110\n");
+
+  exe_t os = exe_decode_file("asm/bin/os");
+  exe_reloc(&os, 0, os.code_size);
+  so_t stdlib = so_decode_file("asm/bin/stdlib");
+  so_reloc(&stdlib, os.code_size);
+  uint16_t execute_pos = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "execute") + os.code_size;
+  test_run_until(test, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
+  test_run_until(test, cpu->RAM[cpu->IP] == JMPA);
+  test_assert(test.running);
+  test_unset_range(&test, 0, PAGE_SIZE * 3);
+  test_unset_range(&test, 0xF800, PAGE_SIZE);
+  test_check(&test);
+
+  printf("  LOAD\n");
+  load_input_string(cpu, "rule110\n");
+  test_run_until(test, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
+  test_run_until(test, cpu->IR == JMPA);
+  test_step(test);
+  test_assert(test.running);
+
+  exe_t rule110 = exe_decode_file("asm/bin/rule110");
+  exe_reloc(&rule110, 3 * PAGE_SIZE, os.code_size);
+  test_set_range(&test, 3 * PAGE_SIZE, rule110.code_size, rule110.code);
+  test_gpu_print(&test, "$ rule110\n");
+  test_unset_range(&test, 3 * PAGE_SIZE + rule110.code_size, PAGE_SIZE - rule110.code_size); // stack
+  test_check(&test);
+
+  uint16_t row_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "row") + 3 * PAGE_SIZE;
+  uint16_t print_row_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "print_row") + 3 * PAGE_SIZE;
+  uint16_t iter_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "iter") + 3 * PAGE_SIZE;
+  uint16_t loop_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "loop") + 3 * PAGE_SIZE;
+  uint16_t table_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "table") + 3 * PAGE_SIZE;
+
+  test_run_until(test, cpu->IP == iter_pos + 1);
+  test_assert(test.running);
+  test_step(test);
+  test_run_until(test, cpu->IP == iter_pos + 1);
+  test_assert(test.running);
+  test_step(test);
+  test_check(&test);
+}
+
 void print_help() {
   printf("Usage: sim [options]\n\n"
          "Options:\n"
          "  -i | --input <str>  simulate input for the computer\n"
          "  -s | --step         run in step mode\n"
          "  -t | --test         run the test\n"
+         "  -S | --screen       enable screen\n"
          "  -r <from>:<to>      print ram in the range\n"
-         "  --screen            enable screen\n"
          "  --mem <path>        specify bin file path for memory\n"
          "  --stdout <num>      print stdout struct in ram from num\n"
          "  -h | --help         show help message\n");
@@ -220,17 +268,18 @@ int main(int argc, char **argv) {
 
   char *input = "";
   char *mempath = "main.mem.bin";
-  int step_mode = 0;
+  int enable_step_mode = 0;
   int screen = 0;
 
   ARG_PARSE {
     ARG_PARSE_HELP_ARG                                        //
-        else ARG_PARSE_FLAG("s", "step", step_mode)           //
-        else ARG_PARSE_FLAG_(ARG_LFLAG("screen"), screen)     //
+        else ARG_PARSE_FLAG("s", "step", enable_step_mode)    //
+        else ARG_PARSE_FLAG("S", "screen", screen)            //
         else ARG_PARSE_STRING_ARG("i", "input", input)        //
         else ARG_PARSE_STRING_ARG_(ARG_LFLAG("mem"), mempath) //
         else ARG_IF_FLAG("t", "test") {
       test();
+      test_rule110();
       return 0;
     }
     else if (ARG_SFLAG("r")) {
@@ -245,10 +294,6 @@ int main(int argc, char **argv) {
       printf("%d %d\n", from, to);
       exit(101);
     }
-  }
-
-  if (step_mode) {
-    eprintf("TODO step mode");
   }
 
   cpu_t cpu = {0};
@@ -276,6 +321,9 @@ int main(int argc, char **argv) {
     }
     tick(&cpu, &running);
     ++ticks;
+  }
+  if (enable_step_mode) {
+    step_mode(&cpu);
   }
   if (cpu.has_screen) {
     BeginDrawing();

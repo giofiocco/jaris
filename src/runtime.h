@@ -71,6 +71,7 @@ typedef struct {
   uint8_t PATTERN_RAM[1 << 15];
   RenderTexture2D screen;
   bool has_screen;
+  long long ticks;
 } cpu_t;
 
 // TODO: test mem
@@ -86,7 +87,12 @@ typedef struct {
   int stdout_size;
 } test_t;
 
-#define test_run_while(test__, cond__)                        \
+#define test_step(_test)                        \
+  do {                                          \
+    tick(&_test.cpu, &_test.running);           \
+  } while (_test.running && _test.cpu.SC != 2);
+
+#define test_run_until(test__, cond__)                        \
   while (test__.running && !(test__.cpu.SC == 2 && cond__)) { \
     tick(&test__.cpu, &test__.running);                       \
   }
