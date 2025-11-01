@@ -1069,6 +1069,17 @@ int main(int argc, char **argv) {
   assert(putc(0b00111100, file) != -1);
   assert(putc(0, file) != -1);
 
+  ++count;
+  assert(putc(1, file) != -1);
+  assert(putc(0, file) != -1);
+  assert(putc(0b11111100, file) != -1);
+  assert(putc(0b11111100, file) != -1);
+  assert(putc(0b11111100, file) != -1);
+  assert(putc(0b11111100, file) != -1);
+  assert(putc(0b11111100, file) != -1);
+  assert(putc(0b11111100, file) != -1);
+  assert(putc(0, file) != -1);
+
   // rewind(file);
   assert(fseek(file, 4, SEEK_SET) == 0);
   assert(fwrite(&count, 2, 1, file) == 1);
