@@ -1,4 +1,20 @@
 GLOBAL rng_next
+GLOBAL random_init
+GLOBAL random_get
+
+global_rng: db 2
+
+-- [_, _] -> [_, _]
+-- it sets the seed for the global RNG
+random_init:
+  RAM_B global_rng RAM_A 0x5201 A_rB -- TODO: used time
+  RET
+
+-- [_, _] -> [u16 n, _]
+-- returns a random number from the global RNG
+random_get:
+  RAM_A global_rng CALLR $rng_next
+  RET
 
 -- [RNG &rng, _] -> [u16 n, _]
 -- returns a random number modifying the RNG
@@ -24,3 +40,5 @@ rng_next:
   RAM_A 0x4650 SUM
   POPB A_rB
   RET
+
+
