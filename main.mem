@@ -14,6 +14,7 @@ newfile bfjit fromfile asm/bin/bfjit
 newfile tee fromfile asm/bin/tee
 newfile stack fromfile asm/bin/stack
 newfile rule110 fromfile asm/bin/rule110
+newfile pipe fromfile asm/bin/pipe
 newdir dir
 newfile a fromtext
 culo

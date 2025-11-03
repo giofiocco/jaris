@@ -235,11 +235,7 @@ void test_rule110() {
   test_unset_range(&test, 3 * PAGE_SIZE + rule110.code_size, PAGE_SIZE - rule110.code_size); // stack
   test_check(&test);
 
-  uint16_t row_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "row") + 3 * PAGE_SIZE;
-  uint16_t print_row_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "print_row") + 3 * PAGE_SIZE;
   uint16_t iter_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "iter") + 3 * PAGE_SIZE;
-  uint16_t loop_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "loop") + 3 * PAGE_SIZE;
-  uint16_t table_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "table") + 3 * PAGE_SIZE;
 
   test_run_until(test, cpu->IP == iter_pos + 1);
   test_assert(test.running);
@@ -343,6 +339,7 @@ int main(int argc, char **argv) {
          (float)ticks * 1E3 / 10E6);
 
   cpu_dump(&cpu);
+  cpu_dump_stdout(&cpu, 0x1804);
 
   {
     FILE *file = fopen("sim.mem.out.bin", "wb");

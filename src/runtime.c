@@ -549,8 +549,6 @@ void tick(cpu_t *cpu, bool *running) {
   assert(running);
   assert(control_rom[cpu->IR]);
 
-  cpu->ticks++;
-
   uint16_t bus = 0;
   microcode_t mc = control_rom[cpu->IR | (cpu->SC << 6) | (cpu->FR << (6 + 4))];
 
@@ -687,6 +685,7 @@ void tick(cpu_t *cpu, bool *running) {
   }
 
   cpu->SC = (cpu->SC + 1) % 16;
+  cpu->ticks++;
 }
 
 void test_init(test_t *test, char *mem_path) {

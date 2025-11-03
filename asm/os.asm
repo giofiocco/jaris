@@ -8,8 +8,6 @@ EXTERN shiftr
 
 { page_size 0x0800 }
 
-stdout: db 128
-
 _start:
   -- ^ [_, tot_size] (os code_size + stdlib code_size)
   B_A SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR SHR
@@ -28,10 +26,6 @@ _start:
   RAM_B 0xF824 RAM_A 0xFFFE A_rB -- SP
   RAM_B 0xF826 RAM_A 0xFFFF A_rB -- stdout unset
   -- RAM_B 0xF826 RAM_A stdout A_rB -- stdout redirect
-
-  -- stdout
-  RAM_AL 0x80 RAM_B stdout A_rB
-  RAM_AL 0x02 SUM A_B INCA INCA A_rB
 
   RAM_A font_path CALL load_font
 

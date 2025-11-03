@@ -1,4 +1,4 @@
-PROGRAMS=os shutdown ls sh cd cat test_font echo brainfuck bfjit tee stack rule110
+PROGRAMS=os shutdown ls sh cd cat test_font echo brainfuck bfjit tee stack rule110 pipe
 STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string write_file alloc dynamic_array rng
 STDLIB=bin/stdlib
 STDLIB_LOC=$(STDLIB)
