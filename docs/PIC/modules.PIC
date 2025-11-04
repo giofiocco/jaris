@@ -1,0 +1,17 @@
+down
+IP: box "IP"; move 0.1
+RAM: box "RAM"; move 0.1
+CROM: box "CROM"; move 0.1
+KEY: box "KEY"; move 0.1
+move to IP.n right 1 down 0
+A: box "A/B"; move 0.1
+ALU: box "ALU"; move 0.1
+SP: box "SP"; move 0.1
+MEM: box "MEM"; move 0.1
+move to IP.n up 0.1 right 0.5 up 0
+GPU: box "GPU"
+line from GPU.s to 1/2 <KEY.se, MEM.sw>
+line from IP.e to A.w
+line from RAM.e to ALU.w
+line from CROM.e to SP.w
+line from KEY.e to MEM.w

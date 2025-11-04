@@ -1,0 +1,14 @@
+MAR: box "MAR"
+move down 0.7 left 0
+RAM0: box "RAM0"; move left 0.1
+RAM1: box "RAM1"; move left 0.1
+BUSH: line from MAR.ne+(0.2, 0) down 2
+BUSL: line from MAR.ne+(0.3, 0) down 2
+line from MAR.e right 0.3; circle radius 0.025 fill color "black" at MAR.e+(0.2, 0)
+line from MAR.s down 0.2; line from MAR.s down 0.1 then left (MAR.x - RAM1.x) then down 0.1
+line from MAR.s down 0.1 then left (MAR.x - RAM0.x) then down 0.1
+line from RAM0.s down 0.1 then right (BUSL.x - RAM0.x)
+line from RAM1.s down 0.3 then right
+[ line up 0.05 then up 0.1 right 0.1 then down 0.3 then up 0.1 left 0.1 then up 0.05 ]
+line from 1/3 <last [].ne, last [].se> right (BUSH.x - last [].e.x)
+line from 2/3 <last [].ne, last [].se> right (BUSL.x - last [].e.x)

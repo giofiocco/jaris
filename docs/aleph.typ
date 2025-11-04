@@ -46,11 +46,11 @@ Each module is controlled by some _microcode-flags_ (1bit pins) that #text(red)[
 The computer has a single 16bit data/address bus, a #text(red)[[TODO: Hz]] clock that 
 
 = Modules
-#figure(image("aleph_images/modules_diagram.png", height: 20%), caption: [Modules diagram])
+#figure(image("PIC/images/modules.png", height: 20%), caption: [Modules diagram])
 
 
 == RAM Module
-#figure(image("aleph_images/ram_module_diagram.png", height: 20%), caption: [RAM module diagram])
+#figure(image("PIC/images/RAM.png", height: 20%), caption: [RAM module diagram])
 
 The MAR (memory adress register) is a 16 bits register which holds the adress the RAM points,
 its output is always enabled and connected (bits 0 - 14 from MSb) to RAMs adresses.
@@ -59,10 +59,10 @@ The RAM can be used reading/writing 8 bits/16 bits, when reading 16 bits both th
 When reading 8 bits the SRAM enabled depends on the address' LSb and the RAM 1 switch is set so that the output is connected at the low bus.
 
 == ALU Module
-#figure(image("aleph_images/alu_diagram.png", height:20%), caption:[ALU module diagram])
+#figure(image("PIC/images/ALU.png", height:20%), caption:[ALU module diagram])
 
 == Booting Circuit
-#figure(image("aleph_images/booting_circuit_diagram.png", height: 20%), caption: [Booting circuit diagram])
+#figure(image("PIC/images/booting_circuit.png", height: 20%), caption: [Booting circuit diagram])
 
 It loads the first sector (first 256 bytes) from the Non-volatile memory (the bootloader code) into the RAM (from `0xFF00`) and runs it.
 It is connected directly to individual microcode-flags.
@@ -82,7 +82,7 @@ It executes a serie of instructions:
 if response is `0xFE` means resend and `0xFA` means ACK (possibily limited to 3 retries before assume the command is not supported).
 
 == GPU
-#figure(image("aleph_images/gpu.png"), caption: [GPU diagram])
+#figure(image("PIC/images/GPU.png"), caption: [GPU diagram])
 The GPU produce a VGA bicolor signal at #text(red)[resolution], with a separate #text(red)[TODO] clock (#link("http://www.tinyvga.com/vga-timing")[VGA timing]).
 The screen is divided into 8x8 pixel square, each one filled with a so called pattern stored in the PATTERN RAM, while the ATTRIBUTE RAM stores which pattern to draw in a specific square.
 Each pattern is stored in 8 bytes (in rows) it is loaded on a shift-register and bit by bit converted to VGA signal.

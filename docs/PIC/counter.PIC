@@ -1,0 +1,14 @@
+C: box "counter"
+for i = 1 to 4 do { 
+  line from (i/5 <C.w,C.e>,C.n) up 0.1
+  line from (i/5 <C.w,C.e>,C.s) down 0.1
+}
+"INPUT" above at C.n+(0,0.1)
+"OUTPUT" below at C.s-(0,0.1)
+
+line from (C.e, 1/4<C.n,C.s>) right 0.1
+"RESET" ljust with .w at last line .e
+line from (C.e, 2/4<C.n,C.s>) right 0.1
+"UP/DOWN" ljust with .w at last line .e
+line from (C.e, 3/4<C.n,C.s>) right 0.1
+"UPDATE" ljust with .w at last line .e
