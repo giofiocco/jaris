@@ -12,9 +12,6 @@ EXTERN stream_init
   { stdout_offset 0x06 }
   { stdin_offset 0x08 }
 
-stdout: db 128
-stdout_end:
-
 no_arg_str: "ERROR: expected arg" 0x0A 0x00
 not_found_str: ": command not found" 0x0A 0x00
 
@@ -29,7 +26,9 @@ has_cmd:
   PUSHA
   -- ^ cmd &cmd2 old_stdout_redirect
 
-  RAM_A stdout RAM_BL 0x80 CALL stream_init
+  SP_A A_B RAM_AL 0x30 SUB A_B RAM_A stdout SUB A_B
+  RAM_A stdout CALL stream_init
+
   -- set stdout redirect
   RAM_B current_process_ptr rB_A RAM_BL stdout_offset SUM
   A_B rB_A PUSHAR 0x06 RAM_A stdout A_rB
@@ -78,3 +77,6 @@ execute_no_arg:
 found:
   POPB POPA CALL execute
   RET
+
+ALIGN
+stdout: NOP
