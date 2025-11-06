@@ -106,10 +106,10 @@ void cpu_dump_stdout(cpu_t *cpu, uint16_t pos) {
 
   int to = cpu_read16(cpu, pos + 4);
   printf("STDOUT 0x%04X:\n", pos);
-  printf("  w: %04X r: %04X e: %04X\n",
-         cpu_read16(cpu, pos),
-         cpu_read16(cpu, pos + 2),
-         cpu_read16(cpu, pos + 4));
+  printf("  w: [%d] r: [%d] e: [%d]\n",
+         cpu_read16(cpu, pos) - pos - 6,
+         cpu_read16(cpu, pos + 2) - pos - 6,
+         cpu_read16(cpu, pos + 4) - pos - 6);
   for (int i = pos + 6; i < to; ++i) {
     switch (cpu->RAM[i]) {
       case '\t':
@@ -972,6 +972,7 @@ void step_mode(cpu_t *cpu) {
 
   cpu_dump(cpu);
 
+  bool enable_cpu_dump = true;
   bool running = true;
   microcode_flag_t mc = 0;
 
@@ -994,7 +995,8 @@ void step_mode(cpu_t *cpu) {
              "  c | continue        continue till the next HLT\n"
              "  stack INT           print INT items from the stack\n"
              "  str HEX             print from HEX as a null terminated string\n"
-             "  cpu                 print the cpu state\n"
+             "  cpu on|off          enable/disable printing the cpu state\n"
+             "  skip                if on a CALL/CALLR skip to the RET\n"
              "if no command, next instruction is run\n\n");
 
     } else if (strcmp(input, "read") == 0) {
@@ -1036,7 +1038,31 @@ void step_mode(cpu_t *cpu) {
       printf("\n");
 
     } else if (strcmp(input, "cpu") == 0) {
-      cpu_dump(cpu);
+      if (!arg1 || strcmp(arg1, "off") == 0) {
+        enable_cpu_dump = false;
+      } else if (strcmp(arg1, "on") == 0) {
+        enable_cpu_dump = true;
+      }
+
+    } else if (strcmp(input, "skip") == 0) {
+      if (cpu->IR == CALL || cpu->IR == CALLR) {
+        running = true;
+        int n = 0;
+        do {
+          if (mc & (1 << SCr)) {
+            if (cpu->IR == CALL || cpu->IR == CALLR) {
+              n++;
+            } else if (cpu->IR == RET) {
+              n--;
+            }
+          }
+          tick(cpu, &running);
+          mc = control_rom[cpu->IR | (cpu->SC << 6) | (cpu->FR << (6 + 4))];
+        } while (running && n != 0);
+
+      } else {
+        printf("ERROR: not CALL or CALLR\n");
+      }
 
     } else {
       cpu->SC = 0;
@@ -1047,8 +1073,11 @@ void step_mode(cpu_t *cpu) {
       } while (running && !(mc & (1 << SCr)));
     }
 
-    printf("%s\n", instruction_to_string(cpu->IR));
-    // cpu_dump(cpu);
+    if (enable_cpu_dump) {
+      cpu_dump(cpu);
+    } else {
+      printf("%s\n", instruction_to_string(cpu->IR));
+    }
 
     memset(input, 0, sizeof(input));
     printf("> ");
