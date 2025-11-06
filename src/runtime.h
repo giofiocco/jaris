@@ -8,13 +8,12 @@
 #include "files.h"
 
 #define KEY_FIFO_SIZE 1024
-
 #define SCREEN_WIDTH  640
 #define SCREEN_HEIGHT 350
 #define SCREEN_ZOOM   2
 #define SCREEN_PAD    10
-
-#define PAGE_SIZE 2048
+#define PAGE_SIZE     2048
+#define CLOCK_FREQ    6 // MHz
 
 // clang-format off
 typedef enum {
@@ -87,15 +86,23 @@ typedef struct {
   int stdout_size;
 } test_t;
 
-#define test_step(_test)                        \
-  do {                                          \
-    tick(&_test.cpu, &_test.running);           \
-  } while (_test.running && _test.cpu.SC != 2);
+#define test_step(test__)                         \
+  do {                                            \
+    tick(&test__.cpu, &test__.running);           \
+  } while (test__.running && test__.cpu.SC != 2);
 
 #define test_run_until(test__, cond__)                        \
   while (test__.running && !(test__.cpu.SC == 2 && cond__)) { \
     tick(&test__.cpu, &test__.running);                       \
   }
+
+#define test_assert_running(test__) \
+  do {                              \
+    if (!((test__).running)) {      \
+      cpu_dump(cpu);                \
+      eprintf("expected running");  \
+    }                               \
+  } while (0);
 
 #define test_assert(cond__)               \
   do {                                    \

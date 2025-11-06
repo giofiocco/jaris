@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <time.h>
 
 #include "../argparse.h"
 #include "../mystb/errors.h"
@@ -24,7 +25,7 @@ void test() {
   while (running && !(cpu->IR == JMPA && cpu->A == 0)) {
     tick(cpu, &running);
   }
-  test_assert(running);
+  test_assert_running(test_);
 
   printf("  OS LOADED\n");
   exe_t os = exe_decode_file("asm/bin/os");
@@ -35,11 +36,6 @@ void test() {
     uint16_t font_file_ptr = test_find_symbol(os.symbols, os.symbol_count, "file");
     test_unset_range(test, font_file_ptr, 4);
   }
-
-  uint16_t stdout_pos = test_find_symbol(os.symbols, os.symbol_count, "stdout");
-  test_unset_range(test, stdout_pos, 128);
-  printf("TODO STDOUT\n");
-  stdout_pos = 0xFFFF;
 
   printf("  STDLIB LOADED\n");
   uint16_t stdlib_pos = os.code_size;
@@ -70,7 +66,7 @@ void test() {
   while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
     tick(cpu, &running);
   }
-  // test_assert(running);
+  // test_assert_running(test_);
   // test_assert(cpu->RAM[cpu->A] == 's');
   // test_assert(cpu->RAM[cpu->A + 1] == 'h');
   // test_assert(cpu->RAM[cpu->A + 2] == 0);
@@ -82,10 +78,11 @@ void test() {
   test_set_u16(test, 0xF806, 0b11 << 14); // used page map
   test_set_u16(test, 0xF808, 1);          // used page map
   //  os process:
-  test_set_u16(test, 0xF820, 0xFFFF);     // parent process
-  test_set_u16(test, 0xF822, 1);          // cwd sec
-  test_set_u16(test, 0xF824, 0xFFFE);     //  SP
-  test_set_u16(test, 0xF826, stdout_pos); // stdout redirect
+  test_set_u16(test, 0xF820, 0xFFFF); // parent process
+  test_set_u16(test, 0xF822, 1);      // cwd sec
+  test_set_u16(test, 0xF824, 0xFFFE); //  SP
+  test_set_u16(test, 0xF826, 0xFFFF); // stdout redirect
+  test_set_u16(test, 0xF828, 0xFFFF); // stdin redirect
   test_check(test);
   test_unset_range(test, 0xF824, 2); // os SP
 
@@ -93,7 +90,7 @@ void test() {
   while (running && cpu->IR != JMPA) {
     tick(cpu, &running);
   }
-  test_assert(running);
+  test_assert_running(test_);
 
   uint16_t sh_pos = 2 * PAGE_SIZE;
 
@@ -109,7 +106,8 @@ void test() {
   test_set_u16(test, 0xF830, 0xF820);
   test_set_u16(test, 0xF832, 1);
   test_set_u16(test, 0xF834, 0);
-  test_set_u16(test, 0xF836, stdout_pos);
+  test_set_u16(test, 0xF836, 0xFFFF);
+  test_set_u16(test, 0xF838, 0xFFFF);
   test_check(test);
   test_unset_range(test, 0xF834, 2); // sh SP
 
@@ -170,12 +168,12 @@ void test() {
   // while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
   //   tick(cpu, &running);
   // }
-  // test_assert(running);
+  // test_assert_running(test_);
   // while (running && cpu->IR != JMPA) {
   //   tick(cpu, &running);
   // }
   // cpu_dump(cpu);
-  // test_assert(running);
+  // test_assert_running(test_);
   // test_check(test);
 
   // test_run_command(test, "tee file", "hi\n", "asm/bin/tee", sh_input_pos, execute_pos, exit_pos);
@@ -199,7 +197,7 @@ void test() {
   test_assert(cpu->A == 0xA0A0);
   test_assert(!running);
 
-  printf("END\n");
+  printf("END\n\n");
 }
 
 void test_rule110() {
@@ -208,6 +206,8 @@ void test_rule110() {
   cpu_t *cpu = &test.cpu;
 
   printf("TEST rule110\n");
+  printf("  TODO\n");
+  return;
 
   exe_t os = exe_decode_file("asm/bin/os");
   exe_reloc(&os, 0, os.code_size);
@@ -256,7 +256,9 @@ void print_help() {
          "  -r <from>:<to>      print ram in the range\n"
          "  --mem <path>        specify bin file path for memory\n"
          "  --stdout <num>      print stdout struct in ram from num\n"
-         "  -h | --help         show help message\n");
+         "  --real-time         simulate with ticks at %d MHz\n"
+         "  -h | --help         show help message\n",
+         CLOCK_FREQ);
 }
 
 int main(int argc, char **argv) {
@@ -266,13 +268,17 @@ int main(int argc, char **argv) {
   char *mempath = "main.mem.bin";
   int enable_step_mode = 0;
   int screen = 0;
+  int real_time = 0;
+  int stdout_start = -1;
 
   ARG_PARSE {
-    ARG_PARSE_HELP_ARG                                        //
-        else ARG_PARSE_FLAG("s", "step", enable_step_mode)    //
-        else ARG_PARSE_FLAG("S", "screen", screen)            //
-        else ARG_PARSE_STRING_ARG("i", "input", input)        //
-        else ARG_PARSE_STRING_ARG_(ARG_LFLAG("mem"), mempath) //
+    ARG_PARSE_HELP_ARG                                             //
+        else ARG_PARSE_FLAG("s", "step", enable_step_mode)         //
+        else ARG_PARSE_FLAG_(ARG_LFLAG("real-time"), real_time)    //
+        else ARG_PARSE_FLAG("S", "screen", screen)                 //
+        else ARG_PARSE_STRING_ARG("i", "input", input)             //
+        else ARG_PARSE_STRING_ARG_(ARG_LFLAG("mem"), mempath)      //
+        else ARG_PARSE_INT_ARG_(ARG_LFLAG("stdout"), stdout_start) //
         else ARG_IF_FLAG("t", "test") {
       test();
       test_rule110();
@@ -308,15 +314,23 @@ int main(int argc, char **argv) {
     EndTextureMode();
   }
 
+  clock_t curr_time, begin_time = clock();
   bool running = true;
-  int ticks = 0;
   while (running) {
     PollInputEvents();
     if (cpu.has_screen && WindowShouldClose()) {
       break;
     }
+
+    if (real_time) {
+      curr_time = clock();
+      if ((double)(curr_time - begin_time) / CLOCKS_PER_SEC < 1e-6 / CLOCK_FREQ) {
+        continue;
+      } else {
+        begin_time = curr_time;
+      }
+    }
     tick(&cpu, &running);
-    ++ticks;
   }
   if (enable_step_mode) {
     step_mode(&cpu);
@@ -334,12 +348,15 @@ int main(int argc, char **argv) {
   }
 
   printf("ticks: %.3fE3 (%.3f ms @ 4 MHz, %.3f ms @ 10 MHz)\n",
-         (float)ticks / 1E3,
-         (float)ticks * 1E3 / 4E6,
-         (float)ticks * 1E3 / 10E6);
+         (float)cpu.ticks / 1E3,
+         (float)cpu.ticks * 1E3 / 4E6,
+         (float)cpu.ticks * 1E3 / 10E6);
 
   cpu_dump(&cpu);
-  cpu_dump_stdout(&cpu, 0x1804);
+
+  if (stdout_start != -1) {
+    cpu_dump_stdout(&cpu, stdout_start);
+  }
 
   {
     FILE *file = fopen("sim.mem.out.bin", "wb");

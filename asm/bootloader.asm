@@ -84,8 +84,7 @@ reloced_stdlib:
   POPB RAM_AL 0x00 JMPA -- TODO: JMP 0x0000
 
 not_stdlib:
-  RAM_A 0xFFFF A_B
-  HLT
+  RAM_A 0xFFFF A_B HLT
 
 get_8:
   MEM_A PUSHA

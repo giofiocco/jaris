@@ -211,10 +211,7 @@ instruction_stat_t instruction_stat(instruction_t instruction) {
     case A_SP: case SP_A:
     case A_SEC: case SEC_A:
     case INCNDX: case NDX_A: case A_NDX: case MEM_A: case MEM_AH: case A_MEM:
-    case RET:
-    case _KEY_A:
-    case DRW:
-    case HLT:
+    case RET: case _KEY_A: case DRW: case HLT:
       return (instruction_stat_t){INST_NO_ARGS};
     case RAM_AL: case RAM_BL:
     case PEEKAR: case PUSHAR:

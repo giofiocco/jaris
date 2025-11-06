@@ -496,7 +496,6 @@ void print_help() {
          " --stdlib-path <str>  set path of stdlib\n"
          "  --dot <path>        path of output dot file\n"
          "  --text              print the textual rappresentation of the nodes\n"
-         "  --sp                check stack pointers\n"
          "  -h | --help         show help message\n");
   print_file_kind_list();
   printf("kinds allowed are: asm, obj, exe, so, bin\n");

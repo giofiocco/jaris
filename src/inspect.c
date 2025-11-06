@@ -83,7 +83,7 @@ void inspect_bin(char *filename, int disassemble_flag) {
   }
 }
 
-void inspect_mem(char *filename) {
+void inspect_mem_sec_seq(char *filename) {
   assert(filename);
 
   uint8_t sectors[2048][256] = {0};
@@ -145,7 +145,7 @@ void print_dir(uint8_t *sectors, int ptr, int indent) {
   }
 }
 
-void inspect_mem2(char *filename) {
+void inspect_mem(char *filename) {
   assert(filename);
 
   uint8_t sectors[2048][256] = {0};
@@ -229,8 +229,9 @@ void inspect_font(char *filename) {
 void print_help() {
   printf("Usage: inspect [kind] [options] <input>\n\n"
          "Options:\n"
-         "  -d           print the disassembled code\n"
-         "  -h | --help  show help message\n");
+         "  -s | --sec-seq      print mem as sectors sequence\n"
+         "  -d | --disassemble  print the disassembled code\n"
+         "  -h | --help         show help message\n");
   print_file_kind_list();
   printf("\nif input is '-' it read from the stdin\n");
 }
@@ -239,10 +240,12 @@ int main(int argc, char **argv) {
   char *path = NULL;
   file_kind_t kind = F_NONE;
   int disassemble = 0;
+  int sec_seq = 0;
 
   ARG_PARSE {
     ARG_PARSE_HELP_ARG                                       //
         else ARG_PARSE_FLAG("d", "disassemble", disassemble) //
+        else ARG_PARSE_FLAG("s", "sec-seq", sec_seq)         //
         else if (kind == F_NONE && (kind = parse_argument_file_kind(*argv))) {
     }
     else {
@@ -267,7 +270,13 @@ int main(int argc, char **argv) {
     case F_OBJ: inspect_obj(path, disassemble); break;
     case F_EXE: inspect_exe(path, disassemble); break;
     case F_SO: inspect_so(path, disassemble); break;
-    case F_MEM: inspect_mem2(path); break;
+    case F_MEM:
+      if (sec_seq) {
+        inspect_mem_sec_seq(path);
+      } else {
+        inspect_mem(path);
+      }
+      break;
     case F_BIN: inspect_bin(path, disassemble); break;
     case F_FONT: inspect_font(path); break;
   }

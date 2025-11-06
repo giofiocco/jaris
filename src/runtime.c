@@ -104,9 +104,13 @@ void cpu_dump_stdout(cpu_t *cpu, uint16_t pos) {
   assert(cpu);
   assert(pos % 2 == 0);
 
-  int to = cpu_read16(cpu, pos + 2);
-  printf("STDOUT 0x%04X: (%d chars)\n", pos, to - pos - 4);
-  for (int i = pos + 4; i < to; ++i) {
+  int to = cpu_read16(cpu, pos + 4);
+  printf("STDOUT 0x%04X:\n", pos);
+  printf("  w: %04X r: %04X e: %04X\n",
+         cpu_read16(cpu, pos),
+         cpu_read16(cpu, pos + 2),
+         cpu_read16(cpu, pos + 4));
+  for (int i = pos + 6; i < to; ++i) {
     switch (cpu->RAM[i]) {
       case '\t':
         printf("»");
@@ -547,10 +551,10 @@ bool check_microcode(microcode_t mc, microcode_flag_t flag) {
 void tick(cpu_t *cpu, bool *running) {
   assert(cpu);
   assert(running);
-  assert(control_rom[cpu->IR]);
+  assert(control_rom[cpu->IR & 0b111111]);
 
   uint16_t bus = 0;
-  microcode_t mc = control_rom[cpu->IR | (cpu->SC << 6) | (cpu->FR << (6 + 4))];
+  microcode_t mc = control_rom[(cpu->IR & 0b111111) | (cpu->SC << 6) | (cpu->FR << (6 + 4))];
 
   // dumpsbit(mc); putchar('\n');
 
@@ -744,18 +748,18 @@ void test_check(test_t *test) {
       }
     }
   }
-  fail = 0;
+  int failgpu = 0;
   for (int i = 0; i < 1 << 15; ++i) {
     if (test->test_gpu[i] != test->cpu.ATTRIBUTE_RAM[i]) {
-      if (!fail) {
+      if (!failgpu) {
         fprintf(stderr, "ERROR GPU:\n");
         fprintf(stderr, "            expected | found\n");
       }
-      fail = 1;
+      failgpu = 1;
       fprintf(stderr, "  %02d:%02d:     %3d '%c' | %3d '%c'\n", (i >> 8) & 0xFF, i & 0xFF, test->test_gpu[i], isprint(test->test_gpu[i]) ? test->test_gpu[i] : ' ', test->cpu.ATTRIBUTE_RAM[i], isprint(test->cpu.ATTRIBUTE_RAM[i]) ? test->cpu.ATTRIBUTE_RAM[i] : ' ');
     }
   }
-  if (fail) {
+  if (fail || failgpu) {
     exit(1);
   }
 }
@@ -905,14 +909,14 @@ void test_run_command(test_t *test, char *command, char *input, char *exe_path, 
   load_input_string(cpu, input);
 
   printf("  LOAD `%s`\n", command);
-  while (running && !(cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_pos)) {
+  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
     tick(cpu, &running);
   }
-  test_assert(running);
+  test_assert_running(*test);
   while (running && cpu->IR != JMPA) {
     tick(cpu, &running);
   }
-  test_assert(running);
+  test_assert_running(*test);
 
   exe_t exe = exe_decode_file(exe_path);
   exe_reloc(&exe, 3 * PAGE_SIZE, stdlib_pos);
@@ -935,13 +939,14 @@ void test_run_command(test_t *test, char *command, char *input, char *exe_path, 
   test_set_u16(test, 0xF842, cpu_read16(cpu, 0xF832));
   test_set_u16(test, 0xF844, 0);
   test_set_u16(test, 0xF846, cpu_read16(cpu, 0xF836));
+  test_set_u16(test, 0xF848, cpu_read16(cpu, 0xF838));
   test_check(test);
 
   printf("  RUN `%s`\n", command);
   while (running && !(cpu->IR == CALL && cpu->SC == 2 && cpu_read16(cpu, cpu->IP) == exit_pos)) {
     tick(cpu, &running);
   }
-  test_assert(running);
+  test_assert_running(*test);
   int calls = 1;
   while (running && calls != 0) {
     if (cpu->RAM[cpu->IP] == CALL || cpu->RAM[cpu->IP] == CALLR) {
@@ -951,7 +956,7 @@ void test_run_command(test_t *test, char *command, char *input, char *exe_path, 
     }
     tick(cpu, &running);
   }
-  test_assert(running);
+  test_assert_running(*test);
   test_assert(cpu->A == 0);
 
   // os struct:
@@ -988,7 +993,10 @@ void step_mode(cpu_t *cpu) {
              "  read HEX            read u16 at the addr specified\n"
              "  c | continue        continue till the next HLT\n"
              "  stack INT           print INT items from the stack\n"
+             "  str HEX             print from HEX as a null terminated string\n"
+             "  cpu                 print the cpu state\n"
              "if no command, next instruction is run\n\n");
+
     } else if (strcmp(input, "read") == 0) {
       if (!arg1) {
         printf("ERROR: addr not provided\n");
@@ -1000,6 +1008,7 @@ void step_mode(cpu_t *cpu) {
           printf("0x%04X\n", cpu_read16(cpu, addr));
         }
       }
+      printf("\n");
 
     } else if (strcmp(input, "c") == 0 || strcmp(input, "continue") == 0) {
       cpu->SC = 0;
@@ -1009,12 +1018,25 @@ void step_mode(cpu_t *cpu) {
       } while (running);
 
     } else if (strcmp(input, "stack") == 0) {
+      uint16_t count = arg1 ? atoi(arg1) : 0;
+      cpu_dump_stack(cpu, count ? count : 5);
+      printf("\n");
+
+    } else if (strcmp(input, "str") == 0) {
       if (!arg1) {
         printf("ERROR: addr not provided\n");
       } else {
-        uint16_t count = atoi(arg1);
-        cpu_dump_stack(cpu, count);
+        uint16_t addr = strtol(arg1, NULL, 16);
+        printf("%04X: ", addr);
+        for (int i = addr; cpu->RAM[i] != 0; ++i) {
+          printf("%c", cpu->RAM[i]);
+        }
+        printf("\n");
       }
+      printf("\n");
+
+    } else if (strcmp(input, "cpu") == 0) {
+      cpu_dump(cpu);
 
     } else {
       cpu->SC = 0;
@@ -1025,7 +1047,8 @@ void step_mode(cpu_t *cpu) {
       } while (running && !(mc & (1 << SCr)));
     }
 
-    cpu_dump(cpu);
+    printf("%s\n", instruction_to_string(cpu->IR));
+    // cpu_dump(cpu);
 
     memset(input, 0, sizeof(input));
     printf("> ");

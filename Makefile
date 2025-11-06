@@ -7,14 +7,14 @@ RUNTIME=src/runtime.c src/runtime.h
 ASSEMBLE=src/build/libassemble.a
 
 .PHONY: all asm docs clean cleanall
-all: $(TARGETS) asm docs
+all: $(TARGETS) asm docs main.mem.bin
 asm: assembler linker code_analyzer
 	make -C asm all
 docs:
 	make -C docs all
 
 src/build/:
-	mkdir -p src/build
+	mkdir -p $@
 
 src/build/libassemble.a: src/build/assemble.o src/build/instructions.o | src/build/
 	ar rcs $@ $(filter %.o,$^)
@@ -31,7 +31,7 @@ encodemem: src/encodemem.c
 inspect: src/inspect.c $(FILES) $(INSTRUCTIONS)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
-sim: src/sim.c main.mem.bin $(FILES) $(INSTRUCTIONS) $(RUNTIME)
+sim: src/sim.c $(FILES) $(INSTRUCTIONS) $(RUNTIME)
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^) -lraylib
 
 code_analyzer: src/code_analyzer.c $(ASSEMBLE) $(FILES)

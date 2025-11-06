@@ -40,5 +40,4 @@ not_found:
   HLT
 
 not_font:
-  RAM_B 0xFFFA
-  HLT
+  RAM_B 0xFFFA HLT

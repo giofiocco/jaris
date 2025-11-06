@@ -112,7 +112,7 @@
       ARG_ERROR("invalid int: '%s'", *argv)                    \
     }                                                          \
   }
-#define ARG_PARSE_INT_ARG(cond__, arg_name__, var__)                         \
-  ARG_PARSE_INT_ARG_(ARG_SFLAG(short__) || ARG_LFLAG(long__), long__, var__)
+#define ARG_PARSE_INT_ARG(arg_name__, var__)                         \
+  ARG_PARSE_INT_ARG_(ARG_SFLAG(short__) || ARG_LFLAG(long__), var__)
 
 #endif /* ifndef ARGPARSE_H__ */
