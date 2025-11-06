@@ -1,3 +1,7 @@
+1. globals etc as dynamic arrays
+
+asm formatter
+
 bss section?
 
 maybe check that when copying a label ecc it will always be null terminated
@@ -20,12 +24,6 @@ max index in directory sector?
 - warn macro unused
 - warn label unused
 - warn if extern not used
-
-# Sim
-
-- step mode add commands
-  - `read 0010` to read from ram
-  - `next` to run till the next `HLT`
 
 # bootloader
 

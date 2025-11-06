@@ -3,6 +3,7 @@ GLOBAL put_char
 GLOBAL print_int
 
 EXTERN div
+EXTERN stream_write
 
   { current_process_ptr 0xF802 }
   { stdout_offset 0x06 }
@@ -26,13 +27,15 @@ print_end:
   INCSP RET
 
 -- [char, _] -> [_, _]
--- crash [0xEFFA, _] if stdout full
 -- TODO: wrap screen if row too low
 put_char:
   PUSHA
 
   RAM_B current_process_ptr rB_A RAM_BL stdout_offset SUM A_B rB_A
-  INCA JMPRNZ $ridirect
+  INCA JMPRZ $no_redirect
+  -- ^ char [stdout_ptr + 1, _]
+  DECA POPB CALL stream_write RET
+no_redirect:
 
   PEEKA RAM_BL 0x0A SUB JMPRNZ $no_new_line
 
@@ -49,19 +52,6 @@ no_new_line:
   RAM_B row_ptr rB_AL INCA AL_rB
 end_new_line:
   RET
-
-ridirect:
-  -- ^ char [stdout_ptr + 1, _]
-  DECA A_B rB_A CMPA JMPRZ $stdout_full
-  DECA A_rB
-  RAM_AL 0x02 SUM PUSHA A_B rB_A
-  -- ^ &next_ptr char
-  A_B PEEKAR 0x04 AL_rB -- *next_char = char
-  B_A INCA POPB A_rB
-  INCSP RET
-
-stdout_full:
-  RAM_A 0xEFFA HLT
 
 -- [u16 num, _] -> [_, _]
 -- crash [0xEFFA, _] if stdout is full

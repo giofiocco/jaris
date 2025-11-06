@@ -1,5 +1,5 @@
 PROGRAMS=os shutdown ls sh cd cat test_font echo brainfuck bfjit tee stack rule110 pipe
-STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string write_file alloc dynamic_array rng
+STDLIB_FILES=math solve_path open_file read_file execute exit print get_char string write_file alloc dynamic_array rng stream
 STDLIB=bin/stdlib
 STDLIB_LOC=$(STDLIB)
 LINKER_FLAGS?=-g
@@ -42,7 +42,7 @@ bin/bootloader: build/bootloader.o | bin
 	wc -c $@
 	$(ANALYZE) --bin $@
 
-bin/%: build/%.o | bin
+bin/%: build/%.o $(STDLIB) | bin
 	$(LINKER) $(LINKER_FLAGS) -o $@ $<
 	$(ANALYZE) $@
 

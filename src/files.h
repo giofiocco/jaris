@@ -5,7 +5,7 @@
 
 #include "instructions.h"
 
-#define GLOBAL_MAX_COUNT       32
+#define GLOBAL_MAX_COUNT       64
 #define EXTERN_MAX_COUNT       32
 #define RELOC_MAX_COUNT        128
 #define INTERN_RELOC_MAX_COUNT 128

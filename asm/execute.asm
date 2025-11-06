@@ -14,6 +14,7 @@ EXTERN read_u16
   { cwd_offset 0x02 }
   { SP_offset 0x04 }
   { stdout_offset 0x06 }
+  { stdin_offset 0x08 }
 
 ALIGN file: db 4
 
@@ -112,6 +113,9 @@ search_process:
   PEEKAR 0x04 A_B rB_A RAM_BL stdout_offset SUM A_B rB_A PUSHA
   PEEKAR 0x06 RAM_BL stdout_offset SUM A_B POPA A_rB -- process_ptr->stdout = process_ptr->parent_process->stdout
 
+  PEEKAR 0x04 A_B rB_A RAM_BL stdin_offset SUM A_B rB_A PUSHA
+  PEEKAR 0x06 RAM_BL stdin_offset SUM A_B POPA A_rB -- process_ptr->stdin = process_ptr->parent_process->stdin
+
   SP_A RAM_BL 0x08 SUM PUSHA -- sp before return ptr
   PEEKAR 0x06 A_B rB_A RAM_BL SP_offset SUM A_B POPA A_rB -- process_ptr->parent_process->SP = sp before return ptr
 
@@ -122,11 +126,9 @@ search_process:
   JMPA
 
 not_found:
-  RAM_A 0xFFFF
-  HLT
+  RAM_A 0xFFFF HLT
 not_exe:
-  RAM_A 0xFFFE
-  HLT
+  RAM_A 0xFFFE HLT
 
 -- [_, _] -> [page_start, _]
 allocate_page:
@@ -154,5 +156,4 @@ allocate_page2:
 
 not_stdlib:
   -- ^ dynamic_count ram_start argv
-  RAM_A 0xFAFA
-  HLT
+  RAM_A 0xFAFA HLT

@@ -1,8 +1,18 @@
 GLOBAL get_char
 
+EXTERN stream_read
+
+  { current_process_ptr 0xF802 }
+  { stdin_offset 0x08 }
+
 -- [_, _] -> [char, _]
--- crash [0xF00F, _] if shift TODO
 get_char:
+  RAM_B current_process_ptr rB_A RAM_BL stdin_offset SUM A_B rB_A
+  INCA JMPRZ $no_redirect
+  -- ^ [stdout_ptr + 1, _]
+  DECA CALL stream_read RET
+no_redirect:
+
   KEY_A A_B
   RAM_AL 0xAA SUB JMPRZ $shift
   RAM_AL 0xE0 SUB JMPRZ $get_char

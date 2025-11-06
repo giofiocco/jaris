@@ -294,6 +294,8 @@ The first process struct is the os-process
 | 2        | cwd sec               |
 | 2        | SP                    |
 | 2        | stdout redirect       |
+| 2        | stdin redirect        |
+| 6        |                       |
 
 If the stdout buffer ptr is 0xFFFF the put_char function will print chars to the screen
 otherwise should point to a stdout struct (ridirection).
@@ -310,9 +312,11 @@ TODO: when multithreading redo SP -> RET and SP ?
 | 1        | ndx                       |
 | 1        | undef (to keep alignment) |
 
-### Stdout struct
+### Stream struct
 
-| size [B] | description              |
-| :------- | :----------------------- |
-| 2        | count of remaining chars |
-| 2        | ptr to next char         |
+| size [B] | description                 |
+| :------- | :-------------------------- |
+| 2        | ptr to next char on reading |
+| 2        | ptr to next char on writing |
+| 2        | ptr to ending of the struct |
+|          | data                        |

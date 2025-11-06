@@ -25,14 +25,13 @@ _start:
   RAM_B 0xF822 RAM_AL 0x01  A_rB -- cwd sec
   RAM_B 0xF824 RAM_A 0xFFFE A_rB -- SP
   RAM_B 0xF826 RAM_A 0xFFFF A_rB -- stdout unset
-  -- RAM_B 0xF826 RAM_A stdout A_rB -- stdout redirect
+  RAM_B 0xF828 RAM_A 0xFFFF A_rB -- stdin unset
 
   RAM_A font_path CALL load_font
 
   RAM_A path RAM_BL 0x00 CALL execute
 
-  RAM_B 0x1010
-  HLT
+  RAM_B 0x1010 HLT
 
 font_path: "font" 0x00
 path: "sh" 0x00
