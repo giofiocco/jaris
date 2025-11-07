@@ -92,23 +92,11 @@ void symbols_list_encode(symbol_t *symbols, uint16_t count, FILE *file);
 symbol_t *symbols_list_find(symbol_t *symbols, uint16_t count, char *image);
 
 void obj_dump(obj_t *obj);
-uint16_t obj_add_symbol(obj_t *obj, char *name, uint16_t pos);
-symbol_t *obj_find_symbol(obj_t *obj, char *name);
-uint16_t obj_find_symbol_pos(obj_t *obj, char *name);
-void obj_add_symbol_reloc(obj_t *obj, char *name, uint16_t where);
-void obj_add_instruction(obj_t *obj, instruction_t inst);
-void obj_add_hex(obj_t *obj, uint8_t num);
-void obj_add_hex2(obj_t *obj, uint16_t num);
-void obj_compile_bytecode(obj_t *obj, bytecode_t bc);
-void obj_check(obj_t *obj, int debug_info);
-
 obj_t obj_decode(FILE *file);
 obj_t obj_decode_file(char *filename);
 void obj_encode_file(obj_t *obj, char *filename);
 
 void exe_dump(exe_t *exe);
-void exe_add_symbol_offset(exe_t *exe, symbol_t *s, uint16_t offset);
-
 exe_t exe_decode(FILE *file);
 exe_t exe_decode_file(char *filename);
 void exe_encode_file(exe_t *exe, char *filename);

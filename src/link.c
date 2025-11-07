@@ -45,6 +45,25 @@ uint16_t exe_state_find_so_global(exe_state_t *state, int so_index, char *name) 
   return 0xFFFF;
 }
 
+void exe_add_symbol_offset(exe_t *exe, symbol_t *from, uint16_t offset) {
+  assert(exe);
+  assert(from);
+
+  assert(exe->symbol_count + 1 < SYMBOL_MAX_COUNT);
+  symbol_t *s = &exe->symbols[exe->symbol_count++];
+  memcpy(s, from, sizeof(symbol_t));
+  if (from->pos != 0xFFFF) {
+    s->pos += offset;
+  }
+  for (int j = 0; j < s->reloc_count; ++j) {
+    s->relocs[j] += offset;
+  }
+  for (int j = 0; j < s->relreloc_count; ++j) {
+
+    s->relrelocs[j] += offset;
+  }
+}
+
 void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
   assert(state);
   assert(obj);

@@ -313,6 +313,212 @@ bytecode_t asm_parse_bytecode(asm_tokenizer_t *tok) {
   return bc;
 }
 
+void obj_add_hex2(obj_t *obj, uint16_t num) {
+  assert(obj);
+
+  obj->code[obj->code_size++] = num & 0xFF;
+  obj->code[obj->code_size++] = (num >> 8) & 0xFF;
+}
+
+symbol_t *obj_find_symbol(obj_t *obj, char *name) {
+  assert(obj);
+  assert(name);
+
+  for (int i = 0; i < obj->symbol_count; ++i) {
+    if (strcmp(name, obj->symbols[i].image) == 0) {
+      return &obj->symbols[i];
+    }
+  }
+  return NULL;
+}
+
+uint16_t obj_add_symbol(obj_t *obj, char *name, uint16_t pos) {
+  assert(obj);
+  assert(name);
+
+  for (int i = 0; i < obj->symbol_count; ++i) {
+    if (strcmp(obj->symbols[i].image, name) != 0) {
+      continue;
+    }
+    if (obj->symbols[i].pos != 0xFFFF) {
+      eprintf("label redifinition: %s", name);
+    }
+    obj->symbols[i].pos = pos;
+    return i;
+  }
+
+  assert(obj->symbol_count + 1 < SYMBOL_MAX_COUNT);
+  strncpy(obj->symbols[obj->symbol_count].image, name, LABEL_MAX_LEN);
+  obj->symbols[obj->symbol_count].pos = pos;
+  ++obj->symbol_count;
+  return obj->symbol_count - 1;
+}
+
+void obj_add_symbol_reloc(obj_t *obj, char *name, uint16_t pos) {
+  assert(obj);
+  assert(name);
+
+  symbol_t *s = obj_find_symbol(obj, name);
+  if (s == NULL) {
+    s = &obj->symbols[obj_add_symbol(obj, name, 0xFFFF)];
+  }
+  assert(s->reloc_count + 1 < INTERN_RELOC_MAX_COUNT);
+  s->relocs[s->reloc_count++] = pos;
+}
+
+void obj_add_symbol_relreloc(obj_t *obj, char *name, uint16_t pos) {
+  assert(obj);
+  assert(name);
+
+  symbol_t *s = obj_find_symbol(obj, name);
+  if (s == NULL) {
+    s = &obj->symbols[obj_add_symbol(obj, name, 0xFFFF)];
+  }
+  assert(s->relreloc_count + 1 < INTERN_RELOC_MAX_COUNT);
+  s->relrelocs[s->relreloc_count++] = pos;
+}
+
+void obj_compile_bytecode(obj_t *obj, bytecode_t bc) {
+  assert(obj);
+
+  switch (bc.kind) {
+    case BNONE:
+      assert(0);
+    case BINST:
+      obj->code[obj->code_size++] = bc.inst;
+      break;
+    case BINSTHEX:
+      obj->code[obj->code_size++] = bc.inst;
+      obj->code[obj->code_size++] = bc.arg.num;
+      break;
+    case BINSTHEX2:
+      if (obj->code_size % 2 == 0) {
+        obj->code[obj->code_size++] = NOP;
+      }
+      obj->code[obj->code_size++] = bc.inst;
+      obj_add_hex2(obj, bc.arg.num);
+      break;
+    case BINSTLABEL:
+      if (obj->code_size % 2 == 0) {
+        obj->code[obj->code_size++] = NOP;
+      }
+      obj->code[obj->code_size++] = bc.inst;
+      obj_add_symbol_reloc(obj, bc.arg.string, obj->code_size);
+      obj->code_size += 2;
+      break;
+    case BINSTRELLABEL:
+      if (obj->code_size % 2 == 0) {
+        obj->code[obj->code_size++] = NOP;
+      }
+      obj->code[obj->code_size++] = bc.inst;
+      obj_add_symbol_relreloc(obj, bc.arg.string, obj->code_size);
+      obj->code_size += 2;
+      break;
+    case BHEX:
+      obj->code[obj->code_size++] = bc.arg.num;
+      break;
+    case BHEX2:
+      obj_add_hex2(obj, bc.arg.num);
+      break;
+    case BSTRING:
+      for (char *c = bc.arg.string; *c; ++c) {
+        obj->code[obj->code_size++] = *c;
+      }
+      break;
+    case BSETLABEL:
+    {
+      symbol_t *s = obj_find_symbol(obj, bc.arg.string);
+      if (s && s->pos != 0xFFFF) {
+        eprintf("label redefinition %s", bc.arg.string);
+      }
+      obj_add_symbol(obj, bc.arg.string, obj->code_size);
+    } break;
+    case BGLOBAL:
+    {
+      uint16_t i = obj_add_symbol(obj, bc.arg.string, 0xFFFF);
+      assert(obj->global_count + 1 < GLOBAL_MAX_COUNT);
+      obj->globals[obj->global_count++] = i;
+    } break;
+    case BEXTERN:
+    {
+      uint16_t i = obj_add_symbol(obj, bc.arg.string, 0xFFFF);
+      assert(obj->extern_count + 1 < EXTERN_MAX_COUNT);
+      obj->externs[obj->extern_count++] = i;
+    } break;
+    case BALIGN:
+      if (obj->code_size % 2 == 1) {
+        ++obj->code_size;
+      }
+      break;
+    case BDB:
+      obj->code_size += bc.arg.num;
+      break;
+  }
+}
+
+void obj_check(obj_t *obj, int debug_info) {
+  assert(obj);
+
+  uint8_t is_extern[obj->symbol_count];
+  memset(is_extern, 0, sizeof(is_extern));
+
+  for (int i = 0; i < obj->extern_count; ++i) {
+    symbol_t *s = &obj->symbols[obj->externs[i]];
+    assert(s->pos == 0xFFFF);
+    assert(s->relreloc_count == 0);
+    is_extern[obj->externs[i]] = 1;
+    for (int j = 0; j < s->reloc_count; ++j) {
+      assert(s->relocs[j] % 2 == 0);
+      obj->code[s->relocs[j]] = 0xFF;
+      obj->code[s->relocs[j] + 1] = 0xFF;
+    }
+  }
+  for (int i = 0; i < obj->symbol_count; ++i) {
+    symbol_t *s = &obj->symbols[i];
+    for (int j = 0; j < s->relreloc_count; ++j) {
+      uint16_t num = s->pos - s->relrelocs[j];
+      obj->code[s->relrelocs[j]] = num & 0xFF;
+      obj->code[s->relrelocs[j] + 1] = (num >> 8) & 0xFF;
+    }
+    if (is_extern[i]) {
+      continue;
+    }
+    if (s->pos == 0xFFFF) {
+      eprintf("label unset: %s", obj->symbols[i].image);
+    }
+    for (int j = 0; j < s->reloc_count; ++j) {
+      assert(obj->reloc_count + 1 < RELOC_MAX_COUNT);
+      assert(s->relocs[j] % 2 == 0);
+      obj->relocs[obj->reloc_count++] = (reloc_entry_t){s->relocs[j], s->pos};
+      obj->code[s->relocs[j]] = s->pos & 0xFF;
+      obj->code[s->relocs[j] + 1] = (s->pos >> 8) & 0xFF;
+    }
+  }
+
+  if (!debug_info) {
+    obj_t new = {0};
+    new.code_size = obj->code_size;
+    memcpy(new.code, obj->code, obj->code_size);
+    new.reloc_count = obj->reloc_count;
+    memcpy(new.relocs, obj->relocs, obj->reloc_count * sizeof(reloc_entry_t));
+    new.global_count = obj->global_count;
+    new.extern_count = obj->extern_count;
+
+    for (int i = 0; i < obj->global_count; ++i) {
+      new.globals[i] = new.symbol_count;
+      symbol_t *s = &new.symbols[new.symbol_count++];
+      memcpy(s, &obj->symbols[obj->globals[i]], sizeof(symbol_t));
+      memset(s->relrelocs, 0, s->relreloc_count * sizeof(uint16_t));
+      s->relreloc_count = 0;
+    }
+    for (int i = 0; i < obj->extern_count; ++i) {
+      new.externs[i] = new.symbol_count;
+      memcpy(&new.symbols[new.symbol_count++], &obj->symbols[obj->externs[i]], sizeof(symbol_t));
+    }
+    *obj = new;
+  }
+}
+
 obj_t assemble(char *buffer, char *buffer_name, int debug_info, int debug_flags, int allowed_flags) {
   assert(buffer);
 

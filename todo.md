@@ -8,16 +8,12 @@ maybe check that when copying a label ecc it will always be null terminated
 
 allow label alone or hex2 as rel with @allow thing
 labels with dot as sublabels?
+
 conditional call?
 
 remove some micro flags
 
 test flag in assembler linker etc to test encoding and others
-
-put the exe and exe_state things in link
-and obj things in assemble
-
-max index in directory sector?
 
 # Assembler
 
