@@ -1,6 +1,7 @@
 GLOBAL print
 GLOBAL put_char
 GLOBAL print_int
+GLOBAL set_cursor
 
 EXTERN div
 EXTERN stream_write
@@ -8,12 +9,17 @@ EXTERN stream_write
   { current_process_ptr 0xF802 }
   { stdout_offset 0x06 }
   { max_cols 0x4F }
-  { max_rows 0x2C }
+  { max_rows 0x2B }
 
 ALIGN
 pos_ptr:
 col_ptr: 0x00
 row_ptr: 0x00
+
+-- [u8 col, u8 row] -> [_, _]
+set_cursor:
+  B_AH RAM_B pos_ptr A_rB
+  RET
 
 -- [char, _] -> [_, _]
 put_char:
@@ -40,7 +46,7 @@ new_line:
   RAM_B row_ptr RAM_AL 0x00 AL_rB
 end_new_line:
   RAM_B col_ptr RAM_AL 0x00 AL_rB
-  RAM_AL max_cols
+  RAM_AL max_cols INCA
 clear_line:
   PUSHA
   -- ^ i
