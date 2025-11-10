@@ -79,4 +79,5 @@ found:
   RET
 
 ALIGN
-stdout: NOP
+stdout:
+NOP -- TODO: this is because otherwise code_analyze complains

@@ -15,6 +15,7 @@ newfile tee fromfile asm/bin/tee
 newfile stack fromfile asm/bin/stack
 newfile rule110 fromfile asm/bin/rule110
 newfile pipe fromfile asm/bin/pipe
+newfile clear fromfile asm/bin/clear
 newdir dir
 newfile a fromtext
 culo

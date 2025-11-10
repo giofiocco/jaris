@@ -352,6 +352,10 @@ int main(int argc, char **argv) {
     eprintf("encodemem for a dir is unimplemented");
   }
 
+  if (!path) {
+    ARG_ERROR_("no file provided")
+  }
+
   FILE *file = fopen(path, "r");
   if (file == NULL) {
     eprintf("cannot open file %s: %s\n", path, strerror(errno));

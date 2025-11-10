@@ -91,9 +91,12 @@ typedef struct {
     tick(&test__.cpu, &test__.running);           \
   } while (test__.running && test__.cpu.SC != 2);
 
-#define test_run_until(test__, cond__)                        \
-  while (test__.running && !(test__.cpu.SC == 2 && cond__)) { \
-    tick(&test__.cpu, &test__.running);                       \
+#define test_run_until(test__, cond__)      \
+  while ((test__).running) {                \
+    if ((test__).cpu.SC == 2 && (cond__)) { \
+      break;                                \
+    }                                       \
+    tick(&(test__).cpu, &(test__).running); \
   }
 
 #define test_assert_running(test__) \
@@ -130,6 +133,7 @@ uint16_t test_find_symbol(symbol_t *symbols, uint16_t count, char *image);
 void test_set_range(test_t *test, int ram_start, int count, uint8_t *data);
 void test_set_u16(test_t *test, uint16_t at, uint16_t num);
 void test_unset_range(test_t *test, uint16_t from, uint16_t count);
+void test_gpu_put_char(test_t *test, char c);
 void test_gpu_print(test_t *test, char *str);
 void test_print_ram_range(test_t *test, uint16_t from, uint16_t to);
 void test_set_stdout(test_t *test, uint16_t stdout_pos, char *str);

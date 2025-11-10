@@ -131,7 +131,7 @@ void print_dir(uint8_t *sectors, int ptr, int indent) {
     }
 
     if (sectors[sec * 256] == 'D') {
-      printf("\n");
+      printf("%d \n", sec); // TODO: others secs for the dir
       print_dir(sectors, sec, indent + 2);
     } else if (sectors[sec * 256] == 'F') {
       do {

@@ -104,7 +104,7 @@ void cpu_dump_stdout(cpu_t *cpu, uint16_t pos) {
   assert(cpu);
   assert(pos % 2 == 0);
 
-  int to = cpu_read16(cpu, pos + 4);
+  int to = cpu_read16(cpu, pos + 2);
   printf("STDOUT 0x%04X:\n", pos);
   printf("  w: [%d] r: [%d] e: [%d]\n",
          cpu_read16(cpu, pos) - pos - 6,
@@ -735,16 +735,16 @@ void test_check(test_t *test) {
     if (test->test_ram[i] >= 0 && test->test_ram[i] != test->cpu.RAM[i]) {
       if (!fail) {
         fprintf(stderr, "ERROR:\n");
-        fprintf(stderr, "                   expected | found\n");
+        fprintf(stderr, "                    expected | found\n");
       }
       fail = 1;
-      fprintf(stderr, "  0x%04X [%2d+%-3d]        %02X | %02X", i, i / PAGE_SIZE, i - (i / PAGE_SIZE) * PAGE_SIZE, test->test_ram[i], test->cpu.RAM[i]);
+      fprintf(stderr, "  0x%04X [%2d+%-4d]        %02X | %02X", i, i / PAGE_SIZE, i - (i / PAGE_SIZE) * PAGE_SIZE, test->test_ram[i], test->cpu.RAM[i]);
       if (isprint(test->cpu.RAM[i])) {
         fprintf(stderr, "    '%c'", test->cpu.RAM[i]);
       }
       fprintf(stderr, "\n");
       if (i % 2 == 0) {
-        fprintf(stderr, "                       %04X | %04X\n", test->test_ram[i] | (test->test_ram[i + 1] << 8), cpu_read16(&test->cpu, i));
+        fprintf(stderr, "                        %04X | %04X\n", test->test_ram[i] | (test->test_ram[i + 1] << 8), cpu_read16(&test->cpu, i));
       }
     }
   }
@@ -753,10 +753,10 @@ void test_check(test_t *test) {
     if (test->test_gpu[i] != test->cpu.ATTRIBUTE_RAM[i]) {
       if (!failgpu) {
         fprintf(stderr, "ERROR GPU:\n");
-        fprintf(stderr, "            expected | found\n");
+        fprintf(stderr, "             expected | found\n");
       }
       failgpu = 1;
-      fprintf(stderr, "  %02d:%02d:     %3d '%c' | %3d '%c'\n", (i >> 8) & 0xFF, i & 0xFF, test->test_gpu[i], isprint(test->test_gpu[i]) ? test->test_gpu[i] : ' ', test->cpu.ATTRIBUTE_RAM[i], isprint(test->cpu.ATTRIBUTE_RAM[i]) ? test->cpu.ATTRIBUTE_RAM[i] : ' ');
+      fprintf(stderr, "  %02d:%02d:     %3d  '%c' | %3d '%c'\n", (i >> 8) & 0xFF, i & 0xFF, test->test_gpu[i], isprint(test->test_gpu[i]) ? test->test_gpu[i] : ' ', test->cpu.ATTRIBUTE_RAM[i], isprint(test->cpu.ATTRIBUTE_RAM[i]) ? test->cpu.ATTRIBUTE_RAM[i] : ' ');
     }
   }
   if (fail || failgpu) {
@@ -802,21 +802,26 @@ void test_unset_range(test_t *test, uint16_t from, uint16_t count) {
   memset(test->test_ram + from, -1, count * sizeof(test->test_ram[0]));
 }
 
+void test_gpu_put_char(test_t *test, char c) {
+  assert(test);
+  if (c == '\n') {
+    test->gpu_x = 0;
+    test->gpu_y++;
+    return;
+  }
+  test->test_gpu[test->gpu_x + (test->gpu_y << 8)] = c;
+  test->gpu_x++;
+  if (test->gpu_x > 0x4A) {
+    test->gpu_x = 0;
+    test->gpu_y++;
+  }
+}
+
 void test_gpu_print(test_t *test, char *str) {
   assert(test);
   assert(str);
   for (int i = 0; str[i]; ++i) {
-    if (str[i] == '\n') {
-      test->gpu_x = 0;
-      test->gpu_y++;
-      continue;
-    }
-    test->test_gpu[test->gpu_x + (test->gpu_y << 8)] = str[i];
-    test->gpu_x++;
-    if (test->gpu_x > 0x4A) {
-      test->gpu_x = 0;
-      test->gpu_y++;
-    }
+    test_gpu_put_char(test, str[i]);
   }
 }
 
@@ -909,13 +914,9 @@ void test_run_command(test_t *test, char *command, char *input, char *exe_path, 
   load_input_string(cpu, input);
 
   printf("  LOAD `%s`\n", command);
-  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
-    tick(cpu, &running);
-  }
+  test_run_until((*test), cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
   test_assert_running(*test);
-  while (running && cpu->IR != JMPA) {
-    tick(cpu, &running);
-  }
+  test_run_until((*test), cpu->IR == JMPA);
   test_assert_running(*test);
 
   exe_t exe = exe_decode_file(exe_path);
@@ -943,11 +944,13 @@ void test_run_command(test_t *test, char *command, char *input, char *exe_path, 
   test_check(test);
 
   printf("  RUN `%s`\n", command);
-  while (running && !(cpu->IR == CALL && cpu->SC == 2 && cpu_read16(cpu, cpu->IP) == exit_pos)) {
-    tick(cpu, &running);
-  }
+  test_run_until(*test, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_pos);
   test_assert_running(*test);
-  int calls = 1;
+  // while (running && !(cpu->IR == CALL && cpu->SC == 2 && cpu_read16(cpu, cpu->IP) == exit_pos)) {
+  //   tick(cpu, &running);
+  // }
+  test_assert_running(*test);
+  int calls = 0;
   while (running && calls != 0) {
     if (cpu->RAM[cpu->IP] == CALL || cpu->RAM[cpu->IP] == CALLR) {
       calls++;
@@ -1065,7 +1068,9 @@ void step_mode(cpu_t *cpu) {
       }
 
     } else {
-      cpu->SC = 0;
+      if (cpu->IR == HLT) {
+        cpu->SC = 0;
+      }
       running = true;
       do {
         tick(cpu, &running);

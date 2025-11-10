@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdio.h>
 #include <time.h>
 
 #include "../argparse.h"
@@ -22,9 +23,7 @@ void test() {
   test_check(test);
 
   printf("  BOOTLOADER RUN\n");
-  while (running && !(cpu->IR == JMPA && cpu->A == 0)) {
-    tick(cpu, &running);
-  }
+  test_run_until(test_, cpu->IR == JMPA && cpu->A == 0);
   test_assert_running(test_);
 
   printf("  OS LOADED\n");
@@ -63,13 +62,7 @@ void test() {
   }
 
   printf("  OS SETUP\n");
-  while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
-    tick(cpu, &running);
-  }
-  // test_assert_running(test_);
-  // test_assert(cpu->RAM[cpu->A] == 's');
-  // test_assert(cpu->RAM[cpu->A + 1] == 'h');
-  // test_assert(cpu->RAM[cpu->A + 2] == 0);
+  test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
 
   // os struct:
   test_set_u16(test, 0xF800, stdlib_pos); // stdlib
@@ -113,137 +106,383 @@ void test() {
 
   uint16_t sh_input_pos = test_find_symbol(sh.symbols, sh.symbol_count, "input") + sh_pos;
 
-  test_run_command(test, "test_font", "", "asm/bin/test_font", sh_input_pos, execute_pos, exit_pos);
-  test_gpu_print(test, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\nabcdefghijklmnopqrstuvwxyz\n0123456789\n!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}\1\n");
-  test_check(test);
-
-  test_run_command(test, "echo ab cd ef", "", "asm/bin/echo", sh_input_pos, execute_pos, exit_pos);
-  test_gpu_print(test, "ab cd ef\n");
-  test_check(test);
-
-  test_run_command(test, "cd dir", "", "asm/bin/cd", sh_input_pos, execute_pos, exit_pos);
-  uint16_t dir_sec = mem_sector_find_entry(cpu->MEM + 256, "dir");
-  test_set_u16(test, 0xF832, dir_sec);
-  test_check(test);
-
-  test_set_u16(test, 0xF842, dir_sec);
-  test_run_command(test, "/ls", "", "asm/bin/ls", sh_input_pos, execute_pos, exit_pos);
-  test_gpu_print(test, "a a.sk \n");
-  test_check(test);
-
-  test_run_command(test, "/cat a", "", "asm/bin/cat", sh_input_pos, execute_pos, exit_pos);
   {
-    exe_t cat = exe_decode_file("asm/bin/cat");
-    exe_reloc(&cat, 3 * PAGE_SIZE, stdlib_pos);
-    uint16_t file_pos = test_find_symbol(cat.symbols, cat.symbol_count, "file") + 3 * PAGE_SIZE;
-    test_unset_range(test, file_pos, 4);
+    printf("  EXECUTE `test_font`\n");
+
+    load_input_string(cpu, "test_font\n");
+
+    test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
+    test_assert_running(test_);
+    test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_pos);
+    test_assert_running(test_);
+
+    exe_t exe = exe_decode_file("asm/bin/test_font");
+    exe_reloc(&exe, 3 * PAGE_SIZE, stdlib_pos);
+    test_unset_range(test, 3 * PAGE_SIZE, PAGE_SIZE);
+    test_set_range(test, 3 * PAGE_SIZE, exe.code_size, exe.code);
+    test_gpu_print(test, "$ test_font\n");
+    test_set_range(test, sh_input_pos, 10, (uint8_t *)"test_font\0");
+
+    test_set_u16(test, 0xF802, 0xF840);             // os.current_process
+    test_set_u16(test, 0xF804, 0b111 << (16 - 3));  // os.process_map
+    test_set_u16(test, 0xF806, 0b1111 << (16 - 4)); // os.page_map
+    test_set_u16(test, 0xF840, 0xF830);             // process.parent
+    test_set_u16(test, 0xF842, 1);                  // process.cwd
+    test_set_u16(test, 0xF844, 0);                  // process.SP
+    test_set_u16(test, 0xF846, 0xFFFF);             // process.stdout
+    test_set_u16(test, 0xF848, 0xFFFF);             // process.stdin
+
+    test_gpu_print(test, "ABCDEFGHIJKLMNOPQRSTUVWXYZ\n"
+                         "abcdefghijklmnopqrstuvwxyz\n"
+                         "0123456789\n"
+                         "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}\1\n");
+    test_check(test);
   }
-  test_gpu_print(test, "culo\n");
-  test_check(test);
 
-  test_run_command(test, "/cd ..", "", "asm/bin/cd", sh_input_pos, execute_pos, exit_pos);
-  test_set_u16(test, 0xF832, 1);
-  test_check(test);
+  {
+    printf("  EXIT\n");
+    int calls = 1;
+    test_step(test_);
+    while (test->running && calls != 0) {
+      if (cpu->RAM[cpu->IP] == CALL || cpu->RAM[cpu->IP] == CALLR) {
+        calls++;
+      } else if (cpu->RAM[cpu->IP] == RET) {
+        calls--;
+      }
+      tick(cpu, &test->running);
+    }
+    test_step(test_);
+    test_step(test_);
 
-  // test_run_command(test, "stack dir/a.sk", "", "asm/bin/stack", sh_input_pos, execute_pos, exit_pos);
-  // test_unset_range(test, 3 * PAGE_SIZE + 3, 4 + 4 + 32 + 2);
-  // test_check(test);
-  //
+    test_set_u16(test, 0xF802, 0xF830);            // os.current_process
+    test_set_u16(test, 0xF804, 0b11 << (16 - 2));  // os.process_map
+    test_set_u16(test, 0xF806, 0b111 << (16 - 3)); // os.page_map
+    test_check(test);
+  }
+
+  {
+    printf("  EXECUTE `echo ab cd ef`\n");
+    load_input_string(cpu, "echo ab cd ef\n");
+
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
+    test_assert_running(test_);
+    int calls = 1;
+    while (test->running && calls != 0) {
+      if (cpu->IR == CALL || cpu->IR == CALLR) {
+        calls++;
+      } else if (cpu->IR == RET) {
+        calls--;
+      }
+      tick(cpu, &test->running);
+    }
+    test_assert_running(test_);
+
+    test_unset_range(test, 3 * PAGE_SIZE, PAGE_SIZE);
+    test_gpu_print(test, "$ echo ab cd ef\n");
+    test_gpu_print(test, "ab cd ef\n");
+    test_set_range(test, sh_input_pos, 14, (uint8_t *)"echo\0ab cd ef\0");
+
+    test_check(test);
+  }
+
+  {
+    printf("  EXECUTE `cd dir`\n");
+
+    load_input_string(cpu, "cd dir\n");
+
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
+    test_assert_running(test_);
+    int calls = 1;
+    while (test->running && calls != 0) {
+      if (cpu->IR == CALL || cpu->IR == CALLR) {
+        calls++;
+      } else if (cpu->IR == RET) {
+        calls--;
+      }
+      tick(cpu, &test->running);
+    }
+    test_assert_running(test_);
+
+    test_gpu_print(test, "$ cd dir\n");
+    test_set_range(test, sh_input_pos, 7, (uint8_t *)"cd\0dir\0");
+
+    test_set_u16(test, 0xF832, mem_sector_find_entry(cpu->MEM + 256, "dir"));
+
+    test_check(test);
+  }
+
+  {
+    printf("  EXECUTE `/ls`\n");
+
+    load_input_string(cpu, "/ls\n");
+
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
+    test_assert_running(test_);
+    int calls = 1;
+    while (test->running && calls != 0) {
+      if (cpu->IR == CALL || cpu->IR == CALLR) {
+        calls++;
+      } else if (cpu->IR == RET) {
+        calls--;
+      }
+      tick(cpu, &test->running);
+    }
+    test_assert_running(test_);
+
+    test_gpu_print(test, "$ /ls\n");
+    test_set_range(test, sh_input_pos, 4, (uint8_t *)"/ls\0");
+
+    test_set_u16(test, 0xF842, mem_sector_find_entry(cpu->MEM + 256, "dir"));
+    test_gpu_print(test, "a a.sk \n");
+
+    test_check(test);
+  }
+
+  {
+    printf("  EXECUTE `/cd`\n");
+
+    load_input_string(cpu, "/cd\n");
+
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
+    test_assert_running(test_);
+    int calls = 1;
+    while (test->running && calls != 0) {
+      if (cpu->IR == CALL || cpu->IR == CALLR) {
+        calls++;
+      } else if (cpu->IR == RET) {
+        calls--;
+      }
+      tick(cpu, &test->running);
+    }
+    test_assert_running(test_);
+
+    test_gpu_print(test, "$ /cd\n");
+    test_set_range(test, sh_input_pos, 4, (uint8_t *)"/cd\0");
+
+    test_set_u16(test, 0xF832, 1);
+
+    test_check(test);
+  }
+
+  {
+    printf("  EXECUTE `cat dir/a`\n");
+
+    load_input_string(cpu, "cat dir/a\n");
+
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
+    test_assert_running(test_);
+    int calls = 1;
+    while (test->running && calls != 0) {
+      if (cpu->IR == CALL || cpu->IR == CALLR) {
+        calls++;
+      } else if (cpu->IR == RET) {
+        calls--;
+      }
+      tick(cpu, &test->running);
+    }
+    test_assert_running(test_);
+
+    test_gpu_print(test, "$ cat dir/a\n");
+    test_set_range(test, sh_input_pos, 10, (uint8_t *)"cat\0dir/a\0");
+    uint16_t sec = mem_sector_find_entry(cpu->MEM + 256 * mem_sector_find_entry(cpu->MEM + 256, "dir"), "a");
+    test_assert(cpu->MEM[256 * sec] == 'F');
+    test_assert(cpu->MEM[256 * sec + 1] == 0xFF);
+    test_assert(cpu->MEM[256 * sec + 2] == 0xFF);
+    for (int i = 4; i <= cpu->MEM[256 * sec + 3]; ++i) {
+      test_gpu_put_char(test, cpu->MEM[256 * sec + i]);
+    }
+    test_set_u16(test, 0xF842, 1);
+
+    test_check(test);
+  }
+
+  {
+    printf("  EXECUTE `tee out`\n");
+
+    load_input_string(cpu, "tee out\n");
+    load_input_string(cpu, "ciao\n");
+
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
+    test_assert_running(test_);
+    int calls = 1;
+    while (test->running && calls != 0) {
+      if (cpu->IR == CALL || cpu->IR == CALLR) {
+        calls++;
+      } else if (cpu->IR == RET) {
+        calls--;
+      }
+      tick(cpu, &test->running);
+    }
+    test_assert_running(test_);
+
+    test_gpu_print(test, "$ tee out\n");
+    test_set_range(test, sh_input_pos, 8, (uint8_t *)"tee\0out\0");
+    test_gpu_print(test, "ciao\n");
+
+    test_check(test);
+
+    printf("  TEST FILE `out`\n");
+
+    uint16_t sec = mem_sector_find_entry(cpu->MEM + 256, "out");
+    test_assert(sec != 0);
+    test_assert(cpu->MEM[256 * sec] == 'F');
+    test_assert(cpu->MEM[256 * sec + 1] == 0xFF);
+    test_assert(cpu->MEM[256 * sec + 2] == 0xFF);
+    test_assert(cpu->MEM[256 * sec + 3] == 8);
+    test_assert(cpu->MEM[256 * sec + 4] == 'c');
+    test_assert(cpu->MEM[256 * sec + 5] == 'i');
+    test_assert(cpu->MEM[256 * sec + 6] == 'a');
+    test_assert(cpu->MEM[256 * sec + 7] == 'o');
+    test_assert(cpu->MEM[256 * sec + 8] == '\n');
+  }
+
+  {
+    printf("  EXECUTE `clear`\n");
+
+    load_input_string(cpu, "clear\n");
+
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
+    test_assert_running(test_);
+    int calls = 1;
+    while (test->running && calls != 0) {
+      if (cpu->IR == CALL || cpu->IR == CALLR) {
+        calls++;
+      } else if (cpu->IR == RET) {
+        calls--;
+      }
+      tick(cpu, &test->running);
+    }
+    test_assert_running(test_);
+
+    memset(test->test_gpu, 0, sizeof(test->test_gpu));
+    test->gpu_x = 0;
+    test->gpu_y = 0;
+    test_set_range(test, sh_input_pos, 6, (uint8_t *)"clear\0");
+
+    test_check(test);
+  }
+
+  {
+    printf("  EXECUTE `rule110`\n");
+
+    load_input_string(cpu, "rule110\n");
+
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
+    test_assert_running(test_);
+    int calls = 1;
+    while (test->running && calls != 0) {
+      if (cpu->IR == CALL || cpu->IR == CALLR) {
+        calls++;
+      } else if (cpu->IR == RET) {
+        calls--;
+      }
+      tick(cpu, &test->running);
+    }
+    test_assert_running(test_);
+
+    test_gpu_print(test, "$ rule110\n");
+    test_set_range(test, sh_input_pos, 8, (uint8_t *)"rule110\0");
+    char *result = "         #|\n"
+                   "        ##|\n"
+                   "       ###|\n"
+                   "      ## #|\n"
+                   "     #####|\n"
+                   "    ##   #|\n"
+                   "   ###  ##|\n"
+                   "  ## # ###|\n"
+                   " ####### #|\n"
+                   "##     ###|\n"
+                   " #    ##  |\n"
+                   "##   ###  |\n"
+                   "##  ## # #|\n"
+                   " # #######|\n"
+                   "####     #|\n"
+                   "   #    ##|\n";
+    for (int j = 0; j < 16 * (10 + 1); ++j) {
+      switch (result[j]) {
+        case ' ': test_gpu_put_char(test, 0); break;
+        case '#': test_gpu_put_char(test, 1); break;
+        default: test_gpu_put_char(test, result[j]); break;
+      }
+    }
+
+    test_check(test);
+  }
+
+  {
+    printf("  EXECUTE `shutdown`\n");
+
+    load_input_string(cpu, "shutdown\n");
+
+    while (test->running) {
+      tick(cpu, &test->running);
+    }
+
+    test_assert(!test->running);
+    test_assert(cpu->A == 0xA0A0);
+    test_gpu_print(test, "$ shutdown\n");
+    test_set_range(test, sh_input_pos, 9, (uint8_t *)"shutdown\0");
+    test_gpu_print(test, "BYE\n");
+
+    test_set_u16(test, 0xF802, 0xF840);             // os.current_process
+    test_set_u16(test, 0xF804, 0b111 << (16 - 3));  // os.process_map
+    test_set_u16(test, 0xF806, 0b1111 << (16 - 4)); // os.page_map
+
+    test_check(test);
+  }
+
+  printf("TODO brainfuck/bfjit\n");
+  printf("TODO stack\n");
+  printf("TODO pipe\n");
+
   // {
-  //   FILE *file = fmemopen(cpu->MEM + 256 * 22 + 4, cpu->MEM[256 * 22 + 3], "r");
-  //   assert(file);
-  //   exe_t exe = exe_decode(file);
-  //   test_assert(exe.reloc_count == 0);
-  //   test_assert(exe.dynamic_count == 1);
-  //   test_assert(exe.dynamics[0].file_name[0] = 1);
-  //   test_assert(exe.symbol_count == 0);
-  //   exe_dump(&exe);
-  //   assert(fclose(file) == 0);
-  // }
+  //   load_input_string(cpu, "pipe echo ciao | tee out\n");
+  //   printf("  LOAD `pipe echo ciao | tee out`\n");
+  //   // test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
+  //   // test_assert_running(test_);
+  //   // test_run_until(test_, cpu->IR != JMPA);
+  //   // test_assert_running(test_);
+  //   exe_t pipe = exe_decode_file("asm/bin/pipe");
+  //   exe_reloc(&pipe, 3 * PAGE_SIZE, stdlib_pos);
+  //   test_set_range(test, 3 * PAGE_SIZE, pipe.code_size, pipe.code);
+  //   test_gpu_print(test, "$ pipe echo ciao | tee out\n");
+  //   test_set_range(test, sh_input_pos, 25, (uint8_t *)"pipe\0echo ciao | tee out\0");
+  //   // test_set_u16(test, 0xF802, 0xF840);
+  //   // test_set_u16(test, 0xF804, 0xE000);
+  //   // test_set_u16(test, 0xF806, 0xF000);
+  //   // test_set_u16(test, 0xF842, 1);
+  //   test_check(test);
   //
-  // printf("  LOAD `stack.out`\n");
-  // load_input_string(cpu, "stack.out\n");
-  // test_gpu_print(test, "$ stack.out\n");
-  // test_set_range(test, sh_input_pos, 10, (uint8_t *)"stack.out\0");
-  // while (running && !(cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos)) {
-  //   tick(cpu, &running);
-  // }
-  // test_assert_running(test_);
-  // while (running && cpu->IR != JMPA) {
-  //   tick(cpu, &running);
-  // }
-  // cpu_dump(cpu);
-  // test_assert_running(test_);
-  // test_check(test);
+  //   printf("  RUN `echo`\n");
+  //   test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
+  //   test_assert_running(test_);
+  //   test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_pos);
+  //   test_assert_running(test_);
+  //   test_run_until(test_, cpu->IR == JMPA);
+  //   test_assert_running(test_);
+  //
+  //   test_set_range(test, sh_input_pos, 25, (uint8_t *)"pipe\0echo\0ciao \0 tee out\0");
+  //   uint16_t stdout_pos = test_find_symbol(pipe.symbols, pipe.symbol_count, "stdout") + 3 * PAGE_SIZE;
+  //   test_set_u16(test, stdout_pos, stdout_pos + 6);               // setup stdout
+  //   test_set_u16(test, stdout_pos + 2, stdout_pos + 6);           // setup stdout
+  //   test_set_u16(test, stdout_pos + 4, 4 * PAGE_SIZE - 0x30 - 8); // setup stdout
+  //   test_set_u16(test, 0xF846, stdout_pos);                       // stdout redirect
+  //   test_check(test);
+  //
+  //   printf("  RUN `echo`\n");
+  //   test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_pos);
+  //   test_assert_running(test_);
+  //   exe_t echo = exe_decode_file("asm/bin/echo");
+  //   exe_reloc(&echo, 4 * PAGE_SIZE, stdlib_pos);
+  //   test_unset_range(test, 4 * PAGE_SIZE, PAGE_SIZE); // unset the stack and the code of the program and then set the code
+  //   test_set_range(test, 4 * PAGE_SIZE, echo.code_size, echo.code);
+  //
+  //   test_check(test);
 
-  // test_run_command(test, "tee file", "hi\n", "asm/bin/tee", sh_input_pos, execute_pos, exit_pos);
-  //{
-  //   exe_t tee = exe_decode_file("asm/bin/tee");
-  //   exe_reloc(&tee, 3 * PAGE_SIZE, stdlib_pos);
-  //   uint16_t file_pos = test_find_symbol(tee.symbols, tee.symbol_count, "file") + 3 * PAGE_SIZE;
-  //   test_unset_range(test, file_pos, 4);
-  // }
-  // test_check(test);
-
-  printf("TODO bfjit?\n");
-  printf("TODO expr?\n");
-  printf("TODO ERRORS\n");
-
-  printf("  RUN `shutdown`\n");
-  load_input_string(cpu, "shutdown\n");
-  while (running) {
-    tick(cpu, &running);
-  }
-  test_assert(cpu->A == 0xA0A0);
-  test_assert(!running);
+  // test_unset_range(test, 3 * PAGE_SIZE, PAGE_SIZE); // unset the stack and the code of the program and then set the code
+  //}
 
   printf("END\n\n");
-}
-
-void test_rule110() {
-  test_t test = {0};
-  test_init(&test, TEST_MEM_PATH);
-  cpu_t *cpu = &test.cpu;
-
-  printf("TEST rule110\n");
-  printf("  TODO\n");
-  return;
-
-  exe_t os = exe_decode_file("asm/bin/os");
-  exe_reloc(&os, 0, os.code_size);
-  so_t stdlib = so_decode_file("asm/bin/stdlib");
-  so_reloc(&stdlib, os.code_size);
-  uint16_t execute_pos = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "execute") + os.code_size;
-  test_run_until(test, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
-  test_run_until(test, cpu->RAM[cpu->IP] == JMPA);
-  test_assert(test.running);
-  test_unset_range(&test, 0, PAGE_SIZE * 3);
-  test_unset_range(&test, 0xF800, PAGE_SIZE);
-  test_check(&test);
-
-  printf("  LOAD\n");
-  load_input_string(cpu, "rule110\n");
-  test_run_until(test, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
-  test_run_until(test, cpu->IR == JMPA);
-  test_step(test);
-  test_assert(test.running);
-
-  exe_t rule110 = exe_decode_file("asm/bin/rule110");
-  exe_reloc(&rule110, 3 * PAGE_SIZE, os.code_size);
-  test_set_range(&test, 3 * PAGE_SIZE, rule110.code_size, rule110.code);
-  test_gpu_print(&test, "$ rule110\n");
-  test_unset_range(&test, 3 * PAGE_SIZE + rule110.code_size, PAGE_SIZE - rule110.code_size); // stack
-  test_check(&test);
-
-  uint16_t iter_pos = test_find_symbol(rule110.symbols, rule110.symbol_count, "iter") + 3 * PAGE_SIZE;
-
-  test_run_until(test, cpu->IP == iter_pos + 1);
-  test_assert(test.running);
-  test_step(test);
-  test_run_until(test, cpu->IP == iter_pos + 1);
-  test_assert(test.running);
-  test_step(test);
-  test_check(&test);
 }
 
 void print_help() {
@@ -281,7 +520,6 @@ int main(int argc, char **argv) {
         else ARG_PARSE_INT_ARG_(ARG_LFLAG("stdout"), stdout_start) //
         else ARG_IF_FLAG("t", "test") {
       test();
-      test_rule110();
       return 0;
     }
     else if (ARG_SFLAG("r")) {
