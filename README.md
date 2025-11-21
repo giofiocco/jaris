@@ -20,6 +20,8 @@ It contains the source code for simulation, compilation and other things:
 - `inspect.c`: provides a CLI to inspect files (and disassemble the code).
 - `code_analyzer.c`: creates a graph of the execution of the input file and uses it to perform checks (to the stack pointer for example).
 - `encodefont.c`: creates a font file writing it byte by byte.
+- `encodemem.c`: encodes .mem file to binary
+- `decodemem.c`: decodes the mem.bin file (can be provided a path to decode only that)
 
 ### `asm/` directory
 
@@ -48,16 +50,16 @@ Programs:
 
 - `bootloader.asm`: loads the os and the stdlib and runs the os.
 - `os.asm + load_font.asm`: sets the os struct and process' structs, loads the font in GPU and runs sh.
-- `sh.asm`: read line and search for a program to run.
-- `test_font.asm`: it prints all the chars to test how the font looks like.
+- `sh.asm`: reads line and search for a program to run.
+- `test_font.asm`: prints all the chars to test how the font looks like.
 - `cat.asm`: prints the content of the input file.
-- `cd.asm`: changes the directory.
+- `cd.asm`: changes directory.
 - `echo.asm`: echoes the input in the command line.
-- `ls.asm`: list files in a dir.
-- `shutdown.asm`: halt the computer.
-- `stack.asm`: a stack based programming language, compiles the input file to `/stack.out`.
+- `ls.asm`: lists files in a dir.
+- `shutdown.asm`: halts the computer.
+- `stack.asm`: is a stack based programming language, it compiles the input file to executable `/stack.out`.
 - `bfjit.asm`: a jit compiler for brainfuck.
-- `expr.asm`: ...
+- `expr.asm`: TODO.
 - `pipe.asm`: pipes output of an cmd to another passed as arg divided by `|`.
 - `tee.asm`: writes the stdin both to stdout and to a file passed as arg.
 

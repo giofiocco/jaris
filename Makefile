@@ -1,4 +1,4 @@
-TARGETS=assembler linker encodemem inspect sim encodefont code_analyzer
+TARGETS=assembler linker encodemem inspect sim encodefont code_analyzer decodemem
 CFLAGS=-Wall -Wextra -g
 
 FILES=src/files.c src/files.h
@@ -41,6 +41,9 @@ font: encodefont
 	./encodefont $@
 
 encodefont: src/encodefont.c
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
+
+decodemem: src/decodemem.c
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
 %.mem.bin: %.mem asm font encodemem
