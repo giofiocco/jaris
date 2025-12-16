@@ -18,8 +18,10 @@ no_error:
 
   B_A RAM_B file CALL open_create_file
 loop:
-  CALL get_char PUSHA CALL put_char
-  RAM_A file PEEKB CALL write_u8
-  POPA INCA JMPRNZ $loop -- jmp if != 0xFFFF
+  CALL get_char PUSHA INCA JMPRZ $end -- jmp if == 0xFFFF
+  PEEKA CALL put_char
+  RAM_A file POPB CALL write_u8
+  JMPR $loop
 
+end:
   RAM_AL 0x00 CALL exit
