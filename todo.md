@@ -1,4 +1,7 @@
+code_analyzer works if is label: nop jmp but not if label: jmp because relreloc points to the label not the jmp node
+
 1. globals etc as dynamic arrays
+1. maybe not fclose stdin in exe_decode etc
 
 asm formatter
 

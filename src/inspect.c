@@ -59,14 +59,15 @@ void inspect_so(char *filename, int disassemble_flag) {
 void inspect_bin(char *filename, int disassemble_flag) {
   assert(filename);
 
-  FILE *file = fopen(filename, "rb");
+  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
   if (!file) {
     eprintf("cannot open file '%s': '%s'", filename, strerror(errno));
   }
   assert(fseek(file, 0, SEEK_END) == 0);
   size_t size = ftell(file);
   assert(fseek(file, 0, SEEK_SET) == 0);
-  uint8_t buffer[size];
+  uint8_t buffer[size + 1];
+  buffer[size] = 0;
   assert(fread(buffer, 1, size, file) == size);
   assert(fclose(file) == 0);
 
@@ -88,7 +89,7 @@ void inspect_mem_sec_seq(char *filename) {
 
   uint8_t sectors[2048][256] = {0};
 
-  FILE *file = fopen(filename, "rb");
+  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
   if (!file) {
     eprintf("cannot open file '%s': %s", filename, strerror(errno));
   }
@@ -150,7 +151,7 @@ void inspect_mem(char *filename) {
 
   uint8_t sectors[2048][256] = {0};
 
-  FILE *file = fopen(filename, "rb");
+  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
   if (!file) {
     eprintf("cannot open file '%s': %s", filename, strerror(errno));
   }
@@ -167,7 +168,7 @@ void inspect_mem(char *filename) {
 void inspect_font(char *filename) {
   assert(filename);
 
-  FILE *file = fopen(filename, "rb");
+  FILE *file = strcmp(filename, "-") == 0 ? stdin : fopen(filename, "rb");
   if (!file) {
     eprintf("cannot open file '%s': %s", filename, strerror(errno));
   }

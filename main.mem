@@ -16,6 +16,7 @@ newfile stack fromfile asm/bin/stack
 newfile rule110 fromfile asm/bin/rule110
 newfile pipe fromfile asm/bin/pipe
 newfile clear fromfile asm/bin/clear
+newfile rpncalc fromfile asm/bin/rpncalc
 newdir dir
 newfile a fromtext
 culo

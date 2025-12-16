@@ -269,6 +269,8 @@ void analyze_code(context_t *context, uint16_t code_size, uint8_t *code, uint16_
         continue;
       }
       node_t *node = &context->nodes[context->ip_nodes[symbols[i].relrelocs[j] - 1]];
+      // printf("<");
+      // bytecode_dump(node->bc);
       if (node->bc.kind == BINSTHEX2) {
         node->bc.kind = BINSTRELLABEL;
         strncpy(node->bc.arg.string, symbols[i].image, LABEL_MAX_LEN);
@@ -302,7 +304,8 @@ void analyze_asm(context_t *context, char *filename) {
   assert(fseek(file, 0, SEEK_END) == 0);
   int size = ftell(file);
   assert(fseek(file, 0, SEEK_SET) == 0);
-  char buffer[size];
+  char buffer[size + 1];
+  buffer[size] = 0;
   assert((int)fread(buffer, 1, size, file) == size);
   assert(fclose(file) == 0);
 
@@ -356,6 +359,10 @@ void analyze_obj(context_t *context, char *filename) {
   }
 
   analyze_code(context, obj.code_size, obj.code, obj.symbol_count, obj.symbols, obj.reloc_count, obj.relocs);
+
+  for (int i = 0; i < context->node_count; ++i) {
+    bytecode_dump(context->nodes[i].bc);
+  }
 
   for (int i = 0; i < obj.global_count; ++i) {
     int node = search_label(context, obj.symbols[obj.globals[i]].image);

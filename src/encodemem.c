@@ -103,7 +103,7 @@ uint16_t encode_dir(char *path, uint16_t parent, uint16_t head) {
   }
   struct dirent *d;
   while ((d = readdir(dir))) {
-    if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0 || strcmp(d->d_name, "__bootloader") == 0) {
+    if (strcmp(d->d_name, ".") == 0 || strcmp(d->d_name, "..") == 0) {
       continue;
     }
 

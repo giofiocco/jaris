@@ -81,7 +81,8 @@ int main(int argc, char **argv) {
   int size = ftell(file);
   assert(size >= 0);
   assert(fseek(file, 0, SEEK_SET) == 0);
-  char buffer[size];
+  char buffer[size + 1];
+  buffer[size] = 0;
   assert((long int)fread(buffer, 1, size, file) == size);
   buffer[size] = 0;
   assert(fclose(file) == 0);

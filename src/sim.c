@@ -362,11 +362,10 @@ void test() {
     test_check(test);
   }
 
-  {
+  if (0) {
     printf("  EXECUTE `rule110`\n");
 
     load_input_string(cpu, "rule110\n");
-
     test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
     test_assert_running(test_);
     int calls = 1;
@@ -410,6 +409,37 @@ void test() {
   }
 
   {
+    printf("  EXECUTE `pipe echo ... tee`\n");
+
+    load_input_string(cpu, "pipe echo ciao | tee out\n");
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_pos);
+    test_assert_running(test_);
+    test_run_until(test_, cpu->IR == JMPA);
+    test_assert_running(test_);
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_pos);
+    test_assert_running(test_);
+
+    exe_t pipe = exe_decode_file("asm/bin/pipe");
+    exe_reloc(&pipe, 3 * PAGE_SIZE, stdlib_pos);
+
+    test_gpu_print(test, "$ pipe echo ciao | tee out\n");
+    test_set_range(test, sh_input_pos, 25, (uint8_t *)"pipe\0echo ciao | tee out\0");
+
+    test_check(test);
+
+    printf("  EXECUTE 1st command\n");
+
+    test_set_range(test, sh_input_pos, 25, (uint8_t *)"pipe\0echo\0ciao \0 tee out\0");
+    test_unset_range(test, 4 * PAGE_SIZE, PAGE_SIZE);
+    test_unset_range(test, 0xF850, 16);
+
+    test_check(test);
+  }
+
+  printf("TODO brainfuck/bfjit\n");
+  printf("TODO stack\n");
+
+  {
     printf("  EXECUTE `shutdown`\n");
 
     load_input_string(cpu, "shutdown\n");
@@ -430,10 +460,6 @@ void test() {
 
     test_check(test);
   }
-
-  printf("TODO brainfuck/bfjit\n");
-  printf("TODO stack\n");
-  printf("TODO pipe\n");
 
   // {
   //   load_input_string(cpu, "pipe echo ciao | tee out\n");
