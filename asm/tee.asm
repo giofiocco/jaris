@@ -20,6 +20,6 @@ no_error:
 loop:
   CALL get_char PUSHA CALL put_char
   RAM_A file PEEKB CALL write_u8
-  POPA RAM_BL 0x0A SUB JMPRNZ $loop
+  POPA INCA JMPRNZ $loop -- jmp if != 0xFFFF
 
   RAM_AL 0x00 CALL exit

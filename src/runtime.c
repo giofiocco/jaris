@@ -516,9 +516,21 @@ void load_input_string(cpu_t *cpu, char *string) {
   assert(string);
 
   for (; *string; ++string) {
-    if (*string == '\\' && *(string + 1) == 'n') {
+    if (*string == '\\') {
       ++string;
-      *string = '\n';
+      switch (*string) {
+        case 'n': *string = '\n'; break;
+        case 'D':
+          // end of input -> 0xFF
+          assert(cpu->key_fifo_i + 4 < 1000);
+          cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x1D; // left control pressed
+          cpu->KEY_FIFO[cpu->key_fifo_i++] = char_to_scancode['d'];
+          cpu->KEY_FIFO[cpu->key_fifo_i++] = char_to_scancode['d'] + 0x80;
+          cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x9D; // left control released
+          ++string;
+          continue;
+        default: eprintf("no scancode for '\\%c'", *string);
+      }
     }
 
     int code = char_to_scancode[(int)*string];
@@ -528,13 +540,11 @@ void load_input_string(cpu_t *cpu, char *string) {
 
     if (code < 0) {
       assert(-code < 0x80);
-      assert(cpu->key_fifo_i + 6 < 1000);
-      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0xE0;
-      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0xAA;
+      assert(cpu->key_fifo_i + 4 < 1000);
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x2A; // left shif pressed
       cpu->KEY_FIFO[cpu->key_fifo_i++] = -code;
       cpu->KEY_FIFO[cpu->key_fifo_i++] = -code + 0x80;
-      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0xE0;
-      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0x2A;
+      cpu->KEY_FIFO[cpu->key_fifo_i++] = 0xAA; // left shift released
     } else {
       assert(code < 0x80);
       assert(cpu->key_fifo_i + 2 < 1000);
@@ -542,6 +552,7 @@ void load_input_string(cpu_t *cpu, char *string) {
       cpu->KEY_FIFO[cpu->key_fifo_i++] = code + 0x80;
     }
   }
+  printf("\n");
 }
 
 bool check_microcode(microcode_t mc, microcode_flag_t flag) {

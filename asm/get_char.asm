@@ -14,9 +14,8 @@ get_char:
 no_redirect:
 
   KEY_A A_B
-  RAM_AL 0xAA SUB JMPRZ $shift
-  RAM_AL 0xE0 SUB JMPRZ $get_char
-  RAM_AL 0x2A SUB JMPRZ $get_char
+  RAM_AL 0x1D SUB JMPRZ $ctrl
+  RAM_AL 0x2A SUB JMPRZ $shift
   RAM_AL 0x80 SUB JMPRNN $get_char
   RAM_A scancode_to_ascii SUM A_B rB_AL
   RET
@@ -24,6 +23,13 @@ no_redirect:
 shift:
   KEY_A RAM_B scancode_to_ascii_shift SUM A_B rB_AL
   RET
+
+ctrl:
+  KEY_A
+  RAM_BL 0x20 SUB JMPRNZ $not_d -- ctr+d
+  RAM_A 0xFFFF RET
+not_d:
+  JMPR $get_char
 
 scancode_to_ascii:
 --   0    1    2    3    4    5    6    7
@@ -64,3 +70,4 @@ scancode_to_ascii_shift:
   0x68 0x69 0x6A 0x6B 0x6C 0x6D 0x6E 0x6F -- 6
   0x70 0x71 0x72 0x73 0x74 0x75 0x76 0x77 -- 7
   0x78 0x79 0x7A 0x7B 0x7C 0x7D 0x7E 0x7F -- 7
+

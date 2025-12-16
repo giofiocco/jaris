@@ -34,7 +34,7 @@ not_full:
   INCSP RET
 
 -- [STREAM *stream, _] -> [u8 char, _]
--- [0xFFFF, _] if empty
+-- returns [0xFFFF, _] if empty
 stream_read:
   PUSHA
   A_B rB_A PUSHA -- next_r
