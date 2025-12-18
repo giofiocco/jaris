@@ -783,8 +783,10 @@ uint16_t test_find_symbol(symbol_t *symbols, uint16_t count, char *image) {
       return symbols[i].pos;
     }
   }
+  char *at_pos = NULL;
   for (int i = 0; i < count; i++) {
-    if (strlen(symbols[i].image) > 4 && strcmp(symbols[i].image + 4, image) == 0) {
+    at_pos = strchr(symbols[i].image, '@');
+    if (at_pos && strcmp(at_pos + 1, image) == 0) {
       return symbols[i].pos;
     }
   }
