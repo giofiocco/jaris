@@ -1,6 +1,8 @@
 #include <assert.h>
 #include <string.h>
 
+#include "instructions.h"
+
 #define ERRORS_IMPLEMENTATION
 #include "../mystb/errors.h"
 #include "files.h"
@@ -147,12 +149,14 @@ void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info) {
       }
 
       char new_image[LABEL_MAX_LEN];
-      snprintf(new_image, LABEL_MAX_LEN, "%03d_%-s", exe->symbol_count, obj->symbols[i].image);
+      snprintf(new_image, LABEL_MAX_LEN, "%d@%-s", state->obj_count, obj->symbols[i].image);
       strcpy(obj->symbols[i].image, new_image);
 
       exe_add_symbol_offset(exe, &obj->symbols[i], offset);
     }
   }
+
+  state->obj_count++;
 }
 
 void exe_link_so(exe_state_t *state, so_t *so, char *name) {

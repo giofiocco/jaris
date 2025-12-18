@@ -14,6 +14,7 @@ typedef struct {
   int so_global_counts[DYNAMIC_MAX_COUNT];
   char so_gloabals_images[DYNAMIC_MAX_COUNT][GLOBAL_MAX_COUNT][LABEL_MAX_LEN];
   uint16_t so_globals_pos[DYNAMIC_MAX_COUNT][GLOBAL_MAX_COUNT];
+  int obj_count;
 } exe_state_t;
 
 void exe_link_obj(exe_state_t *state, obj_t *obj, int debug_info);
