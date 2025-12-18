@@ -16,16 +16,21 @@
 
 char *stdlib_path = "asm/bin/stdlib";
 
-#define ASSERT_IS_NODE(i__)                                           \
-  if (!(0 <= (i__) && (i__) < context->node_count)) {                 \
-    eprintf("!((0 <= %d && %d < context->node_count)", (i__), (i__)); \
+#define TODO eprintf("TODO")
+
+#define ASSERT_IS_NODE(i__)                                               \
+  if (!(0 <= (i__) && (i__) < context->node_count)) {                     \
+    eprintf("!((0 <= %d && %d < %d)", (i__), (i__), context->node_count); \
   }
 
-typedef struct {
-  int visited;
-  int sp;
-  bytecode_t bc;
+// TODO: remove visited from the node
+// TODO: sp in context and not in path
 
+typedef struct {
+  bytecode_t bc;
+  int sp;
+
+  int visited;
   int next;
   int branch;
 } node_t;
@@ -37,12 +42,16 @@ typedef struct {
   int labels_node[MAX_LABEL_COUNT];
   int label_count;
   int ip_nodes[MAX_CODE_SIZE];
+  int entry_points[MAX_NODE_COUNT];
+  int entry_point_count;
+  int visited[MAX_NODE_COUNT];
 } context_t;
 
 void context_init(context_t *context) {
   assert(context);
   memset(context->ip_nodes, -1, sizeof(context->ip_nodes));
   memset(context->labels_node, -1, sizeof(context->labels_node));
+  memset(context->entry_points, -1, sizeof(context->entry_points));
 }
 
 int search_label(context_t *context, char *label) {
@@ -59,7 +68,205 @@ int search_label(context_t *context, char *label) {
   return -1;
 }
 
-void path(context_t *context, int starting_node, int sp) {
+void path(context_t *context, int i, int sp) {
+  assert(context);
+  // ASSERT_IS_NODE(i);
+  assert(sp >= 0);
+
+  if (!(0 <= (i) && (i) < context->node_count)) {
+    return;
+  }
+
+  if (context->nodes[i].visited) {
+    return;
+  }
+
+  node_t *node = &context->nodes[i];
+  bytecode_kind_t kind = node->bc.kind;
+  instruction_t inst = node->bc.inst;
+  node->visited = 1;
+  node->sp = sp;
+
+  switch (kind) {
+    case BNONE:
+    case BDB:
+    case BHEX:
+    case BHEX2:
+    case BSTRING:
+    case BALIGN:
+    case BGLOBAL:
+    case BEXTERN:
+      break;
+
+    case BSETLABEL:
+      node->next = i + 1;
+      break;
+
+    case BINST:
+    case BINSTHEX:
+    case BINSTHEX2:
+    case BINSTLABEL:
+    case BINSTRELLABEL:
+      switch (inst) {
+        case RET:
+          if (node->sp != 0) {
+            fprintf(stderr, "ERROR: expected RET sp to be 0, found %d, at node %d\n", node->sp, i);
+          }
+          __attribute__((fallthrough));
+        case HLT:
+        case JMPA:
+        case JMPAR:
+          break;
+
+        case JMP:
+        case JMPR:
+        case JMPRZ:
+        case JMPRN:
+        case JMPRC:
+        case JMPRNZ:
+        case JMPRNN:
+        case JMPRNC:
+        case CALL:
+        case CALLR:
+        {
+          int jmp = -1;
+          if (kind == BINSTHEX2) {
+            for (int j = 0; j < MAX_CODE_SIZE; ++j) {
+              if (context->ip_nodes[j] == i) {
+                jmp = j;
+                break;
+              }
+            }
+            if (inst == JMPR
+                || inst == JMPRZ
+                || inst == JMPRN
+                || inst == JMPRC
+                || inst == JMPRNZ
+                || inst == JMPRNN
+                || inst == JMPRNC
+                || inst == CALLR) {
+              int rel = jmp + 1 + (int16_t)node->bc.arg.num;
+              if ((0 <= rel && rel < MAX_CODE_SIZE)) {
+                jmp = context->ip_nodes[rel];
+              }
+            }
+
+          } else if (kind == BINSTRELLABEL) {
+            jmp = search_label(context, node->bc.arg.string);
+
+          } else if (kind == BINSTLABEL) {
+            if (inst == CALL && strcmp(node->bc.arg.string, "exit") == 0) {
+              break;
+            }
+            jmp = search_label(context, node->bc.arg.string);
+
+          } else {
+            assert(0 && "malformed bytecode");
+          }
+          if (inst == JMPRZ
+              || inst == JMPRN
+              || inst == JMPRC
+              || inst == JMPRNZ
+              || inst == JMPRNN
+              || inst == JMPRNC
+              || inst == CALL
+              || inst == CALLR) {
+            node->branch = jmp;
+            node->next = i + 1;
+          } else {
+            node->next = jmp;
+          }
+        } break;
+
+        case PUSHA:
+        case PUSHB:
+        case DECSP:
+          node->next = i + 1;
+          sp += 2;
+          break;
+
+        case POPA:
+        case POPB:
+        case INCSP:
+          node->next = i + 1;
+          sp -= 2;
+          break;
+
+        case PEEKAR:
+        case PUSHAR:
+          if (node->sp < node->bc.arg.num) {
+            fprintf(stderr, "ERROR: %s %d with sp:%d\n", instruction_to_string(inst), node->bc.arg.num, sp);
+          }
+          __attribute__((fallthrough));
+        case PEEKA:
+        case PEEKB:
+          if (node->sp < 2) {
+            fprintf(stderr, "ERROR: %s with sp:%d\n", instruction_to_string(inst), sp);
+          }
+          __attribute__((fallthrough));
+        case NOP:
+        case INCA:
+        case DECA:
+        case INCB:
+        case RAM_AL:
+        case RAM_BL:
+        case RAM_A:
+        case RAM_B:
+        case SUM:
+        case SUB:
+        case SHR:
+        case SHL:
+        case AND:
+        case CMPA:
+        case CMPB:
+        case A_B:
+        case B_A:
+        case B_AH:
+        case AL_rB:
+        case A_rB:
+        case rB_AL:
+        case rB_A:
+        case A_SP:
+        case SP_A:
+        case A_SEC:
+        case SEC_A:
+        case RAM_NDX:
+        case INCNDX:
+        case NDX_A:
+        case A_NDX:
+        case MEM_A:
+        case MEM_AH:
+        case A_MEM:
+        case _KEY_A:
+        case DRW:
+        case RAM_DRW:
+          node->next = i + 1;
+          break;
+      }
+  }
+
+  if (node->next != -1) {
+    path(context, node->next, sp);
+  }
+  if (node->branch != -1) {
+    if (inst == CALL) {
+      sp = 0;
+    }
+    path(context, node->branch, sp);
+  }
+}
+
+void connect(context_t *context) {
+  assert(context);
+
+  for (int i = 0; i < context->node_count; ++i) {
+    if (!context->nodes[i].visited) {
+      path(context, i, 0);
+    }
+  }
+}
+
+void path2(context_t *context, int starting_node, int sp) {
   assert(context);
   ASSERT_IS_NODE(starting_node);
   assert(sp >= 0);
@@ -344,7 +551,7 @@ void analyze_asm(context_t *context, char *filename) {
   for (int i = 0; i < global_count; ++i) {
     int node = search_label(context, globals[i]);
     ASSERT_IS_NODE(node);
-    path(context, node, 0);
+    context->entry_points[context->entry_point_count++] = node;
   }
 }
 
@@ -360,14 +567,10 @@ void analyze_obj(context_t *context, char *filename) {
 
   analyze_code(context, obj.code_size, obj.code, obj.symbol_count, obj.symbols, obj.reloc_count, obj.relocs);
 
-  for (int i = 0; i < context->node_count; ++i) {
-    bytecode_dump(context->nodes[i].bc);
-  }
-
   for (int i = 0; i < obj.global_count; ++i) {
     int node = search_label(context, obj.symbols[obj.globals[i]].image);
     assert(node != -1);
-    path(context, node, 0);
+    context->entry_points[context->entry_point_count++] = node;
   }
 }
 
@@ -401,7 +604,7 @@ void analyze_exe(context_t *context, char *filename) {
     }
   }
 
-  path(context, 0, 0);
+  context->entry_points[context->entry_point_count++] = 0;
 }
 
 void analyze_so(context_t *context, char *filename) {
@@ -422,7 +625,7 @@ void analyze_so(context_t *context, char *filename) {
   for (int i = 0; i < so.global_count; ++i) {
     int node = search_label(context, so.symbols[so.globals[i]].image);
     assert(node != -1);
-    path(context, node, 0);
+    context->entry_points[context->entry_point_count++] = node;
   }
 }
 
@@ -444,7 +647,29 @@ void analyze_bin(context_t *context, char *filename) {
 
   analyze_code(context, size, code, 0, NULL, 0, NULL);
 
-  path(context, 0, 0);
+  context->entry_points[context->entry_point_count++] = 0;
+}
+
+void dump_dot_path(context_t *context, FILE *file, int i) {
+  assert(context);
+  assert(file);
+  ASSERT_IS_NODE(i);
+
+  if (context->visited[i]) {
+    return;
+  }
+
+  node_t *node = &context->nodes[i];
+  context->visited[i] = 1;
+
+  if (node->next != -1) {
+    fprintf(file, "\tN%03d -> N%03d;\n", i, node->next);
+    dump_dot_path(context, file, node->next);
+  }
+  if (node->branch != -1) {
+    fprintf(file, "\tN%03d -> N%03d [color=red];\n", i, node->branch);
+    dump_dot_path(context, file, node->branch);
+  }
 }
 
 void dump_dot_digraph(context_t *context, char *filename) {
@@ -458,38 +683,20 @@ void dump_dot_digraph(context_t *context, char *filename) {
 
   fprintf(file, "digraph {\n\tsplines = ortho;\n\tnode [shape = box];\n");
 
-  for (int i = 0; i < context->node_count; ++i) {
-    node_t *node = &context->nodes[i];
-    if (!node->visited) {
-      continue;
-    }
-
-    fprintf(file, "\tN%03d [label=", i);
-    fprintf(file, "< %d: ", i);
-    bytecode_to_asm(file, node->bc);
-    fprintf(file, ">");
-    if (!node->visited) {
-      fprintf(file, ", color=red");
-    }
-    if (node->sp != -1) {
-      fprintf(file, ", xlabel=\"%d\"", node->sp);
-    }
-    fprintf(file, "];\n");
+  memset(context->visited, 0, sizeof(context->visited));
+  for (int i = 0; i < context->entry_point_count; ++i) {
+    dump_dot_path(context, file, context->entry_points[i]);
   }
 
   for (int i = 0; i < context->node_count; ++i) {
-    node_t *node = &context->nodes[i];
-
-    if (node->bc.kind == BNONE || node->bc.kind == BEXTERN || node->bc.kind == BGLOBAL) {
+    if (!context->visited[i]) {
       continue;
     }
+    node_t *node = &context->nodes[i];
 
-    if (node->next != -1) {
-      fprintf(file, "\tN%03d -> N%03d;\n", i, node->next);
-    }
-    if (node->branch != -1) {
-      fprintf(file, "\tN%03d -> N%03d [color=red];\n", i, node->branch);
-    }
+    fprintf(file, "\tN%03d [label=< %d: ", i, i);
+    bytecode_to_asm(file, node->bc);
+    fprintf(file, ">, xlabel=\"%d\"];\n", node->sp);
   }
 
   fprintf(file, "}");
@@ -550,6 +757,8 @@ int main(int argc, char **argv) {
     case F_MEM:
     case F_FONT: eprintf("unvalid file kind: %s", file_kind_to_string(kind)); break;
   }
+
+  connect(&context);
 
   if (text) {
     for (int i = 0; i < context.node_count; ++i) {

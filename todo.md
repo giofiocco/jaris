@@ -45,3 +45,7 @@ arg: "asdf" 0x00
 # execute
 
 - errors instead of crashes (but how do you diff between exitcode or error from execute?)
+
+# alloc
+
+- allocate the blocks starting from the start of the page so a realloc wouldn't need to move always
