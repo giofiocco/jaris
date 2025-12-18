@@ -1,6 +1,7 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 #include "assemble.h"
 #include "files.h"
@@ -23,8 +24,22 @@ char *stdlib_path = "asm/bin/stdlib";
     eprintf("!((0 <= %d && %d < %d)", (i__), (i__), context->node_count); \
   }
 
+void warning(int node, char *fmt, ...) {
+  if (isatty(2)) {
+    fprintf(stderr, "\e[31m");
+  }
+  fprintf(stderr, "WARN: at node %d: ", node);
+  va_list argptr;
+  va_start(argptr, fmt);
+  vfprintf(stderr, fmt, argptr);
+  va_end(argptr);
+  fprintf(stderr, "\n");
+  if (isatty(2)) {
+    fprintf(stderr, "\e[0m");
+  }
+}
+
 // TODO: remove visited from the node
-// TODO: sp in context and not in path
 
 typedef struct {
   bytecode_t bc;
@@ -70,10 +85,13 @@ int search_label(context_t *context, char *label) {
 
 void path(context_t *context, int i, int sp) {
   assert(context);
-  // ASSERT_IS_NODE(i);
-  assert(sp >= 0);
 
-  if (!(0 <= (i) && (i) < context->node_count)) {
+  if (sp < 0) {
+    warning(i, "sp < 0");
+  }
+
+  if (!(0 <= i && i < context->node_count)) {
+    warning(i, "node > %d", context->node_count);
     return;
   }
 
@@ -110,7 +128,7 @@ void path(context_t *context, int i, int sp) {
       switch (inst) {
         case RET:
           if (node->sp != 0) {
-            fprintf(stderr, "ERROR: expected RET sp to be 0, found %d, at node %d\n", node->sp, i);
+            warning(i, "expected RET sp to be 0, found %d", node->sp);
           }
           __attribute__((fallthrough));
         case HLT:
@@ -195,13 +213,13 @@ void path(context_t *context, int i, int sp) {
         case PEEKAR:
         case PUSHAR:
           if (node->sp < node->bc.arg.num) {
-            fprintf(stderr, "ERROR: %s %d with sp:%d\n", instruction_to_string(inst), node->bc.arg.num, sp);
+            warning(i, "%s %d with sp:%d", instruction_to_string(inst), node->bc.arg.num, sp);
           }
           __attribute__((fallthrough));
         case PEEKA:
         case PEEKB:
           if (node->sp < 2) {
-            fprintf(stderr, "ERROR: %s with sp:%d\n", instruction_to_string(inst), sp);
+            warning(i, "%s with sp:%d", instruction_to_string(inst), sp);
           }
           __attribute__((fallthrough));
         case NOP:
@@ -249,7 +267,7 @@ void path(context_t *context, int i, int sp) {
     path(context, node->next, sp);
   }
   if (node->branch != -1) {
-    if (inst == CALL) {
+    if (inst == CALL || inst == CALLR) {
       sp = 0;
     }
     path(context, node->branch, sp);
@@ -259,13 +277,27 @@ void path(context_t *context, int i, int sp) {
 void connect(context_t *context) {
   assert(context);
 
-  for (int i = 0; i < context->node_count; ++i) {
-    if (!context->nodes[i].visited) {
-      path(context, i, 0);
-    }
+  for (int i = 0; i < context->entry_point_count; ++i) {
+    path(context, context->entry_points[i], 0);
   }
+
+  // TODO: check all the others
+  // node_t *node = NULL;
+  // for (int i = 0; i < context->node_count; ++i) {
+  //   node = &context->nodes[i];
+  //   if (!node->visited) {
+  //     node->visited = 1;
+  //     if (node->bc.kind == BINST
+  //         || node->bc.kind == BINSTHEX
+  //         || node->bc.kind == BINSTHEX2
+  //         || node->bc.kind == BINSTLABEL
+  //         || node->bc.kind == BINSTRELLABEL) {
+  //     }
+  //   }
+  // }
 }
 
+/*
 void path2(context_t *context, int starting_node, int sp) {
   assert(context);
   ASSERT_IS_NODE(starting_node);
@@ -275,7 +307,7 @@ void path2(context_t *context, int starting_node, int sp) {
     node_t *node = &context->nodes[i];
     if (node->visited) {
       if (node->sp != sp) {
-        fprintf(stderr, "ERROR: expected sp to be %d, found %d, at node %d\n", node->sp, sp, i);
+        warning(i, "expected sp to be %d, found %d", node->sp, sp);
       }
       return;
     }
@@ -290,7 +322,7 @@ void path2(context_t *context, int starting_node, int sp) {
 
     } else if (node->bc.inst == RET) {
       if (node->sp != 0) {
-        fprintf(stderr, "ERROR: expected RET sp to be 0, found %d, at node %d\n", node->sp, i);
+        warning(i, "expected RET sp to be 0, found %d, at node %d\n", node->sp, i);
       }
       return;
 
@@ -378,10 +410,16 @@ void path2(context_t *context, int starting_node, int sp) {
     }
   }
 }
+*/
 
 void analyze_code(context_t *context, uint16_t code_size, uint8_t *code, uint16_t symbol_count, symbol_t *symbols, uint16_t reloc_count, reloc_entry_t *relocs) {
   assert(context);
   assert(code);
+
+  assert(code_size < MAX_CODE_SIZE);
+  if (code_size > MAX_NODE_COUNT) {
+    printf("WARN: code_size > MAX_NODE_COUNT\n");
+  }
 
   bytecode_t bc = {0};
   for (int ip = 0; ip < code_size;) {
@@ -450,6 +488,11 @@ void analyze_code(context_t *context, uint16_t code_size, uint8_t *code, uint16_
 
     assert(context->ip_nodes[node_ip] == -1);
     context->ip_nodes[node_ip] = label_node == -1 ? context->node_count - 1 : label_node;
+  }
+
+  node_t *last_node = &context->nodes[context->node_count - 1];
+  if (last_node->bc.kind == BINST && last_node->bc.inst == NOP) {
+    last_node->bc = (bytecode_t){BHEX, 0, {.num = 0}};
   }
 
   for (int i = 0; i < symbol_count; ++i) {
@@ -560,11 +603,6 @@ void analyze_obj(context_t *context, char *filename) {
   assert(filename);
 
   obj_t obj = obj_decode_file(filename);
-  assert(obj.code_size < MAX_CODE_SIZE);
-  if (obj.code_size > MAX_NODE_COUNT) {
-    printf("WARN: code_size > MAX_NODE_COUNT\n");
-  }
-
   analyze_code(context, obj.code_size, obj.code, obj.symbol_count, obj.symbols, obj.reloc_count, obj.relocs);
 
   for (int i = 0; i < obj.global_count; ++i) {
@@ -579,11 +617,6 @@ void analyze_exe(context_t *context, char *filename) {
   assert(filename);
 
   exe_t exe = exe_decode_file(filename);
-  assert(exe.code_size < MAX_CODE_SIZE);
-  if (exe.code_size > MAX_NODE_COUNT) {
-    printf("WARN: code_size > MAX_NODE_COUNT\n");
-  }
-
   analyze_code(context, exe.code_size, exe.code, exe.symbol_count, exe.symbols, exe.reloc_count, exe.relocs);
 
   if (exe.dynamic_count > 0) {
@@ -612,12 +645,6 @@ void analyze_so(context_t *context, char *filename) {
   assert(filename);
 
   so_t so = so_decode_file(filename);
-
-  assert(so.code_size < MAX_CODE_SIZE);
-  if (so.code_size > MAX_NODE_COUNT) {
-    printf("WARN: code_size > MAX_NODE_COUNT\n");
-  }
-
   analyze_code(context, so.code_size, so.code, so.symbol_count, so.symbols, so.reloc_count, so.relocs);
 
   //  TODO: TBD

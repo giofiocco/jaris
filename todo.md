@@ -42,6 +42,10 @@ argv: arg 0x0000
 arg: "asdf" 0x00
 ```
 
+# Code Analyzer
+
+- disassemble correctly data or code
+
 # execute
 
 - errors instead of crashes (but how do you diff between exitcode or error from execute?)

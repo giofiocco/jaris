@@ -36,8 +36,8 @@ set_iup2:
 page_mask2:
   RAM_A 0xAEDA HLT -- TODO: test
   -- page_mask process_mask exit_code [page, _]
-  A_B POPA SHR PUSHA B_A DECA JMPRNZ $page_mask2
-  RAM_B iup2_ptr rB_A A_B POPA SUB RAM_B iup2_ptr A_rB -- iup -= page_mask
+  -- A_B POPA SHR PUSHA B_A DECA JMPRNZ $page_mask2
+  -- RAM_B iup2_ptr rB_A A_B POPA SUB RAM_B iup2_ptr A_rB -- iup -= page_mask
 page_mask_done:
   -- ^ process_mask exit_code
   RAM_B process_map_ptr rB_A A_B POPA SUB
