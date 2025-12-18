@@ -1,22 +1,18 @@
-code_analyzer works if is label: nop jmp but not if label: jmp because relreloc points to the label not the jmp node
-
 1. globals etc as dynamic arrays
 1. maybe not fclose stdin in exe_decode etc
+1. remove disassemble and maybe use the code analyzer one
 
 asm formatter
 
 bss section?
+data section?
 
 maybe check that when copying a label ecc it will always be null terminated
 
 allow label alone or hex2 as rel with @allow thing
 labels with dot as sublabels?
 
-conditional call?
-
 remove some micro flags
-
-test flag in assembler linker etc to test encoding and others
 
 # Assembler
 

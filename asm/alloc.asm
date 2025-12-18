@@ -1,6 +1,9 @@
 GLOBAL alloc
+GLOBAL free
+
 EXTERN shiftr
 EXTERN shiftl
+EXTERN div
 
   { iup2_ptr 0xF808 }
 
@@ -68,10 +71,10 @@ alloc:
   -- ^ count
 
   RAM_AL 0x00 PUSHA
-  RAM_A pages_map PUSHA
+  RAM_B pages_map rB_A PUSHA
 loop:
   -- ^ _pages_map page_num count
-  PEEKA CMPA JMPRZ $has_pages
+  PEEKA CMPA JMPRNZ $has_pages
   -- ALLOC PAGES
   INCSP INCSP
   RAM_AL 0x00 PUSHA -- page_num = 0
@@ -101,24 +104,27 @@ has_pages:
 
 found_page:
   -- ^ _page_map page_num count
-  PEEKAR 0x06 DECA PUSHA
+  RAM_AL 0x00 PUSHA
   -- ^ block_num _page_map page_num count
   PEEKAR 0x06 SHL RAM_B block_map_list SUM A_B rB_A PUSHA
   -- ^ block_map block_num _page_map page_num count
-  PEEKAR 0x08 A_B RAM_AL 0x01 CALL shiftl DECA PUSHA
+  PEEKAR 0x0A RAM_BL 0x10 SUB A_B RAM_AL 0x01 CALL shiftl DECA RAM_B 0xFFFF SUB PUSHA
   -- ^ blocks_mask block_map block_num _page_map page_num count
 search_block:
   -- ^ blocks_mask block_map block_num _page_map page_num count
   PEEKAR 0x04 PEEKB AND JMPRZ $found_block
-  -- TODO:
+  POPA SHR PUSHA
+  PEEKAR 0x06 INCA PUSHAR 0x06
+  -- TODO: check if < than 16?
+  JMPR $search_block
 found_block:
   -- ^ blocks_mask block_map block_num _page_map page_num count
   POPA POPB SUM PUSHA
   -- ^ new_block_map block_num _page_map page_num count
   PEEKAR 0x08 SHL RAM_B block_map_list SUM A_B POPA A_rB
   -- ^ block_num _page_map page_num count
-  POPB RAM_BL 0x0F SUB SHL SHL SHL SHL SHL SHL SHL PUSHA
-  -- ^ _ _page_map page_num count
+  POPA SHL SHL SHL SHL SHL SHL SHL PUSHA
+  -- ^ (block_num*128) _page_map page_num count
   PEEKAR 0x06 RAM_BL 0x1F SUB SHL SHL SHL SHL SHL SHL SHL SHL SHL SHL SHL
   POPB SUM
   -- ^ _page_map page_num count
@@ -131,3 +137,26 @@ invalid_alloc_count:
 
 no_more_pages:
   RAM_A 0xDFFA HLT
+
+-- [u8 *ptr, u16 count] -> [_, _]
+-- free `count` blocks
+free:
+  PUSHB
+  -- ^ count
+  A_B RAM_A 0x0800 CALL div
+  PUSHB
+  RAM_BL 0x1F SUB PUSHA
+  PEEKAR 0x04 SHR SHR SHR SHR SHR SHR SHR PUSHAR 0x04
+  -- ^ page_num block_num count
+  PEEKAR 0x06 RAM_BL 0x10 SUB A_B RAM_AL 0x01 CALL shiftl DECA RAM_B 0xFFFF SUB PUSHA
+  -- ^ blocks_mask(unshred) page_num block_num count
+  PEEKAR 0x06 A_B POPA CALL shiftr
+  POPB PUSHA B_A
+  -- ^ blocks_mask block_num count [page_num, _]
+  SHL RAM_B block_map_list SUM PUSHA A_B rB_A
+  -- ^ &map_list[page_num] blocks_mask block_num count [page_num, _]
+  A_B PEEKAR 0x04 SUB
+  POPB A_rB
+  -- ^ blocks_mask block_num count [page_num, _]
+  INCSP INCSP INCSP
+  RET
