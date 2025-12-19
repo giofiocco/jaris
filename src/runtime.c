@@ -76,9 +76,11 @@ void cpu_dump(cpu_t *cpu) {
 
   printf("A:   %5d %04X ", cpu->A, cpu->A);
   dumpsbit(cpu->A, 16);
+  printf(" [%2d+%-4d]", cpu->A / PAGE_SIZE, cpu->A - PAGE_SIZE * (cpu->A / PAGE_SIZE));
   printf(" %c\n", isprint(cpu->A) ? cpu->A : ' ');
   printf("B:   %5d %04X ", cpu->B, cpu->B);
   dumpsbit(cpu->B, 16);
+  printf(" [%2d+%-4d]", cpu->B / PAGE_SIZE, cpu->B - PAGE_SIZE * (cpu->B / PAGE_SIZE));
   printf(" %c\n", isprint(cpu->B) ? cpu->B : ' ');
   printf("IP:  %5d %04X %s\n", cpu->IP, cpu->IP, instruction_to_string(cpu->IR));
   printf("FR:         %c%c%c\n",

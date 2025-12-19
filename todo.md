@@ -1,6 +1,5 @@
 1. globals etc as dynamic arrays
-1. maybe not fclose stdin in exe_decode etc
-1. remove disassemble and maybe use the code analyzer one
+1. remove disassemble and maybe use the code_analyzer one
 
 asm formatter
 
@@ -24,10 +23,6 @@ remove some micro flags
 
 - add file checking etc
 
-# Inspect
-
-- os disassemble does not work
-
 # Assemble
 
 - bytecode BLABEL
@@ -49,3 +44,7 @@ arg: "asdf" 0x00
 # alloc
 
 - allocate the blocks starting from the start of the page so a realloc wouldn't need to move always
+
+# pipe
+
+- what if first program fails

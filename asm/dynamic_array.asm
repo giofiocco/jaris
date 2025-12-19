@@ -1,12 +1,15 @@
 GLOBAL dynamic_array_init
+GLOBAL dynamic_array_free
 GLOBAL dynamic_array_push16
 GLOBAL dynamic_array_push8
+
 EXTERN alloc
+EXTERN free
 
 -- dynamic_array_t (size 6 bytes)
--- int data[]; // ptr to data
--- int size;
--- int capacity;
+-- u8 *data;
+-- u16 size;
+-- u16 capacity;
 
 -- [dynamic_array_t *list, _] -> [dynamic_array_t *list, _]
 -- inits the dynamic_array struct
@@ -52,3 +55,17 @@ dynamic_array_push8:
 
 reloc:
   RAM_A 0xAB03 HLT
+
+-- [dynamic_array_t *list, _] -> [dynamic_array_t *list, _]
+-- frees the dynamic_array data and zero-initialize the struct
+dynamic_array_free:
+  PUSHA
+  RAM_BL 0x04 SUM A_B rB_AL SHR SHR SHR SHR SHR SHR SHR PUSHA -- block_count
+  -- ^ block_count list
+  PEEKAR 0x04 A_B rB_A POPB CALL free
+  -- ^ list
+  POPB RAM_AL 0x00 A_rB
+  INCB INCB A_rB
+  INCB INCB A_rB
+  RET
+
