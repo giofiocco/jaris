@@ -84,14 +84,12 @@ if response is `0xFE` means resend and `0xFA` means ACK (possibily limited to 3 
 == GPU
 #figure(image("PIC/images/GPU.png"), caption: [GPU diagram])
 The GPU produce a VGA bicolor signal at #text(red)[resolution], with a separate #text(red)[TODO] clock (#link("http://www.tinyvga.com/vga-timing")[VGA timing]).
-The screen is divided into 8x8 pixel square, each one filled with a so called pattern stored in the PATTERN RAM, while the ATTRIBUTE RAM stores which pattern to draw in a specific square.
-Each pattern is stored in 8 bytes (in rows) it is loaded on a shift-register and bit by bit converted to VGA signal.
+The screen is divided into 8x8 pixel squares, each one filled with a so called pattern stored in the PATTERN RAM, while the ATTRIBUTE RAM stores which pattern to draw in a specific square.
+Each pattern is stored in 8 bytes (rows-wise) it is loaded on the shift-register and bit by bit converted to VGA signal.
 
 The fastest clock for a reasonable resolution is 35.5 MHz so the reading circuit will need to be faster than 28 ns \* 8 = 224 ns because the ram is read every 8 clock cycle.
 
-
-
-The coordinates of the pixel to draw will be refered as x and y (xl the least significant 3 bit, xh the rest of the bits, and the same for yh, yl):
+The coordinates of the pixel to draw will be refered as x and y (xl the least significant 3 bit, xh the rest of the bits):
 
 #register(```yaml
 structures:
@@ -226,3 +224,20 @@ If `stdout redirect` is `0xFFFF` the `put_char` will print to the screen otherwi
   [*From*],         [*To*],       [*Time* [ns]],
   [RAM adress set], [data valid], [12],
 ))
+
+= Timing analysis
+
+#{
+  let IPo = 0
+  let MARi = 0
+
+  table(
+    columns:4,
+    stroke:.5pt,
+    [*instructions*], [*step*], [*micros*], [*time* [ns]],
+    ..(
+      "all",0,`IPo|MARi`,IPo+MARi,
+      "all",1,`RAM|RAMo|Iri|IPp`,
+    ).map(x => [#x])
+  )
+}
