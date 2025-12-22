@@ -1,7 +1,7 @@
+1. test pipe
 1. globals etc as dynamic arrays
 1. remove disassemble and maybe use the code_analyzer one
-
-asm formatter
+1. maybe remove obj_dump from assemble so if one wants assemble.a donesnt need to compiel with files
 
 bss section?
 data section?
@@ -32,6 +32,8 @@ remove some micro flags
 argv: arg 0x0000
 arg: "asdf" 0x00
 ```
+
+- fail with `{ciao 0x00}` because expected space after hex
 
 # Code Analyzer
 

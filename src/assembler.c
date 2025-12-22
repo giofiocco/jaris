@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
     }
     else {
       if (path != NULL) {
-        eprintf("file already provided: %s", path);
+        ARG_ERROR("file already provided: %s", path);
       }
       path = *argv;
     }

@@ -114,6 +114,7 @@ void path(context_t *context, int i, int sp) {
     case BALIGN:
     case BGLOBAL:
     case BEXTERN:
+      warning(i, "execution flow should not get to %s", bytecode_kind_to_string(kind));
       break;
 
     case BSETLABEL:

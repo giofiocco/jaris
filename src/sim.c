@@ -108,7 +108,6 @@ void test() {
 
   {
     printf("  EXECUTE `test_font`\n");
-
     load_input_string(cpu, "test_font\n");
 
     test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
@@ -300,7 +299,7 @@ void test() {
     printf("  EXECUTE `tee out`\n");
 
     load_input_string(cpu, "tee out\n");
-    load_input_string(cpu, "ciao\n");
+    load_input_string(cpu, "ciao\\D");
 
     test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
     test_assert_running(test_);
@@ -328,12 +327,12 @@ void test() {
     test_assert(cpu->MEM[256 * sec] == 'F');
     test_assert(cpu->MEM[256 * sec + 1] == 0xFF);
     test_assert(cpu->MEM[256 * sec + 2] == 0xFF);
-    test_assert(cpu->MEM[256 * sec + 3] == 8);
+    test_assert(cpu->MEM[256 * sec + 3] == 7);
     test_assert(cpu->MEM[256 * sec + 4] == 'c');
     test_assert(cpu->MEM[256 * sec + 5] == 'i');
     test_assert(cpu->MEM[256 * sec + 6] == 'a');
     test_assert(cpu->MEM[256 * sec + 7] == 'o');
-    test_assert(cpu->MEM[256 * sec + 8] == '\n');
+    test_assert(cpu->MEM[256 * sec + 8] == 0);
   }
 
   {
