@@ -478,8 +478,8 @@ int main(int argc, char **argv) {
   assert(putc(0, file) != -1);
   assert(putc(0b00111000, file) != -1);
   assert(putc(0b01000100, file) != -1);
-  assert(putc(0b01000000, file) != -1);
-  assert(putc(0b00110100, file) != -1);
+  assert(putc(0b00100000, file) != -1);
+  assert(putc(0b01010100, file) != -1);
   assert(putc(0b01001000, file) != -1);
   assert(putc(0b00110100, file) != -1);
   assert(putc(0, file) != -1);

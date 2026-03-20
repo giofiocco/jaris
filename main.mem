@@ -23,5 +23,7 @@ newdir dir
 newfile a fromtext
 culo
 __endtext
-newfile a.sk fromfile a.sk
+newfile a.sk fromtext
+
+__endtext
 enddir

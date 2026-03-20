@@ -7,12 +7,10 @@
 #include "files.h"
 #include "runtime.h"
 
-#define TEST_MEM_PATH "main.mem.bin" // TODO: make test mem
-
 void test() {
   test_t test_ = {0};
   test_t *test = &test_;
-  test_init(test, TEST_MEM_PATH);
+  test_init(test, "main.mem.bin");
   cpu_t *cpu = &test->cpu;
   bool running = true;
 
@@ -58,7 +56,7 @@ void test() {
     uint16_t file_ptr = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "file") + stdlib_pos;
     test_unset_range(test, file_ptr, 4);
     uint16_t print_pos_ptr = test_find_symbol(stdlib.symbols, stdlib.symbol_count, "pos_ptr") + stdlib_pos;
-    test_unset_range(test, print_pos_ptr, 2); // TODO:
+    test_unset_range(test, print_pos_ptr, 2);
   }
 
   printf("  OS SETUP\n");

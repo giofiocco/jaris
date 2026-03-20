@@ -15,7 +15,7 @@ EXTERN stream_init
 no_arg_str: "ERROR: expected arg" 0x0A 0x00
 not_found_str: ": command not found" 0x0A 0x00
 
--- Usage: pipe command1 args1 | command2 args2
+  -- Usage: pipe command1 args1 | command2 args2
 _start:
   RAM_AL 0x00 PUSHA PUSHA
 
@@ -58,8 +58,8 @@ skip_space:
 
   RAM_AL 0x00 CALL exit
 
--- [cstr cmd, _] -> [u16 exitcode, _]
--- exit if error
+  -- [cstr cmd, _] -> [u16 exitcode, _]
+  -- exit if error
 execute_cmd:
   PUSHA
   RAM_BL " " CALL str_find_char
@@ -78,6 +78,6 @@ found:
   POPB POPA CALL execute
   RET
 
-ALIGN
+  ALIGN
 stdout:
-NOP -- TODO: this is because otherwise code_analyze complains
+  NOP -- TODO: this is because otherwise code_analyze complains

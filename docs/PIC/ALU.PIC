@@ -9,4 +9,20 @@
 .% buffer(0.2)
 .% line right 0.3
 .% line from last line.e + (0, -1.2) to last line.e + (0, 0.6)
-box
+
+.% down
+.% A: Here
+.% box "ADDER"
+.% box "AND"
+.% box "SHR"
+.% move to A - (2,0)
+
+M: [ line down 1 then down right 0.5 then up 2 then left down 0.5 ]
+line right from 1/4<M.ne, M.se>
+line right from 2/4<M.ne, M.se>
+line right from 3/4<M.ne, M.se>
+line left from 1/2<M.nw,M.sw>
+line from last line .c down 
+
+
+

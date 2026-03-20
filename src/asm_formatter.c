@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <ctype.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "../argparse.h"
@@ -57,6 +58,7 @@ sv_t next_sv(char **_buffer) {
     case '{':
     case '}':
     case ':':
+    case '$':
       return consume_sv(_buffer, 1);
     case '-':
       if (buffer[1] == '-') {
@@ -71,6 +73,14 @@ sv_t next_sv(char **_buffer) {
         return sv;
       }
       break;
+    case '"':
+    {
+      int i = 1;
+      while (buffer[i] != '"') {
+        i++;
+      }
+      return consume_sv(_buffer, i + 1);
+    } break;
     case '0':
       if (buffer[1] == 'x' || buffer[1] == 'X') {
         int i = 2;
@@ -92,7 +102,7 @@ sv_t next_sv(char **_buffer) {
     {
       if (isalpha(*buffer) || *buffer == '_') {
         int i = 1;
-        while (isalpha(buffer[i]) || buffer[i] == '_') {
+        while (isalnum(buffer[i]) || buffer[i] == '_') {
           i++;
         }
         return consume_sv(_buffer, i);
@@ -230,6 +240,18 @@ int main(int argc, char **argv) {
         fprintf(out, "\n");
       }
       fprintf(out, "\n");
+
+      /*
+      if (i + 1 < code.count && code.svs[i + 1].len >= 2 && code.svs[i + 1].start[0] == '-' && code.svs[i + 1].start[1] == '-') {
+        char *comment = code.svs[i + 1].start;
+        int j = 0;
+        while (comment - j > buffer && *(comment - j) != '\n') {
+          ++j;
+        }
+        sv_t a = {comment - j, j};
+        fprintf(out, SV_FMT SV_FMT, SV_UNPACK(a), SV_UNPACK(code.svs[i + 1]));
+
+      } else*/
       if (!(i + 2 < code.count && sv_eq_char(code.svs[i + 2], ':'))) {
         fprintf(out, "  ");
       }
@@ -240,7 +262,8 @@ int main(int argc, char **argv) {
     }
 
     before_code = 0;
-    if (!(i + 1 < code.count && sv_eq_char(code.svs[i + 1], '\n'))) {
+    if (!((i + 1 < code.count && sv_eq_char(code.svs[i + 1], '\n'))
+          || sv_eq_char(code.svs[i], '$'))) {
       fprintf(out, " ");
     }
   }

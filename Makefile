@@ -47,7 +47,7 @@ decodemem: src/decodemem.c
 	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
 asm_formatter: src/asm_formatter.c
-	$(CC) $(CFLGAS) -o $@ $(filter %.c,$^)
+	$(CC) $(CFLAGS) -o $@ $(filter %.c,$^)
 
 %.mem.bin: %.mem asm font encodemem
 	./encodemem $<

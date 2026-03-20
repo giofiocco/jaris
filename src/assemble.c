@@ -145,7 +145,7 @@ asm_token_t asm_token_next(asm_tokenizer_t *tok) {
           tok->loc.len = i;
           eprintfloc(tok->loc, "invalid HEX");
         }
-        if (!isspace(tok->buffer[i])) {
+        if (!(isspace(tok->buffer[i]) || tok->buffer[i] == '}')) {
           eprintfloc(tok->loc, "expected space after HEX");
         }
         uint16_t asint = strtol(tok->buffer + 2, NULL, 16);

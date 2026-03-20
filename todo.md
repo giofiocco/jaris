@@ -2,16 +2,18 @@
 1. globals etc as dynamic arrays
 1. remove disassemble and maybe use the code_analyzer one
 1. maybe remove obj_dump from assemble so if one wants assemble.a donesnt need to compiel with files
+   removing the -d obj flag ?
 
 bss section?
 data section?
 
 maybe check that when copying a label ecc it will always be null terminated
+fix all the count + 1 < MAX ... etc
 
 allow label alone or hex2 as rel with @allow thing
 labels with dot as sublabels?
 
-remove some micro flags
+remove some micro flags for hardware
 
 # Assembler
 
@@ -33,8 +35,6 @@ argv: arg 0x0000
 arg: "asdf" 0x00
 ```
 
-- fail with `{ciao 0x00}` because expected space after hex
-
 # Code Analyzer
 
 - disassemble correctly data or code
@@ -45,7 +45,7 @@ arg: "asdf" 0x00
 
 # alloc
 
-- allocate the blocks starting from the start of the page so a realloc wouldn't need to move always
+- realloc
 
 # pipe
 
