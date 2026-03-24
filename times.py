@@ -1,48 +1,73 @@
-counter_load_to_output = 220
-buffer_enable_output = 20
-counter_clock_to_up = 30
-reg_in_to_out = 10
-buffer_enable = 10
-ram_in = 20
-ram_out = 20
-mux_enable = 10
+# registers with reset: https://www.mouser.it/c/semiconductors/logic-ics/flip-flops/?number%20of%20circuits=8%20Circuit
+# register has clock, reset so to input needs flag and-ed with the clock and to output needs a buffer
 
-HLT = 0
-IPi = counter_load_to_output
-IPo = buffer_enable_output
-IPp = counter_clock_to_up
-Ai = buffer_enable
-AHi = buffer_enable
-Ao = buffer_enable
-MARi = reg_in_to_out
-Bi = buffer_enable
-Bo = buffer_enable
-RAMi = max(ram_in, mux_enable + ram_in)
-RAMo = max(ram_out, mux_enable + ram_out)
-RAM16i = ram_in
-RAM16o = ram_out
-Xi = reg_in_to_out
-Yi = reg_in_to_out
-Add = 0
-Sub = 0
-Shr = 0
-And = 0
-Ci = 0
-SPi = 0
-SPo = 0
-SPp = 0
-SPm = 0
-IRi = 0
-SCr = 0
-SECi = 0
-SECo = 0
-NDXi = 0
-NDXo = 0
-MEMi = 0
-MEMo = 0
-KEYo = 0
-GPUAi = 0
-GPUi = 0
+# counter? https://www.ti.com/lit/ds/symlink/sn74ls191.pdf?ts=1774373216393
+
+reg_clock_to_out = 90
+buffer = 7
+trans = 8.4
+_and = 4.8
+_or = 30
+_not = 6
+sram_access = 45
+sram_addr_available = 45
+adder = 14 # TODO: maybe the sum to carry out of the first has to prop on the other one and so on
+eq_zero = 0
+
+counter_in = 50
+counter_out = buffer
+counter_up = 24
+counter_down = counter_up
+counter_reset = 0
+
+reg_in = _and + reg_clock_to_out
+reg_out = buffer
+
+ram_in = _and + _or + _not + sram_access
+ram_out = ram_in
+
+alu_out = eq_zero + reg_in
+
+HLT    = 0
+IPi    = counter_in
+IPo    = counter_out
+IPp    = counter_up
+Ai     = reg_in
+AHi    = reg_in
+Ao     = reg_out
+MARi   = reg_in + sram_addr_available
+Bi     = reg_in
+Bo     = reg_out
+RAMi   = trans + ram_in
+RAMo   = trans + ram_out
+RAM16i = trans + ram_in
+RAM16o = trans + ram_out
+Xi     = reg_in
+Yi     = reg_in
+Add    = alu_out + buffer + adder
+Sub    = alu_out + buffer + adder
+Shr    = alu_out + buffer
+And    = alu_out + buffer + _and
+Ci     = 0
+SPi    = counter_in
+SPo    = counter_out
+SPp    = counter_up
+SPm    = counter_down
+IRi    = reg_in
+SCr    = counter_reset
+SECi   = reg_in
+SECo   = reg_out
+NDXi   = reg_in
+NDXo   = reg_out
+MEMi   = 0
+MEMo   = 0
+KEYo   = 0
+GPUAi  = 0
+GPUi   = 0
+
+uinst = [(eval(i),i) for i in ["HLT", "IPi", "IPo", "IPp", "Ai", "AHi", "Ao", "MARi", "Bi", "Bo", "RAMi", "RAMo", "RAM16i", "RAM16o", "Xi", "Yi", "Add", "Sub", "Shr", "And", "Ci", "SPi", "SPo", "SPp", "SPm", "IRi", "SCr", "SECi", "SECo", "NDXi", "NDXo", "MEMi", "MEMo", "KEYo", "GPUAi", "GPUi"]]
+uinst.sort(reverse=True)
+print(uinst)
 
 fetch = (IPo + MARi) + max(RAMo + IRi, IPp)
 jmpr = fetch + (IPo + max(MARi, Yi)) + (RAM16o + Xi) + (Add + IPi) + SCr
@@ -111,7 +136,7 @@ instructions = {
 }
 
 for inst,time in instructions.items():
-    print(inst, time)
+    print('{} {:.3f}'.format(inst, time))
 
 max_time = sorted([time for inst,time in instructions.items()])[-1]
 

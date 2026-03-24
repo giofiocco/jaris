@@ -13,7 +13,7 @@
 #define SCREEN_ZOOM   2
 #define SCREEN_PAD    10
 #define PAGE_SIZE     2048
-#define CLOCK_FREQ    6 // MHz
+#define CLOCK_FREQ    0.4 // MHz
 
 // clang-format off
 typedef enum {

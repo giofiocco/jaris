@@ -518,7 +518,7 @@ void print_help() {
          "  -r <from>:<to>      print ram in the range\n"
          "  --mem <path>        specify bin file path for memory\n"
          "  --stdout <num>      print stdout struct in ram from num\n"
-         "  --real-time         simulate with ticks at %d MHz\n"
+         "  --real-time         simulate with ticks at %f MHz\n"
          "  -h | --help         show help message\n",
          CLOCK_FREQ);
 }
@@ -585,7 +585,7 @@ int main(int argc, char **argv) {
 
     if (real_time) {
       curr_time = clock();
-      if ((double)(curr_time - begin_time) / CLOCKS_PER_SEC < 1e-6 / CLOCK_FREQ) {
+      if (((double)curr_time - (double)begin_time) * (1e6 / CLOCKS_PER_SEC) < 1 / CLOCK_FREQ) {
         continue;
       } else {
         begin_time = curr_time;

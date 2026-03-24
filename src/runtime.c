@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 #define ERRORS_IMPLEMENTATION
 #define SV_IMPLEMENTATION
@@ -691,11 +692,13 @@ void tick(cpu_t *cpu, bool *running) {
       cpu->ATTRIBUTE_RAM[cpu->GPUA & 0x7FFF] = bus & 0xFF;
 
       if (cpu->has_screen) {
+        clock_t start = clock();
         compute_screen(cpu);
         BeginDrawing();
         ClearBackground(RED);
         DrawTextureEx(cpu->screen.texture, (Vector2){SCREEN_PAD, SCREEN_PAD}, 0, SCREEN_ZOOM, WHITE);
         EndDrawing();
+        printf("redraw %f us\n", (double)(clock() - start));
       }
     }
   }
