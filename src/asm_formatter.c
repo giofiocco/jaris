@@ -224,10 +224,13 @@ int main(int argc, char **argv) {
   }
 
   int new_line = 1;
-  for (int i = 0; i < code.count - 1; ++i) {
+  for (int i = 0; i < code.count; ++i) {
     if (sv_eq_char(code.svs[i], '\n') && new_line) {
-      while (i + 1 < code.count && sv_eq_char(code.svs[i], '\n')) {
+      while (i < code.count && sv_eq_char(code.svs[i], '\n')) {
         i++;
+      }
+      if (i == code.count) {
+        break;
       }
       i--;
       fprintf(out, "\n");
@@ -247,7 +250,6 @@ int main(int argc, char **argv) {
       fprintf(out, "\n");
     }
   }
-  fprintf(out, SV_FMT, SV_UNPACK(code.svs[code.count - 1]));
 
   return 0;
 }
