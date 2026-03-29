@@ -200,12 +200,14 @@ int main(int argc, char **argv) {
     }
     fprintf(out, "\n");
   }
+
   if (externs.count > 0) {
     for (int i = 0; i < externs.count; ++i) {
       fprintf(out, "EXTERN " SV_FMT "\n", SV_UNPACK(externs.svs[i]));
     }
     fprintf(out, "\n");
   }
+
   if (macros.count > 0) {
     for (int i = 0; i < macros.count; ++i) {
       if (sv_eq_char(macros.svs[i], '{')) {
@@ -220,51 +222,29 @@ int main(int argc, char **argv) {
     }
     fprintf(out, "\n");
   }
-  int before_code = 1;
-  for (int i = 0; i < code.count - 1; ++i) {
-    if (before_code && sv_eq_char(code.svs[i], '\n')) {
-      continue;
-    }
-    if (i + 1 < code.count && sv_eq_char(code.svs[i + 1], ':')) {
-      fprintf(out, SV_FMT ":", SV_UNPACK(code.svs[i]));
-      i++;
 
-    } else if (sv_eq_char(code.svs[i], '\n')) {
-      int newlines = 0;
-      while (i < code.count && sv_eq_char(code.svs[i], '\n')) {
-        newlines++;
+  int new_line = 1;
+  for (int i = 0; i < code.count - 1; ++i) {
+    if (sv_eq_char(code.svs[i], '\n') && new_line) {
+      while (i + 1 < code.count && sv_eq_char(code.svs[i], '\n')) {
         i++;
       }
       i--;
-      if (newlines >= 2) {
-        fprintf(out, "\n");
-      }
       fprintf(out, "\n");
-
-      /*
-      if (i + 1 < code.count && code.svs[i + 1].len >= 2 && code.svs[i + 1].start[0] == '-' && code.svs[i + 1].start[1] == '-') {
-        char *comment = code.svs[i + 1].start;
-        int j = 0;
-        while (comment - j > buffer && *(comment - j) != '\n') {
-          ++j;
-        }
-        sv_t a = {comment - j, j};
-        fprintf(out, SV_FMT SV_FMT, SV_UNPACK(a), SV_UNPACK(code.svs[i + 1]));
-
-      } else*/
-      if (!(i + 2 < code.count && sv_eq_char(code.svs[i + 2], ':'))) {
-        fprintf(out, "  ");
-      }
-      continue;
-
+      new_line = 1;
     } else {
       fprintf(out, SV_FMT, SV_UNPACK(code.svs[i]));
+      new_line = sv_eq_char(code.svs[i], '\n');
     }
 
-    before_code = 0;
-    if (!((i + 1 < code.count && sv_eq_char(code.svs[i + 1], '\n'))
+    if (!((i + 2 < code.count && sv_eq_char(code.svs[i + 2], ':'))
+          || (i + 1 < code.count && sv_eq_char(code.svs[i + 1], '\n'))
+          || (i + 1 < code.count && sv_eq_char(code.svs[i + 1], ':'))
           || sv_eq_char(code.svs[i], '$'))) {
       fprintf(out, " ");
+    }
+    if (i + 2 < code.count && sv_eq_char(code.svs[i + 2], ':') && !new_line) {
+      fprintf(out, "\n");
     }
   }
   fprintf(out, SV_FMT, SV_UNPACK(code.svs[code.count - 1]));
