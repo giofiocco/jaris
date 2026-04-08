@@ -1,5 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <time.h>
 
 #include "../argparse.h"
@@ -101,6 +102,15 @@ void test() {
   test_set_u16(test, 0xF838, 0xFFFF);
   test_check(test);
   test_unset_range(test, 0xF834, 2); // sh SP
+
+  uint16_t sh_stdout = test_find_symbol(sh.symbols, sh.symbol_count, "stdout") + sh_pos;
+  test_set_u16(test, sh_stdout, sh_stdout + 6);
+  test_set_u16(test, sh_stdout + 2, sh_stdout + 6);
+  test_set_u16(test, sh_stdout + 4, sh_pos + PAGE_SIZE - 0x30 - 2);
+  memset(&test->test_ram[sh_stdout + 6], 0, sh_pos + PAGE_SIZE - 0x30 - 2 - sh_stdout);
+
+  test_set_u16(test, test_find_symbol(sh.symbols, sh.symbol_count, "old_stdout") + sh_pos, 0xFFFF); // TODO:  0xFFFF process etc
+  test_set_u16(test, test_find_symbol(sh.symbols, sh.symbol_count, "old_stdin") + sh_pos, 0xFFFF);  // TODO:  0xFFFF process etc
 
   uint16_t sh_input_pos = test_find_symbol(sh.symbols, sh.symbol_count, "input") + sh_pos;
 
@@ -297,7 +307,7 @@ void test() {
     printf("  EXECUTE `tee out`\n");
 
     load_input_string(cpu, "tee out\n");
-    load_input_string(cpu, "ciao\\D");
+    load_input_string(cpu, "hello\\D");
 
     test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
     test_assert_running(test_);
@@ -314,7 +324,7 @@ void test() {
 
     test_gpu_print(test, "$ tee out\n");
     test_set_range(test, sh_input_pos, 8, (uint8_t *)"tee\0out\0");
-    test_gpu_print(test, "ciao\n");
+    test_gpu_print(test, "hello\n");
 
     test_check(test);
 
@@ -325,12 +335,13 @@ void test() {
     test_assert(cpu->MEM[256 * sec] == 'F');
     test_assert(cpu->MEM[256 * sec + 1] == 0xFF);
     test_assert(cpu->MEM[256 * sec + 2] == 0xFF);
-    test_assert(cpu->MEM[256 * sec + 3] == 7);
-    test_assert(cpu->MEM[256 * sec + 4] == 'c');
-    test_assert(cpu->MEM[256 * sec + 5] == 'i');
-    test_assert(cpu->MEM[256 * sec + 6] == 'a');
-    test_assert(cpu->MEM[256 * sec + 7] == 'o');
-    test_assert(cpu->MEM[256 * sec + 8] == 0);
+    test_assert(cpu->MEM[256 * sec + 3] == 8);
+    test_assert(cpu->MEM[256 * sec + 4] == 'h');
+    test_assert(cpu->MEM[256 * sec + 5] == 'e');
+    test_assert(cpu->MEM[256 * sec + 6] == 'l');
+    test_assert(cpu->MEM[256 * sec + 7] == 'l');
+    test_assert(cpu->MEM[256 * sec + 8] == 'o');
+    test_assert(cpu->MEM[256 * sec + 9] == 0);
   }
 
   {
@@ -360,6 +371,7 @@ void test() {
   }
 
   if (0) {
+    // TODO: rule110
     printf("  EXECUTE `rule110`\n");
 
     load_input_string(cpu, "rule110\n");
@@ -406,29 +418,48 @@ void test() {
   }
 
   {
-    printf("  EXECUTE `pipe echo ... tee`\n");
+    printf("  EXECUTE `echo | tee`\n");
 
-    load_input_string(cpu, "pipe echo ciao | tee out\n");
-    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_pos);
-    test_assert_running(test_);
-    test_run_until(test_, cpu->IR == JMPA);
-    test_assert_running(test_);
+    load_input_string(cpu, "echo hello | tee out\n");
     test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_pos);
     test_assert_running(test_);
 
-    exe_t pipe = exe_decode_file("asm/bin/pipe");
-    exe_reloc(&pipe, 3 * PAGE_SIZE, stdlib_pos);
-
-    test_gpu_print(test, "$ pipe echo ciao | tee out\n");
-    test_set_range(test, sh_input_pos, 25, (uint8_t *)"pipe\0echo ciao | tee out\0");
+    test_gpu_print(test, "$ echo hello |");
+    test_set_range(test, sh_input_pos, 12, (uint8_t *)"echo\0hello \0");
+    test_set_u16(test, 0xF836, sh_stdout); // TODO: todo
 
     test_check(test);
 
     printf("  EXECUTE 1st command\n");
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
+    test_assert_running(test_);
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == execute_pos);
+    test_assert_running(test_);
 
-    test_set_range(test, sh_input_pos, 25, (uint8_t *)"pipe\0echo\0ciao \0 tee out\0");
-    test_unset_range(test, 4 * PAGE_SIZE, PAGE_SIZE);
-    test_unset_range(test, 0xF850, 16);
+    test_gpu_print(test, " tee out\n");
+    test_set_range(test, sh_input_pos, 9, (uint8_t *)" tee\0out\0");
+    test_set_u16(test, sh_stdout + 2, sh_stdout + 6 + 7);
+    test_set_range(test, sh_stdout + 6, 7, (uint8_t *)"hello \n");
+    test_unset_range(test, 0xF830, 16 * 2);
+
+    test_check(test);
+
+    printf("  EXECUTE 2st command\n");
+    test_run_until(test_, cpu->IR == CALL && cpu_read16(cpu, cpu->IP) == exit_pos);
+    test_assert_running(test_);
+    int calls = 1;
+    while (test->running && calls != 0) {
+      if (cpu->IR == CALL || cpu->IR == CALLR) {
+        calls++;
+      } else if (cpu->IR == RET) {
+        calls--;
+      }
+      tick(cpu, &test->running);
+    }
+    test_assert_running(test_);
+
+    test_gpu_print(test, "hello \n");
+    test_set_u16(test, sh_stdout, sh_stdout + 6 + 7);
 
     test_check(test);
   }
@@ -458,53 +489,6 @@ void test() {
     test_check(test);
   }
 
-  // {
-  //   load_input_string(cpu, "pipe echo ciao | tee out\n");
-  //   printf("  LOAD `pipe echo ciao | tee out`\n");
-  //   // test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
-  //   // test_assert_running(test_);
-  //   // test_run_until(test_, cpu->IR != JMPA);
-  //   // test_assert_running(test_);
-  //   exe_t pipe = exe_decode_file("asm/bin/pipe");
-  //   exe_reloc(&pipe, 3 * PAGE_SIZE, stdlib_pos);
-  //   test_set_range(test, 3 * PAGE_SIZE, pipe.code_size, pipe.code);
-  //   test_gpu_print(test, "$ pipe echo ciao | tee out\n");
-  //   test_set_range(test, sh_input_pos, 25, (uint8_t *)"pipe\0echo ciao | tee out\0");
-  //   // test_set_u16(test, 0xF802, 0xF840);
-  //   // test_set_u16(test, 0xF804, 0xE000);
-  //   // test_set_u16(test, 0xF806, 0xF000);
-  //   // test_set_u16(test, 0xF842, 1);
-  //   test_check(test);
-  //
-  //   printf("  RUN `echo`\n");
-  //   test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == execute_pos);
-  //   test_assert_running(test_);
-  //   test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_pos);
-  //   test_assert_running(test_);
-  //   test_run_until(test_, cpu->IR == JMPA);
-  //   test_assert_running(test_);
-  //
-  //   test_set_range(test, sh_input_pos, 25, (uint8_t *)"pipe\0echo\0ciao \0 tee out\0");
-  //   uint16_t stdout_pos = test_find_symbol(pipe.symbols, pipe.symbol_count, "stdout") + 3 * PAGE_SIZE;
-  //   test_set_u16(test, stdout_pos, stdout_pos + 6);               // setup stdout
-  //   test_set_u16(test, stdout_pos + 2, stdout_pos + 6);           // setup stdout
-  //   test_set_u16(test, stdout_pos + 4, 4 * PAGE_SIZE - 0x30 - 8); // setup stdout
-  //   test_set_u16(test, 0xF846, stdout_pos);                       // stdout redirect
-  //   test_check(test);
-  //
-  //   printf("  RUN `echo`\n");
-  //   test_run_until(test_, cpu->RAM[cpu->IP] == CALL && cpu_read16(cpu, cpu->IP + 1) == exit_pos);
-  //   test_assert_running(test_);
-  //   exe_t echo = exe_decode_file("asm/bin/echo");
-  //   exe_reloc(&echo, 4 * PAGE_SIZE, stdlib_pos);
-  //   test_unset_range(test, 4 * PAGE_SIZE, PAGE_SIZE); // unset the stack and the code of the program and then set the code
-  //   test_set_range(test, 4 * PAGE_SIZE, echo.code_size, echo.code);
-  //
-  //   test_check(test);
-
-  // test_unset_range(test, 3 * PAGE_SIZE, PAGE_SIZE); // unset the stack and the code of the program and then set the code
-  //}
-
   printf("END\n\n");
 }
 
@@ -515,6 +499,7 @@ void print_help() {
          "  -s | --step         run in step mode\n"
          "  -t | --test         run the test\n"
          "  -S | --screen       enable screen\n"
+         "  -G | --gpu-stdout   print the gpu content on the stdout\n"
          "  -r <from>:<to>      print ram in the range\n"
          "  --mem <path>        specify bin file path for memory\n"
          "  --stdout <num>      print stdout struct in ram from num\n"
@@ -530,6 +515,7 @@ int main(int argc, char **argv) {
   char *mempath = "main.mem.bin";
   int enable_step_mode = 0;
   int screen = 0;
+  int gpu_on_stdout = 0;
   int real_time = 0;
   int stdout_start = -1;
 
@@ -538,6 +524,7 @@ int main(int argc, char **argv) {
         else ARG_PARSE_FLAG("s", "step", enable_step_mode)         //
         else ARG_PARSE_FLAG_(ARG_LFLAG("real-time"), real_time)    //
         else ARG_PARSE_FLAG("S", "screen", screen)                 //
+        else ARG_PARSE_FLAG("G", "gpu-stdout", gpu_on_stdout)      //
         else ARG_PARSE_STRING_ARG("i", "input", input)             //
         else ARG_PARSE_STRING_ARG_(ARG_LFLAG("mem"), mempath)      //
         else ARG_PARSE_INT_ARG_(ARG_LFLAG("stdout"), stdout_start) //
@@ -557,6 +544,7 @@ int main(int argc, char **argv) {
       printf("%d %d\n", from, to);
       exit(101);
     }
+    ARG_ELSE_UNKNOWN
   }
 
   cpu_t cpu = {0};
@@ -614,6 +602,16 @@ int main(int argc, char **argv) {
          (float)cpu.ticks * 1E3 / 10E6);
 
   cpu_dump(&cpu);
+
+  if (gpu_on_stdout) {
+    printf("GPU:\n");
+    for (int i = 0; i < 128 && cpu.ATTRIBUTE_RAM[i << 8]; i++) {
+      for (int j = 0; j < 128 && cpu.ATTRIBUTE_RAM[(i << 8) | j]; j++) {
+        printf("%c", cpu.ATTRIBUTE_RAM[(i << 8) | j]);
+      }
+      printf("\n");
+    }
+  }
 
   if (stdout_start != -1) {
     cpu_dump_stdout(&cpu, stdout_start);
