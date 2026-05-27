@@ -1,3 +1,5 @@
+# MOVED TO [codeberg](https://codeberg.org/giofiocco/Aleph0)
+
 # Jaris
 
 Jaris is a project for a 8 bit computer called Aleph 0,
